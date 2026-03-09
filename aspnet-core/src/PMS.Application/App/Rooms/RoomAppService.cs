@@ -1,0 +1,340 @@
+using Abp.Application.Services;
+using System;
+using System.Collections.Generic;
+using Abp.Application.Services.Dto;
+using Abp.Authorization;
+using Abp.Domain.Repositories;
+using Abp.Linq.Extensions;
+using Abp.UI;
+using Microsoft.EntityFrameworkCore;
+using PMS.App.Rooms.Dto;
+using PMS.Authorization;
+using System.Linq;
+using System.Linq.Dynamic.Core;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+namespace PMS.App.Rooms;
+
+public interface IRoomTypeAppService : IApplicationService
+{
+    Task<RoomTypeDto> GetAsync(Guid id);
+    Task<PagedResultDto<RoomTypeListDto>> GetAllAsync(GetRoomTypesInput input);
+    Task<Guid> CreateAsync(CreateRoomTypeDto input);
+    Task UpdateAsync(RoomTypeDto input);
+    Task<System.Collections.Generic.List<RoomTypeListDto>> GetAllActiveAsync();
+}
+
+public interface IRoomAppService : IApplicationService
+{
+    Task<RoomDto> GetAsync(Guid id);
+    Task<PagedResultDto<RoomListDto>> GetAllAsync(GetRoomsInput input);
+    Task<Guid> CreateAsync(CreateRoomDto input);
+    Task UpdateAsync(RoomDto input);
+    Task UpdateStatusAsync(UpdateRoomStatusDto input);
+    Task<System.Collections.Generic.List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input);
+}
+
+[AbpAuthorize(PermissionNames.Pages_RoomTypes)]
+public class RoomTypeAppService(
+    IRepository<RoomType, Guid> roomTypeRepository
+) : PMSAppServiceBase, IRoomTypeAppService
+{
+    [AbpAuthorize(PermissionNames.Pages_RoomTypes_Create)]
+    public async Task<Guid> CreateAsync(CreateRoomTypeDto input)
+    {
+        var exists = await roomTypeRepository.GetAll().AnyAsync(r => r.Name == input.Name.Trim());
+        if (exists) throw new UserFriendlyException(L("RoomTypeNameAlreadyExists"));
+
+        var entity = ObjectMapper.Map<RoomType>(input);
+        return await roomTypeRepository.InsertAndGetIdAsync(entity);
+    }
+
+    public async Task<RoomTypeDto> GetAsync(Guid id)
+    {
+        var entity = await roomTypeRepository.GetAsync(id);
+        return ObjectMapper.Map<RoomTypeDto>(entity);
+    }
+
+    public async Task<System.Collections.Generic.List<RoomTypeListDto>> GetAllActiveAsync()
+    {
+        var list = await roomTypeRepository.GetAll()
+            .Where(r => r.IsActive)
+            .OrderBy(r => r.Name)
+            .ToListAsync();
+        return ObjectMapper.Map<System.Collections.Generic.List<RoomTypeListDto>>(list);
+    }
+
+    public async Task<PagedResultDto<RoomTypeListDto>> GetAllAsync(GetRoomTypesInput input)
+    {
+        var query = roomTypeRepository.GetAll()
+            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), r => r.Name.Contains(input.Filter))
+            .WhereIf(input.IsActive.HasValue, r => r.IsActive == input.IsActive);
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(input.Sorting ?? "Name").PageBy(input).ToListAsync();
+        return new PagedResultDto<RoomTypeListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<RoomTypeListDto>>(items));
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_RoomTypes_Edit)]
+    public async Task UpdateAsync(RoomTypeDto input)
+    {
+        var entity = await roomTypeRepository.GetAsync(input.Id);
+        ObjectMapper.Map(input, entity);
+        await roomTypeRepository.UpdateAsync(entity);
+    }
+}
+
+[AbpAuthorize(PermissionNames.Pages_Rooms)]
+public class RoomAppService(
+    IRepository<Room, Guid> roomRepository,
+    IRepository<RoomStatusLog, Guid> roomStatusLogRepository,
+    IRepository<ReservationRoom, Guid> reservationRoomRepository,
+    IRepository<StayRoom, Guid> stayRoomRepository
+) : PMSAppServiceBase, IRoomAppService
+{
+    [AbpAuthorize(PermissionNames.Pages_Rooms_Create)]
+    public async Task<Guid> CreateAsync(CreateRoomDto input)
+    {
+        var exists = await roomRepository.GetAll().AnyAsync(r => r.RoomNumber == input.RoomNumber.Trim().ToUpper());
+        if (exists) throw new UserFriendlyException(L("RoomNumberAlreadyExists"));
+
+        var entity = ObjectMapper.Map<Room>(input);
+        entity.RoomNumber = input.RoomNumber.Trim().ToUpper();
+        return await roomRepository.InsertAndGetIdAsync(entity);
+    }
+
+    public async Task<RoomDto> GetAsync(Guid id)
+    {
+        var entity = await roomRepository.GetAll()
+            .Include(r => r.RoomType)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (entity == null) throw new UserFriendlyException(L("RoomNotFound"));
+        return ObjectMapper.Map<RoomDto>(entity);
+    }
+
+    public async Task<PagedResultDto<RoomListDto>> GetAllAsync(GetRoomsInput input)
+    {
+        var query = roomRepository.GetAll()
+            .Include(r => r.RoomType)
+            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
+                r => r.RoomNumber.Contains(input.Filter) || r.RoomType.Name.Contains(input.Filter))
+            .WhereIf(input.Status.HasValue, r => r.Status == input.Status)
+            .WhereIf(input.RoomTypeId.HasValue, r => r.RoomTypeId == input.RoomTypeId)
+            .WhereIf(input.IsActive.HasValue, r => r.IsActive == input.IsActive);
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(input.Sorting ?? "RoomNumber").PageBy(input).ToListAsync();
+        return new PagedResultDto<RoomListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<RoomListDto>>(items));
+    }
+
+    public async Task<System.Collections.Generic.List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input)
+    {
+        var hasDateRange = input.ArrivalDate.HasValue && input.DepartureDate.HasValue;
+
+        if (input.ArrivalDate.HasValue != input.DepartureDate.HasValue)
+            throw new UserFriendlyException(L("InvalidArrivalDepartureDate"));
+
+        if (hasDateRange && input.ArrivalDate!.Value.Date >= input.DepartureDate!.Value.Date)
+            throw new UserFriendlyException(L("InvalidArrivalDepartureDate"));
+
+        var query = roomRepository.GetAll()
+            .Include(r => r.RoomType)
+            .Where(r => r.IsActive)
+            .WhereIf(input.RoomTypeId.HasValue, r => r.RoomTypeId == input.RoomTypeId)
+            .Where(r => r.Status != RoomStatus.OutOfOrder && r.Status != RoomStatus.Maintenance);
+
+        if (!hasDateRange)
+        {
+            var immediateStatuses = new[] { RoomStatus.VacantClean, RoomStatus.VacantDirty };
+            query = query.Where(r => immediateStatuses.Contains(r.Status));
+        }
+        else
+        {
+            var arrivalDate = input.ArrivalDate!.Value.Date;
+            var departureDate = input.DepartureDate!.Value.Date;
+
+            var blockingReservationStatuses = new[]
+            {
+                ReservationStatus.Pending,
+                ReservationStatus.Confirmed,
+                ReservationStatus.CheckedIn,
+            };
+
+            var reservedRoomIds = await reservationRoomRepository.GetAll()
+                .Include(rr => rr.Reservation)
+                .Where(rr => rr.RoomId.HasValue)
+                .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
+                .Where(rr => blockingReservationStatuses.Contains(rr.Reservation.Status))
+                .Select(rr => rr.RoomId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var activeStayStatuses = new[] { StayStatus.CheckedIn, StayStatus.InHouse };
+
+            var occupiedByStayRoomIds = await stayRoomRepository.GetAll()
+                .Include(sr => sr.Stay)
+                .Where(sr => activeStayStatuses.Contains(sr.Stay.Status))
+                .Where(sr => sr.AssignedAt.Date < departureDate)
+                .Where(sr => (sr.ReleasedAt.HasValue ? sr.ReleasedAt.Value.Date : sr.Stay.ExpectedCheckOutDateTime.Date) > arrivalDate)
+                .Select(sr => sr.RoomId)
+                .Distinct()
+                .ToListAsync();
+
+            var blockedRoomIds = reservedRoomIds
+                .Concat(occupiedByStayRoomIds)
+                .Distinct()
+                .ToList();
+
+            if (blockedRoomIds.Count > 0)
+                query = query.Where(r => !blockedRoomIds.Contains(r.Id));
+        }
+
+        var items = await query.OrderBy(r => r.RoomNumber).ToListAsync();
+        return items.Select(MapToRoomListDto).ToList();
+    }
+
+    private static RoomListDto MapToRoomListDto(Room room)
+    {
+        var roomTypeName = room.RoomType?.Name ?? string.Empty;
+        var roomTypeDescription = room.RoomType?.Description ?? string.Empty;
+        var profile = GetRoomTypeProfile(roomTypeName, roomTypeDescription);
+
+        return new RoomListDto
+        {
+            Id = room.Id,
+            RoomNumber = room.RoomNumber,
+            RoomTypeId = room.RoomTypeId,
+            RoomTypeName = roomTypeName,
+            RoomTypeDescription = roomTypeDescription,
+            BedTypeSummary = profile.BedTypeSummary,
+            FeatureTags = profile.FeatureTags,
+            AmenityItems = profile.AmenityItems,
+            MaxAdults = room.RoomType?.MaxAdults ?? 0,
+            MaxChildren = room.RoomType?.MaxChildren ?? 0,
+            BaseRate = room.RoomType?.BaseRate ?? 0,
+            Floor = room.Floor,
+            Status = room.Status,
+            IsActive = room.IsActive,
+        };
+    }
+
+    private static RoomTypeProfile GetRoomTypeProfile(string roomTypeName, string roomTypeDescription)
+    {
+        if (TryParseRoomTypeProfileFromDescription(roomTypeDescription, out var profileFromDescription))
+        {
+            return profileFromDescription;
+        }
+
+        if (roomTypeName.Contains("Superior Twin", StringComparison.OrdinalIgnoreCase))
+        {
+            return new RoomTypeProfile(
+                "2 twin beds",
+                ["1 room", "40 m2", "Balcony", "Sea view", "Air conditioning", "Attached bathroom", "Terrace"],
+                ["Free toiletries", "Shower", "Safe", "Bidet", "Toilet", "Towels", "Tile/Marble floor", "Desk", "TV", "Slippers", "Tea/Coffee maker", "Electric kettle", "Cable channels", "Wardrobe or closet", "Toilet paper"]
+            );
+        }
+
+        if (roomTypeName.Contains("Superior King", StringComparison.OrdinalIgnoreCase))
+        {
+            return new RoomTypeProfile(
+                "1 full bed",
+                ["1 room", "40 m2", "Balcony", "Sea view", "Air conditioning", "Attached bathroom", "Terrace"],
+                ["Free toiletries", "Shower", "Safe", "Bidet", "Toilet", "Towels", "Tile/Marble floor", "Desk", "TV", "Slippers", "Tea/Coffee maker", "Electric kettle", "Cable channels", "Wardrobe or closet", "Toilet paper"]
+            );
+        }
+
+        if (roomTypeName.Contains("Family", StringComparison.OrdinalIgnoreCase))
+        {
+            return new RoomTypeProfile(
+                "2 queen beds",
+                ["1 room", "55 m2", "Family area", "Air conditioning", "Attached bathroom", "Pantry"],
+                ["Free toiletries", "Shower", "Safe", "Toilet", "Towels", "Desk", "TV", "Slippers", "Tea/Coffee maker", "Electric kettle", "Wardrobe or closet", "Toilet paper"]
+            );
+        }
+
+        if (roomTypeName.Contains("Suite", StringComparison.OrdinalIgnoreCase))
+        {
+            return new RoomTypeProfile(
+                "1 king bed",
+                ["1 room", "65 m2", "Living room", "Premium view", "Air conditioning", "Attached bathroom"],
+                ["Breakfast included", "Late check-in", "Flexible reschedule", "Free toiletries", "Shower", "Safe", "Toilet", "Towels", "TV", "Tea/Coffee maker", "Electric kettle", "Wardrobe or closet"]
+            );
+        }
+
+        return new RoomTypeProfile(
+            "1 bed",
+            ["1 room"],
+            ["Free toiletries", "Towels", "Toilet paper"]
+        );
+    }
+
+    private static bool TryParseRoomTypeProfileFromDescription(string roomTypeDescription, out RoomTypeProfile profile)
+    {
+        const string prefix = "__RTMETA__";
+        profile = default!;
+
+        if (string.IsNullOrWhiteSpace(roomTypeDescription) || !roomTypeDescription.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            var json = roomTypeDescription[prefix.Length..];
+            using var doc = JsonDocument.Parse(json);
+
+            var root = doc.RootElement;
+            var bedTypeSummary = root.TryGetProperty("bedTypeSummary", out var bed) ? bed.GetString() : null;
+            var featureTags = root.TryGetProperty("featureTags", out var tags) && tags.ValueKind == JsonValueKind.Array
+                ? tags.EnumerateArray().Select(x => x.GetString() ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray()
+                : Array.Empty<string>();
+            var amenityItems = root.TryGetProperty("amenityItems", out var amenities) && amenities.ValueKind == JsonValueKind.Array
+                ? amenities.EnumerateArray().Select(x => x.GetString() ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray()
+                : Array.Empty<string>();
+
+            if (string.IsNullOrWhiteSpace(bedTypeSummary))
+            {
+                return false;
+            }
+
+            profile = new RoomTypeProfile(
+                bedTypeSummary,
+                featureTags,
+                amenityItems
+            );
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private sealed record RoomTypeProfile(string BedTypeSummary, string[] FeatureTags, string[] AmenityItems);
+
+    [AbpAuthorize(PermissionNames.Pages_Rooms_Edit)]
+    public async Task UpdateAsync(RoomDto input)
+    {
+        var entity = await roomRepository.GetAsync(input.Id);
+        ObjectMapper.Map(input, entity);
+        await roomRepository.UpdateAsync(entity);
+    }
+
+    public async Task UpdateStatusAsync(UpdateRoomStatusDto input)
+    {
+        var room = await roomRepository.GetAsync(input.RoomId);
+        var previousStatus = room.Status;
+        room.Status = input.Status;
+        await roomRepository.UpdateAsync(room);
+
+        await roomStatusLogRepository.InsertAsync(new RoomStatusLog
+        {
+            RoomId = input.RoomId,
+            Status = input.Status,
+            Remarks = input.Remarks ?? string.Empty,
+            ChangedAt = Abp.Timing.Clock.Now
+        });
+    }
+}

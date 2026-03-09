@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<localizationDictionary culture="en">
+	<texts>
+		<text name="HomePage" value="Home page" />
+		<text name="About" value="About" />
+		<text name="WelcomeMessage" value="Welcome to PMS!" />
+		<text name="FormIsNotValidMessage" value="Form is not valid. Please check and fix errors." />
+		<text name="TenantNameCanNotBeEmpty" value="Tenant name can not be empty" />
+		<text name="InvalidUserNameOrPassword" value="Invalid username or password" />
+		<text name="ThereIsNoTenantDefinedWithName{0}" value="There is no tenant defined with name {0}" />
+		<text name="TenantIsNotActive" value="Tenant {0} is not active." />
+		<text name="UserIsNotActiveAndCanNotLogin" value="User {0} is not active and can not log in." />
+		<text name="UserEmailIsNotConfirmedAndCanNotLogin">Your email address is not confirmed. You can not log in.</text>
+		<text name="UserLockedOutMessage">The user account has been locked out. Please try again later.</text>
+		<text name="PleaseEnterLoginInformation" value="Please enter login information" />
+		<text name="TenancyName" value="Tenancy name" />
+		<text name="UserNameOrEmail" value="User name or email" />
+		<text name="Password" value="Password" />
+		<text name="ResetPassword" value="Reset Password" />
+		<text name="ChangePassword" value="Change Password" />
+		<text name="RememberMe" value="Remember me" />
+		<text name="LogIn" value="Log in" />
+		<text name="BackToLogIn" value="Back to Log in" />
+		<text name="BackToMyAccount">Back to my account</text>
+		<text name="LoginFailed" value="Login failed!" />
+		<text name="NameSurname" value="Name surname" />
+		<text name="UserName" value="User name" />
+		<text name="Name" value="Name" />
+		<text name="Surname" value="Surname" />
+		<text name="EmailAddress" value="Email address" />
+		<text name="Tenants" value="Tenants" />
+		<text name="SavedSuccessfully" value="Saved successfully" />
+		<text name="UpdatedSuccessfully" value="Updated successfully" />
+		<text name="DeletedSuccessfully" value="Deleted successfully" />
+		<text name="CreateNewTenant" value="Create new tenant" />
+		<text name="AdminEmailAddress" value="Admin email address" />
+		<text name="AdminPassword" value="Admin password" />
+		<text name="Save" value="Save" />
+		<text name="Cancel" value="Cancel" />
+		<text name="Update" value="Update" />
+		<text name="SaveAndPrint" value="Save and Print" />
+		<text name="TenantName_Regex_Description" value="Tenant name must be at least 2 chars, starts with a letter and continue with letter, number, dash or underscore." />
+		<text name="DefaultPasswordIs" value="Default password is {0}" />
+		<text name="CanBeEmptyToLoginAsHost" value="Can be empty to log in as host." />
+		<text name="Register" value="Register" />
+		<text name="OrLoginWith" value="Or login with" />
+		<text name="WaitingForActivationMessage" value="Your account is waiting to be activated by system admin." />
+		<text name="TenantSelection" value="Tenant Selection" />
+		<text name="TenantSelection_Detail" value="Please select one of the following tenants." />
+		<text name="Logout" value="Logout" />
+		<text name="RegisterFormUserNameInvalidMessage">Please don't enter an email address for username.</text>
+		<text name="DatabaseConnectionString" value="Database connection string" />
+		<text name="Users" value="Users" />
+		<text name="IsActive" value="Is active" />
+		<text name="FullName" value="Full name" />
+		<text name="CreateNewUser" value="Create new user" />
+		<text name="Yes" value="Yes" />
+		<text name="No" value="No" />
+		<text name="Optional" value="Optional" />
+		<text name="LeaveEmptyToSwitchToHost">Leave empty to switch to the host</text>
+		<text name="CurrentTenant">Current tenant</text>
+		<text name="NotSelected">Not selected</text>
+		<text name="Change">Change</text>
+		<text name="ChangeTenant">Change tenant</text>
+		<text name="MultiLevelMenu">Multi Level Menu</text>
+		<text name="Back">Back</text>
+		<text name="BackOrderReceivedMessage">Items for SO {0} has arrived in the warehouse. PO: {1}, GRN: {2}</text>
+		<text name="SuccessfullyRegistered">Successfully registered. Please check your email.</text>
+		<text name="WaitingForEmailActivation">Your email address should be activated</text>
+		<text name="Roles">Roles</text>
+		<text name="DisplayName">Display Name</text>
+		<text name="Edit">Edit</text>
+		<text name="Delete">Delete</text>
+		<text name="CreateNewRole">Create new role</text>
+		<text name="RoleName">Role Name</text>
+		<text name="Actions">Actions</text>
+		<text name="CouldNotCompleteLoginOperation">Could not complete login operation. Please try again later.</text>
+		<text name="CouldNotValidateExternalUser">Could not validate external user</text>
+		<text name="EditRole">Edit role</text>
+		<text name="EditTenant">Edit tenant</text>
+		<text name="EditUser">Edit user</text>
+		<text name="TenantIdIsNotActive{0}">TenantId {0} is not active</text>
+		<text name="UnknownTenantId{0}">Unknown tenantId {0}</text>
+		<text name="ThisFieldIsRequired">This field is required</text>
+		<text name="PleaseWait">Please wait...</text>
+		<text name="Administration">Administration</text>
+		<text name="ClearAll">Clear all</text>
+		<text name="ClearOthers">Clear others</text>
+		<text name="LabelOptions">Label options</text>
+		<text name="Permissions">Permissions</text>
+		<text name="RoleDescription">Role description</text>
+		<text name="Refresh">Refresh</text>
+		<text name="Create">Create</text>
+		<text name="UserDetails">User details</text>
+		<text name="UserRoles">User roles</text>
+		<text name="ConfirmPassword">Confirm password</text>
+		<text name="Version">Version</text>
+		<text name="On">On</text>
+		<text name="Off">Off</text>
+		<text name="AreYouSureWantToDelete">Are you sure want to delete {0}?</text>
+		<text name="SuccessfullyDeleted">Successfully deleted</text>
+		<text name="StartTyping">Start Typing</text>
+		<text name="Skins">Skins</text>
+		<text name="Settings">Settings</text>
+		<text name="SystemAndGLSettings">System and GL Settings</text>
+		<text name="Filter">Filter</text>
+		<text name="CurrentPassword">Current Password</text>
+		<text name="NewPassword">New Password</text>
+		<text name="ConfirmNewPassword">Confirm New Password</text>
+		<text name="PasswordsDoNotMatch">Passwords do not match</text>
+		<text name="PasswordsMustBeAtLeast8CharactersContainLowercaseUppercaseNumber">Passwords must be at least 8 characters, contain a lowercase, uppercase, and number</text>
+		<text name="UserDeleteWarningMessage">User {0} will be deleted.</text>
+		<text name="RoleDeleteWarningMessage">Role {0} will be deleted and unassigned from all assigned users.</text>
+		<text name="TenantDeleteWarningMessage">Tenant {0} will be deleted.</text>
+		<text name="DeleteImageWarningMessage">Image will be deleted.</text>
+		<text name="SearchWithThreeDot">Search...</text>
+		<text name="PleaseEnterAtLeastNCharacter">Please enter at least {0} characters</text>
+		<text name="PleaseEnterNoMoreThanNCharacter">Please enter no more than {0} characters</text>
+		<text name="InvalidEmailAddress">Invalid email address</text>
+		<text name="InvalidPattern">Invalid</text>
+		<text name="PairsDoNotMatch">Do not match</text>
+		<text name="All">All</text>
+		<text name="TotalRecordsCount">Total: {0}</text>
+		<text name="Search">Search</text>
+		<text name="Clear">Clear</text>
+		<text name="ResetPasswordStepOneInfo">1. Enter your administrator password</text>
+		<text name="ResetPasswordStepTwoInfo">2. Copy this random password, so you can send it to the user</text>
+		<text name="UsersActivation">Users activation</text>
+		<text name="HangfireDashboard">Hangfire Dashboard</text>
+		<text name="YouAreAlreadyLoggedInWithUser">You are already logged in with user</text>
+		<text name="TestEmail_Subject">PMS Test email</text>
+		<text name="TestEmail_Body">This is a test email.</text>
+		<text name="EmailSettings">EmailSettings</text>
+		<text name="SMTPMail">SMTP Mail</text>
+		<text name="DefaultFromEmail">Default From Email</text>
+		<text name="DefaultSenderName">Default Sender Name</text>
+		<text name="SMTPHost">SMTP Host</text>
+		<text name="SMTPDomain">SMTP Domain</text>
+		<text name="SMTPPort">SMTP Port</text>
+		<text name="EnableSSL">Enable SSL</text>
+		<text name="UseDefaultCredentials">Use Default Credentials</text>
+		<text name="ForgotPassword">Forgot password?</text>
+		<text name="ForgotPasswordLinkText">I forgot my username or password</text>
+		<text name="Reset">Reset</text>
+		<text name="MailSent">Mail sent</text>
+		<text name="PasswordResetMailSentMessage">A password reset link sent to your e-mail address. Please check your emails.</text>
+		<text name="InvalidUserNameOrEmailAddress">Invalid user name or email address</text>
+		<text name="PasswordResetEmail_Subject">Password Reset</text>
+		<text name="PasswordResetEmail_Title">Password Reset</text>
+		<text name="PasswordResetEmail_SubTitle">This email is sent you to reset and re-create your password.</text>
+		<text name="PasswordResetEmail_ClickTheLinkBelowToResetYourPassword">Please click the link below to reset your password:</text>
+		<text name="EmailMessage_CopyTheLinkBelowToYourBrowser">If the button above doesn't work, paste this into your browser:</text>
+		<text name="ResetCode">Reset Code</text>
+		<text name="PasswordsDontMatch">Passwords do not match!</text>
+		<text name="Applications">Applications</text>
+		<text name="Web">Web</text>
+		<text name="Pages">Pages</text>
+		<text name="Activation">Activation</text>
+		<text name="DeleteWarningMessage">{0} will be deleted</text>
+		<text name="SaveWarningMessage">Are you sure you want to save this record?</text>
+		<text name="UpdateWarningMessage">Are you sure you want to update this record?</text>
+		<text name="ItemQuantityUpdated">Item quantity updated.</text>
+		<text name="ItemAddedToTheList">Item added to the list.</text>
+		<text name="ClickHere">Click here</text>
+		<text name="ImportFromExcel">Import from excel</text>
+		<text name="ImportToExcelSampleFileDownloadInfo">{0} to download sample import file.</text>
+		<text name="ImportUsersProcessStart">User import process has begun.</text>
+		<text name="ImportUsersUploadFailed">User import process has failed.</text>
+		<text name="ImportUsers">Import Users</text>
+		<text name="LogsUploaded">{0} logs uploaded from {1}</text>
+		<text name="AllUsersSuccessfullyImportedFromExcel">User import process has been completed successfully. All users in file are imported.</text>
+		<text name="FileCantBeConvertedToUserList">User import process has failed. File is invalid.</text>
+		<text name="{0}IsInvalid">"{0}" is invalid</text>
+		<text name="Exception">Exception</text>
+		<text name="InvalidUserImports">Invalid user imports</text>
+		<text name="ClickToSeeInvalidUsers">User import process has been completed. There are some invalid data. Click to see Invalid user imports.</text>
+		<text name="RoleDoesNotExistMessage">Role name '{0}' does not exist.</text>
+		<text name="MaximumUserCount">Maximum user count</text>
+		<text name="MaximumUserCount_Description">0 = unlimited</text>
+		<text name="MaximumUserCount_Error_Message">Reached maximum allowed user count!</text>
+		<text name="MaximumUserCount_Error_Detail">This tenant is allowed to have a maximum of {0} users.</text>
+		<text name="ApiKeys">API Keys</text>
+		<text name="ApiKey">API Key</text>
+		<text name="Api">API</text>
+		<text name="CreateApiKey">Create API Key</text>
+		<text name="CopiedToClipboardMessage">Copied to clipboard</text>
+		<text name="ApiKeyDeleteWarningMessage">Api Key {0} will be deleted. All client application that used this be revoked access.</text>
+		<text name="ApiClient">API Client</text>
+		<text name="MarkAllAsRead">Mark All As Read</text>
+		<text name="DeleteAllRead">Delete All Read</text>
+		<text name="Notifications">Notifications</text>
+		<text name="NoUnreadNotifications">You have no unread notifications.</text>
+		<text name="UserCompanyMailSentMessage">We have sent the links to your e-mail address. Please check your email.</text>
+		<text name="ForgotCompanyEmail_Subject">Request Access Link</text>
+		<text name="ForgotCompanyEmail_Title">Request Access Link</text>
+		<text name="ForgotCompanyEmail_SubTitle">This email is sent you to list companies you have joined.</text>
+		<text name="WelcomeTenantEmail_Subject">Welcome to PMS</text>
+		<text name="WelcomeTenantEmail_Title">Welcome to PMS</text>
+		<text name="WelcomeTenantEmail_SubTitle">Payroll Solutions at your fingertips.</text>
+		<text name="InvalidSubdomainName">{0} is an invalid subdomain name.</text>
+		<text name="InvalidLastnameOrSssNumber">Last name or SSS Number not found.</text>
+		<text name="EmployeeAccountExist">
+			<![CDATA[
+				Employee account already exist.
+				Username: {0}
+			]]>
+		</text>
+		<text name="EmailAlreadyExist">Email already exist.</text>
+		<text name="SssNumber">SSS Number</text>
+		<text name="SendEmail">Send Email</text>
+		<text name="SignUp">Sign Up</text>
+		<text name="RetrieveAccessUrl">Retrieve Access</text>
+		<text name="ForgotCompanyLinkText">I forgot my company URL</text>
+		<text name="FirstName">First Name</text>
+		<text name="LastName">Last Name</text>
+		<text name="MiddleName">Middle Name</text>
+		<text name="CompanyName">Company Name</text>
+		<text name="CompanyUrl">Company URL</text>
+		<text name="SuccessfullySignUpMessage">Thank you for signing-up to PMS. We sent you an email for more information.</text>
+		<text name="GlobalNotifications">Global Notifications</text>
+		<text name="WelcomeNewUserMessage">Welcome to PMS</text>
+		<text name="ItemAlreadyExists">Item already exists.</text>
+		<text name="ItemAddedSuccessfully">Item added.</text>
+		<text name="Remove">Remove</text>
+		<text name="RemoveItemWarningMessage">Are you sure you want to remove this item?</text>
+		<text name="DocNo">Doc. No.</text>
+		<text name="DocDate">Doc. Date</text>
+		<text name="ReferenceNo">Reference No.</text>
+		<text name="UnitCost">Unit Cost</text>
+		<text name="NoData">No data found.</text>
+		<text name="NoDataFound">No data found.</text>
+		<text name="NoItemsToSave">No items to save</text>
+		<text name="StockIn">Stock IN</text>
+		<text name="StockOut">Stock OUT</text>
+		<text name="Adjustment">Adjustment</text>
+		<text name="StockCard">Stock Card</text>
+		<text name="StockOnHand">Stock on hand</text>
+		<text name="ItemName">Item Name</text>
+		<text name="ReorderLevel">Reorder Level</text>
+		<text name="InStock">In Stock</text>
+		<text name="LowInStock">Low in Stock</text>
+		<text name="OutOfStock">Out of Stock</text>
+		<text name="ItemsBelowReorderLevel">Items Below Reorder Level</text>
+		<text name="PreparedBy">Prepared by</text>
+		<text name="PMSSummary">PMS Summary</text>
+		<text name="Items">Items</text>
+		<text name="StockAdjustment">Stock Adjustment</text>
+		<text name="Print">Print</text>
+		<text name="Export">Export</text>
+		<text name="BeginningStock">Beginning Stock</text>
+		<text name="EndingStock">Ending Stock</text>
+		<text name="ItemCode">Item Code</text>
+		<text name="ATDNo">ATD No.</text>
+		<text name="ATDStartDate">ATD Start Date</text>
+		<text name="ATDAmount">ATD Amount</text>
+		<text name="WithATD">With ATD</text>
+		<text name="PayFrequency">Pay Frequency</text>
+		<text name="EveryPayroll">Every Payroll</text>
+		<text name="FirstPayOfTheMonth">First pay of the month</text>
+		<text name="LastPayOfTheMonth">Last pay of the month</text>
+		<text name="NoOfDeduction">No. of deduction</text>
+		<text name="AmountToDeduct">Amount to deduct</text>
+        <text name="SyncFromPayroll">Sync from Payroll</text>
+        <text name="WithdrawalReport">Withdrawal Report</text>
+		<text name="BarcodeType">Barcode Type</text>
+		<text name="Barcode">Barcode</text>
+		<text name="IsPrimary">Is Primary</text>
+		<text name="AddBarcode">Add Barcode</text>
+		<text name="BarcodeAlreadyExists">Barcode already exists.</text>
+		<text name="DuplicateBarcodeInTheList">Duplicate barcode in the list.</text>
+		<text name="QuantityUpdated">Quantity updated.</text>
+		<text name="AddItemByBarcode">Add Item By Barcode</text>
+		<text name="NoImagesAvailable">No images available</text>
+		<text name="PhysicalCount">Physical Count</text>
+		<text name="PhysicalCounts">Physical Count</text>
+		<text name="PhysicalCountInProgress">Physical Count in Progress</text>
+		<text name="PerformPhysicalCount">Perform Physical Count</text>
+		<text name="InProgress">In Progress</text>
+		<text name="TransactionType">Transaction Type</text>
+		<text name="NoItemsAdded">No items added.</text>
+		<text name="AddItem">Add item</text>
+		<text name="AreYouSureYouWantToCompleteThisPhysicalCount">Are you sure you want to complete this physical count?</text>
+		<text name="DatePrinted">Date Printed</text>
+		<text name="StartedAt">Started At</text>
+		<text name="StartedBy">Started By</text>
+		<text name="CompletedAt">Completed At</text>
+		<text name="CompletedBy">Completed By</text>
+		<text name="CancelledAt">Cancelled At</text>
+		<text name="CancelledBy">Cancelled By</text>
+		<text name="UnitCosts">Unit Costs</text>
+		<text name="EffectiveDate">Effective Date</text>
+		<text name="Remarks">Remarks</text>
+		<text name="AddUnitCost">Add Unit Cost</text>
+		<text name="DuplicateEffectiveDateInTheList">Duplicate effective date in the list.</text>
+		<text name="UnitCostUpdated">Unit cost updated.</text>
+		<text name="ItemQuantityIncreased">Item quantity increased.</text>
+		<text name="SelectEmployee">Select Employee</text>
+		<text name="DateRange">Date Range</text>
+		<text name="SelectTransactionType">Select Transaction Type</text>
+		<text name="SelectCategory">Select Category</text>
+		<text name="SelectWarehouse">Select Warehouse</text>
+		<text name="SuccessfullyCreated">Successfully created</text>
+		<text name="AddAnother">Add Another</text>
+		<text name="BackToList">Back to List</text>
+		<text name="Employee">Employee</text>
+		<text name="ToWarehouse">To Warehouse</text>
+		<text name="Company">Company</text>
+		<text name="Supplier">Supplier</text>
+		<text name="FromWarehouse">From Warehouse</text>
+		<text name="ReturnedBy">Returned By</text>
+		<text name="Source">Source</text>
+		<text name="CreateStockIn">Create Stock In</text>
+		<text name="CreateStockOut">Create Stock Out</text>
+		<text name="CreateStockAdjustment">Create Stock Adjustment</text>
+		<text name="StockInReport">Stock In Report</text>
+		<text name="StockOutReport">Stock Out Report</text>
+		<text name="StockAdjustmentReport">Adjustment Report</text>
+		<text name="TransferReport">Transfer Report</text>
+		<text name="EmployeeDeductionReport">Employee Deduction Report</text>
+		<text name="PeriodFrom">Period From</text>
+		<text name="PeriodTo">Period To</text>
+		<text name="StockOutDocNo">Stock Out Doc No</text>
+		<text name="TransferQtyOut">Transfer Qty (Out)</text>
+		<text name="QtyReceivedIn">Qty Received (In)</text>
+		<text name="BarcodeScanner">Barcode Scanner</text>
+		<text name="ItemScannedAndQuantityIncremented">Item {0} scanned. Quantity incremented to {1}</text>
+		<text name="ItemNotFoundInPhysicalCountList">Item {0} not found in physical count list</text>
+		<text name="EmployeeDeduction">Employee Deduction</text>
+		<text name="EmployeeDeductions">Employee Deductions</text>
+		<text name="DateFrom">Date From</text>
+		<text name="DateTo">Date To</text>
+		<text name="StartPayDate">Start Pay Date</text>
+		<text name="NoOfPayDays">No. of Pay Days</text>
+		<text name="AmountPerPayDay">Amount per Pay Day</text>
+		<text name="TotalAmount">Total Amount</text>
+		<text name="CreateEmployeeDeduction">Create Employee Deduction</text>
+		<text name="CreateDeduction">Create Deduction</text>
+		<text name="NewEmployeeDeduction">New Employee Deduction</text>
+		<text name="PaymentDate">Payment Date</text>
+		<text name="Setup">Setup</text>
+		<text name="Transactions">Transactions</text>
+		<text name="Categories">Categories</text>
+		<text name="Start">Start</text>
+		<text name="Complete">Complete</text>
+		<text name="Reports">Reports</text>
+		<text name="BackgroundJobs">Background Jobs</text>
+		<text name="DeductionStartDate">Deduction Start Date</text>
+		<text name="TotalAmountPaid">Total Amount Paid</text>
+		<text name="Balance">Balance</text>
+		<text name="DeductionReport">Deduction Report</text>
+	</texts>
+</localizationDictionary>
+
+
+
+
+

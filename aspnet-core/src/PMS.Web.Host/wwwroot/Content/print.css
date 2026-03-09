@@ -1,0 +1,87 @@
+body {
+    font-size: 12px;
+}
+
+p {
+    margin: 0;
+    padding: 0;
+}
+
+.table {
+    font-size: 12px;
+}
+
+.table th, .table td {
+    padding: 0.25rem;
+}
+
+.w-50 {
+    min-width:50px;
+}
+
+.w-75 {
+    min-width: 75px;
+}
+
+.w-100 {
+    min-width: 100px;
+}
+
+.w-125 {
+    min-width: 125px;
+}
+
+.w-150 {
+    min-width: 150px;
+}
+
+.w-175{
+    min-width: 175px;
+}
+
+.w-200 {
+    min-width: 200px;
+}
+
+.w-250 {
+    min-width: 250px;
+}
+
+.wd-auto {
+    width: auto !important;
+}
+
+.wd-8p {
+    width: 8% !important;
+}
+
+.wd-10p {
+    width: 10% !important;
+}
+
+.wd-12p {
+    width: 12% !important;
+}
+
+.wd-15p {
+    width: 15% !important;
+}
+
+.wd-20p {
+    width: 20% !important;
+}
+
+.wd-22p {
+    width: 22% !important;
+}
+
+.wd-25p {
+    width: 25% !important;
+}
+
+.wd-50p {
+    width: 50% !important;
+}
+
+
+

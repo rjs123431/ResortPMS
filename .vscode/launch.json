@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET Core Launch (Web.Host)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/aspnet-core/src/PMS.Web.Host/bin/Debug/net9.0/PMS.Web.Host.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/aspnet-core/src/PMS.Web.Host",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/aspnet-core/src/PMS.Web.Host/Views"
+      }
+    }
+  ]
+}

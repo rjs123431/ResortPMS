@@ -1,0 +1,63 @@
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Abp.Auditing;
+using Abp.Authorization.Users;
+using Abp.Extensions;
+using Abp.MultiTenancy;
+using PMS.Validation;
+
+namespace PMS.Authorization.Accounts.Dto
+{
+    public class SignUpInput : IValidatableObject
+    {
+        [Required]
+        [StringLength(AbpTenantBase.MaxTenancyNameLength)]
+        [RegularExpression(AbpTenantBase.TenancyNameRegex)]
+        public string TenancyName { get; set; }
+
+        [Required]
+        [StringLength(AbpTenantBase.MaxNameLength)]
+        public string CompanyName { get; set; }
+
+        [Required]
+        [StringLength(AbpUserBase.MaxNameLength)]
+        public string FirstName { get; set; }
+
+        [Required]
+        [StringLength(AbpUserBase.MaxSurnameLength)]
+        public string LastName { get; set; }
+
+        [Required]
+        [StringLength(AbpUserBase.MaxUserNameLength)]
+        public string UserName { get; set; }
+
+        [Required]
+        [EmailAddress]
+        [StringLength(AbpUserBase.MaxEmailAddressLength)]
+        public string EmailAddress { get; set; }
+
+        [Required]
+        [StringLength(AbpUserBase.MaxPlainPasswordLength)]
+        [DisableAuditing]
+        public string Password { get; set; }
+
+        [DisableAuditing]
+        public string CaptchaResponse { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!UserName.IsNullOrEmpty())
+            {
+                if (!UserName.Equals(EmailAddress) && ValidationHelper.IsEmail(UserName))
+                {
+                    yield return new ValidationResult("Username cannot be an email address unless it's the same as your email address!");
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
