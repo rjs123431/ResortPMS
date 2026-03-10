@@ -1,11 +1,22 @@
-import { useMemo, useState } from 'react';
+  import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
-import type { LookupDto } from '@/types/resort.types';
+import { RoomChargeType, type ChargeTypeDto } from '@/types/resort.types';
 import { ChargeTypeDialogForm } from './ChargeTypeDialogForm';
+
+const getRoomChargeTypeLabel = (value: RoomChargeType) => {
+  switch (value) {
+    case RoomChargeType.Room:
+      return 'Room';
+    case RoomChargeType.ExtraBed:
+      return 'Extra Bed';
+    default:
+      return 'None';
+  }
+};
 
 export const ChargeTypeListPage = () => {
   const queryClient = useQueryClient();
@@ -15,7 +26,14 @@ export const ChargeTypeListPage = () => {
   const [filter, setFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<LookupDto>({ id: '', name: '', isActive: true });
+  const [form, setForm] = useState<ChargeTypeDto>({
+    id: '',
+    name: '',
+    category: '',
+    sort: 0,
+    roomChargeType: RoomChargeType.None,
+    isActive: true,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['resort-charge-types-paged', filter],
@@ -69,7 +87,14 @@ export const ChargeTypeListPage = () => {
                   type="button"
                   className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
                   onClick={() => {
-                    setForm({ id: '', name: '', isActive: true });
+                    setForm({
+                      id: '',
+                      name: '',
+                      category: '',
+                      sort: 0,
+                      roomChargeType: RoomChargeType.None,
+                      isActive: true,
+                    });
                     setShowCreate(true);
                   }}
                 >
@@ -86,6 +111,8 @@ export const ChargeTypeListPage = () => {
               <thead>
                 <tr className="border-b text-left">
                   <th className="p-2">Name</th>
+                  <th className="p-2">Category</th>
+                  <th className="p-2">Room Charge Type</th>
                   <th className="p-2">Active</th>
                   <th className="p-2">Actions</th>
                 </tr>
@@ -94,6 +121,8 @@ export const ChargeTypeListPage = () => {
                 {items.map((item) => (
                   <tr className="border-b" key={item.id}>
                     <td className="p-2">{item.name}</td>
+                    <td className="p-2">{item.category}</td>
+                    <td className="p-2">{getRoomChargeTypeLabel(item.roomChargeType)}</td>
                     <td className="p-2">{item.isActive ? 'Yes' : 'No'}</td>
                     <td className="p-2">
                       {canEdit ? (
@@ -123,9 +152,18 @@ export const ChargeTypeListPage = () => {
           onFormChange={(updater) => setForm((prev) => updater(prev))}
           onSave={() => {
             if (editingId) {
-              updateMutation.mutate(form);
+              updateMutation.mutate({
+                ...form,
+                name: (form.name ?? '').trim(),
+                category: (form.category ?? '').trim(),
+              });
             } else {
-              createMutation.mutate({ name: form.name });
+              createMutation.mutate({
+                name: (form.name ?? '').trim(),
+                category: (form.category ?? '').trim(),
+                sort: form.sort,
+                roomChargeType: form.roomChargeType,
+              });
             }
           }}
         />

@@ -10,6 +10,7 @@ using PMS.App.CheckIn.Dto;
 using PMS.Application.App.Services;
 using PMS.Authorization;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -18,6 +19,7 @@ namespace PMS.App.CheckIn;
 public interface ICheckInAppService : IApplicationService
 {
     Task<CheckInResultDto> CheckInFromReservationAsync(CheckInFromReservationDto input);
+    Task<CheckInResultDto> CheckInWalkInAsync(CheckInWalkInDto input);
     Task<CheckInResultDto> WalkInCheckInAsync(WalkInCheckInDto input);
 }
 
@@ -32,6 +34,7 @@ public class CheckInAppService(
     IRepository<StayGuest, Guid> stayGuestRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<FolioPayment, Guid> folioPaymentRepository,
+    IRepository<ChargeType, Guid> chargeTypeRepository,
     IRepository<Guest, Guid> guestRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
@@ -47,6 +50,7 @@ public class CheckInAppService(
             .Include(r => r.Guest)
             .Include(r => r.Rooms)
             .Include(r => r.ExtraBeds)
+                .ThenInclude(eb => eb.ExtraBedType)
             .Include(r => r.Guests)
             .Include(r => r.Deposits)
             .FirstOrDefaultAsync(r => r.Id == input.ReservationId);
@@ -66,35 +70,44 @@ public class CheckInAppService(
         if (reservation.Rooms == null || reservation.Rooms.Count == 0)
             throw new UserFriendlyException(L("ReservationMustHaveAtLeastOneRoom"));
 
-        // Validate room
-        var room = await ValidateAndGetRoomAsync(input.RoomId);
+        // Validate primary room
+        var primaryRoom = await ValidateAndGetRoomAsync(input.RoomId);
 
         await ApplyReservationRoomUpdatesAsync(reservation, input.ReservationRooms);
         await ApplyReservationExtraBedUpdatesAsync(reservation, input.ExtraBeds);
 
-        var reservationRoom = ResolveReservationRoomForCheckIn(reservation, room, input.ReservationRoomId);
+        var reservationRoom = ResolveReservationRoomForCheckIn(reservation, primaryRoom, input.ReservationRoomId);
 
-        // Find available rooms for reservation dates and ensure selected room is still free.
-        await EnsureRoomIsAvailableForReservationDatesAsync(
-            reservationId: reservation.Id,
-            roomId: room.Id,
-            arrivalDate: reservation.ArrivalDate,
-            departureDate: reservation.DepartureDate
-        );
+        var requestedRoomIds = BuildRequestedRoomIds(input.RoomId, input.ReservationRooms);
+        var rooms = new List<Room>();
+        foreach (var roomId in requestedRoomIds)
+        {
+            var room = roomId == primaryRoom.Id ? primaryRoom : await ValidateAndGetRoomAsync(roomId);
+            await EnsureRoomIsAvailableForReservationDatesAsync(
+                reservationId: reservation.Id,
+                roomId: room.Id,
+                arrivalDate: reservation.ArrivalDate,
+                departureDate: reservation.DepartureDate
+            );
+            rooms.Add(room);
+        }
 
         var stay = await CreateStayAsync(
             reservationId: reservation.Id,
             guest: reservation.Guest,
-            room: room,
+            primaryRoom: primaryRoom,
+            assignedRooms: rooms,
             expectedCheckOut: input.ExpectedCheckOutDate ?? reservation.DepartureDate,
             additionalGuestIds: input.AdditionalGuestIds ?? []
         );
 
         // Keep reservation room assignment in sync with the selected check-in room.
-        await AssignRoomToReservationRoomAsync(reservationRoom, room);
+        await AssignRoomToReservationRoomAsync(reservationRoom, primaryRoom);
 
-        // Transfer reservation deposits to folio as payments
+        // Post reservation charges, then transfer reservation deposits to folio as payments
         var folio = await CreateFolioAsync(stay);
+        await PostReservationChargesToFolioAsync(folio, reservation);
+
         var depositTotal = reservation.Deposits.Where(d => !d.IsDeleted).Sum(d => d.Amount);
         if (depositTotal > 0)
         {
@@ -137,11 +150,82 @@ public class CheckInAppService(
         await reservationRepository.UpdateAsync(reservation);
 
         // Extension point: sync room turn-over consumption (linen/amenities/etc.) when inventory module is available.
-        await UpdateInventoryAfterCheckInAsync(stay, room);
+        await UpdateInventoryAfterCheckInAsync(stay, primaryRoom);
 
         await CurrentUnitOfWork.SaveChangesAsync();
 
-        Logger.Info($"Check-in completed: Stay {stay.StayNo}, Room {room.RoomNumber}, Guest {reservation.Guest.GuestCode}.");
+        Logger.Info($"Check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {reservation.Guest.GuestCode}.");
+
+        return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_CheckIn_WalkIn)]
+    [UnitOfWork]
+    public async Task<CheckInResultDto> CheckInWalkInAsync(CheckInWalkInDto input)
+    {
+        var guest = await guestRepository.FirstOrDefaultAsync(input.GuestId);
+        if (guest == null)
+            throw new UserFriendlyException(L("GuestNotFound"));
+
+        var expectedCheckOut = input.ExpectedCheckOutDate ?? Clock.Now.Date.AddDays(1);
+        var primaryRoom = await ValidateAndGetRoomAsync(input.RoomId);
+        var requestedRoomIds = BuildRequestedRoomIds(input.RoomId, input.ReservationRooms);
+        var rooms = new List<Room>();
+        foreach (var roomId in requestedRoomIds)
+        {
+            var room = roomId == primaryRoom.Id ? primaryRoom : await ValidateAndGetRoomAsync(roomId);
+            rooms.Add(room);
+        }
+
+        var stay = await CreateStayAsync(
+            reservationId: null,
+            guest: guest,
+            primaryRoom: primaryRoom,
+            assignedRooms: rooms,
+            expectedCheckOut: expectedCheckOut,
+            additionalGuestIds: input.AdditionalGuestIds ?? []
+        );
+
+        var folio = await CreateFolioAsync(stay);
+
+        await PostWalkInRoomChargesToFolioAsync(folio, input.ReservationRooms, input.RoomId, expectedCheckOut);
+        await PostWalkInExtraBedChargesToFolioAsync(folio, input.ExtraBeds);
+
+        if (input.Payments != null)
+        {
+            foreach (var payment in input.Payments.Where(p => p.Amount > 0))
+            {
+                await PostAdvancePaymentAsync(
+                    folio,
+                    payment.Amount,
+                    payment.PaymentMethodId,
+                    payment.ReferenceNo,
+                    payment.PaidDate,
+                    "Check-in payment"
+                );
+            }
+        }
+
+        if (input.RefundableCashDepositAmount.HasValue && input.RefundableCashDepositAmount.Value > 0)
+        {
+            if (!input.RefundableCashDepositPaymentMethodId.HasValue)
+                throw new UserFriendlyException(L("PaymentMethodIsRequired"));
+
+            await PostAdvancePaymentAsync(
+                folio,
+                input.RefundableCashDepositAmount.Value,
+                input.RefundableCashDepositPaymentMethodId.Value,
+                input.RefundableCashDepositReference,
+                Clock.Now,
+                "Refundable cash deposit",
+                FolioTransactionType.DepositPayment
+            );
+        }
+
+        await UpdateInventoryAfterCheckInAsync(stay, primaryRoom);
+        await CurrentUnitOfWork.SaveChangesAsync();
+
+        Logger.Info($"Walk-in check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {guest.GuestCode}.");
 
         return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
     }
@@ -150,34 +234,27 @@ public class CheckInAppService(
     [UnitOfWork]
     public async Task<CheckInResultDto> WalkInCheckInAsync(WalkInCheckInDto input)
     {
-        var guest = await guestRepository.FirstOrDefaultAsync(input.GuestId);
-        if (guest == null)
-            throw new UserFriendlyException(L("GuestNotFound"));
+        if (input.AdvancePaymentAmount > 0 && !input.PaymentMethodId.HasValue)
+            throw new UserFriendlyException(L("PaymentMethodIsRequired"));
 
-        var room = await ValidateAndGetRoomAsync(input.RoomId);
-
-        var stay = await CreateStayAsync(
-            reservationId: null,
-            guest: guest,
-            room: room,
-            expectedCheckOut: input.ExpectedCheckOutDate,
-            additionalGuestIds: input.AdditionalGuestIds ?? []
-        );
-
-        var folio = await CreateFolioAsync(stay);
-
-        // Record walk-in advance payment if provided
-        if (input.AdvancePaymentAmount > 0)
+        var convertedInput = new CheckInWalkInDto
         {
-            if (!input.PaymentMethodId.HasValue)
-                throw new UserFriendlyException(L("PaymentMethodIsRequired"));
+            GuestId = input.GuestId,
+            RoomId = input.RoomId,
+            ExpectedCheckOutDate = input.ExpectedCheckOutDate,
+            AdditionalGuestIds = input.AdditionalGuestIds ?? [],
+            Payments = input.AdvancePaymentAmount > 0 && input.PaymentMethodId.HasValue
+                ? [new CheckInReservationPaymentDto
+                    {
+                        PaymentMethodId = input.PaymentMethodId.Value,
+                        Amount = input.AdvancePaymentAmount,
+                        PaidDate = Clock.Now,
+                        ReferenceNo = input.PaymentReference
+                    }]
+                : []
+        };
 
-            await PostAdvancePaymentAsync(folio, input.AdvancePaymentAmount, input.PaymentMethodId.Value, input.PaymentReference);
-        }
-
-        Logger.Info($"Walk-in check-in: Stay {stay.StayNo}, Room {room.RoomNumber}, Guest {guest.GuestCode}.");
-
-        return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
+        return await CheckInWalkInAsync(convertedInput);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -346,9 +423,26 @@ public class CheckInAppService(
         return Task.CompletedTask;
     }
 
-    private async Task<Stay> CreateStayAsync(Guid? reservationId, Guest guest, Room room, DateTime expectedCheckOut, Guid[] additionalGuestIds)
+    private static List<Guid> BuildRequestedRoomIds(Guid primaryRoomId, List<CheckInReservationRoomUpdateDto> reservationRooms)
+    {
+        var roomIds = reservationRooms?
+            .Where(x => x.RoomId != Guid.Empty)
+            .Select(x => x.RoomId)
+            .ToList() ?? [];
+
+        if (!roomIds.Contains(primaryRoomId))
+            roomIds.Insert(0, primaryRoomId);
+
+        return roomIds.Distinct().ToList();
+    }
+
+    private async Task<Stay> CreateStayAsync(Guid? reservationId, Guest guest, Room primaryRoom, IReadOnlyCollection<Room> assignedRooms, DateTime expectedCheckOut, Guid[] additionalGuestIds)
     {
         var stayNo = await documentNumberService.GenerateNextDocumentNumberAsync("STAY", "STY-");
+        var effectiveRooms = (assignedRooms == null || assignedRooms.Count == 0 ? [primaryRoom] : assignedRooms)
+            .GroupBy(r => r.Id)
+            .Select(g => g.First())
+            .ToList();
 
         var stay = new Stay
         {
@@ -359,8 +453,8 @@ public class CheckInAppService(
             CheckInDateTime = Clock.Now,
             ExpectedCheckOutDateTime = expectedCheckOut.Date.AddHours(12),
             Status = StayStatus.InHouse,
-            AssignedRoomId = room.Id,
-            RoomNumber = room.RoomNumber
+            AssignedRoomId = primaryRoom.Id,
+            RoomNumber = string.Join(", ", effectiveRooms.Select(r => r.RoomNumber))
         };
 
         var stayId = await stayRepository.InsertAndGetIdAsync(stay);
@@ -372,12 +466,18 @@ public class CheckInAppService(
         foreach (var gid in additionalGuestIds)
             await stayGuestRepository.InsertAsync(new StayGuest { StayId = stayId, GuestId = gid, IsPrimary = false });
 
-        // Record room assignment
-        await stayRoomRepository.InsertAsync(new StayRoom { StayId = stayId, RoomId = room.Id, AssignedAt = Clock.Now });
+        // Record all requested room assignments for this stay.
+        foreach (var room in effectiveRooms)
+        {
+            await stayRoomRepository.InsertAsync(new StayRoom { StayId = stayId, RoomId = room.Id, AssignedAt = Clock.Now });
+        }
 
-        // Mark room as occupied
-        room.Status = RoomStatus.Occupied;
-        await roomRepository.UpdateAsync(room);
+        // Mark assigned rooms as occupied.
+        foreach (var room in effectiveRooms)
+        {
+            room.Status = RoomStatus.Occupied;
+            await roomRepository.UpdateAsync(room);
+        }
 
         stay.Id = stayId;
         return stay;
@@ -422,6 +522,239 @@ public class CheckInAppService(
 
         folio.Balance -= depositTotal;
         await folioRepository.UpdateAsync(folio);
+    }
+
+    private async Task PostReservationChargesToFolioAsync(Folio folio, Reservation reservation)
+    {
+        var roomChargeTypeId = await ResolveChargeTypeIdByRoomChargeTypeAsync(RoomChargeType.Room);
+        var extraBedChargeTypeId = await ResolveChargeTypeIdByRoomChargeTypeAsync(RoomChargeType.ExtraBed);
+
+        decimal totalPostedCharges = 0m;
+
+        foreach (var roomLine in reservation.Rooms)
+        {
+            var netAmount = roomLine.NetAmount > 0
+                ? roomLine.NetAmount
+                : Math.Max(0m, roomLine.Amount - roomLine.DiscountAmount - roomLine.SeniorCitizenDiscountAmount);
+
+            if (netAmount <= 0)
+                continue;
+
+            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            {
+                FolioId = folio.Id,
+                TransactionDate = Clock.Now,
+                TransactionType = FolioTransactionType.Charge,
+                ChargeTypeId = roomChargeTypeId,
+                Description = $"Room charge - {roomLine.RoomTypeName}" +
+                              (string.IsNullOrWhiteSpace(roomLine.RoomNumber) ? string.Empty : $" ({roomLine.RoomNumber})"),
+                Quantity = 1,
+                UnitPrice = netAmount,
+                Amount = roomLine.Amount > 0 ? roomLine.Amount : netAmount,
+                DiscountAmount = roomLine.DiscountAmount + roomLine.SeniorCitizenDiscountAmount,
+                NetAmount = netAmount,
+                IsVoided = false
+            });
+
+            totalPostedCharges += netAmount;
+        }
+
+        foreach (var extraBedLine in reservation.ExtraBeds)
+        {
+            var netAmount = extraBedLine.NetAmount > 0
+                ? extraBedLine.NetAmount
+                : Math.Max(0m, extraBedLine.Amount - extraBedLine.DiscountAmount - extraBedLine.SeniorCitizenDiscountAmount);
+
+            if (netAmount <= 0)
+                continue;
+
+            var extraBedName = extraBedLine.ExtraBedType?.Name ?? "Extra bed";
+
+            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            {
+                FolioId = folio.Id,
+                TransactionDate = Clock.Now,
+                TransactionType = FolioTransactionType.Charge,
+                ChargeTypeId = extraBedChargeTypeId,
+                Description = $"Extra bed charge - {extraBedName}",
+                Quantity = extraBedLine.Quantity > 0 ? extraBedLine.Quantity : 1,
+                UnitPrice = extraBedLine.RatePerNight,
+                Amount = extraBedLine.Amount > 0 ? extraBedLine.Amount : netAmount,
+                DiscountAmount = extraBedLine.DiscountAmount + extraBedLine.SeniorCitizenDiscountAmount,
+                NetAmount = netAmount,
+                IsVoided = false
+            });
+
+            totalPostedCharges += netAmount;
+        }
+
+        if (totalPostedCharges > 0)
+        {
+            folio.Balance += totalPostedCharges;
+            await folioRepository.UpdateAsync(folio);
+        }
+    }
+
+    private async Task PostWalkInExtraBedChargesToFolioAsync(Folio folio, System.Collections.Generic.List<CheckInReservationExtraBedDto> extraBeds)
+    {
+        if (extraBeds == null || extraBeds.Count == 0)
+            return;
+
+        var extraBedChargeTypeId = await ResolveChargeTypeIdByRoomChargeTypeAsync(RoomChargeType.ExtraBed);
+        decimal totalPostedCharges = 0m;
+
+        foreach (var row in extraBeds)
+        {
+            if (row.Quantity <= 0 || row.RatePerNight < 0)
+                continue;
+
+            var netAmount = row.Amount > 0
+                ? row.Amount
+                : row.Quantity * row.RatePerNight * (row.NumberOfNights > 0 ? row.NumberOfNights : 1);
+
+            if (netAmount <= 0)
+                continue;
+
+            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            {
+                FolioId = folio.Id,
+                TransactionDate = Clock.Now,
+                TransactionType = FolioTransactionType.Charge,
+                ChargeTypeId = extraBedChargeTypeId,
+                Description = "Extra bed charge",
+                Quantity = row.Quantity,
+                UnitPrice = row.RatePerNight,
+                Amount = netAmount,
+                DiscountAmount = 0,
+                NetAmount = netAmount,
+                IsVoided = false
+            });
+
+            totalPostedCharges += netAmount;
+        }
+
+        if (totalPostedCharges > 0)
+        {
+            folio.Balance += totalPostedCharges;
+            await folioRepository.UpdateAsync(folio);
+        }
+    }
+
+    private async Task PostWalkInRoomChargesToFolioAsync(
+        Folio folio,
+        System.Collections.Generic.List<CheckInReservationRoomUpdateDto> reservationRooms,
+        Guid fallbackRoomId,
+        DateTime expectedCheckOut)
+    {
+        var stayNights = Math.Max(1, (int)(expectedCheckOut.Date - Clock.Now.Date).TotalDays);
+        var roomChargeTypeId = await ResolveChargeTypeIdByRoomChargeTypeAsync(RoomChargeType.Room);
+
+        var roomLines = reservationRooms?.Where(x => x.RoomId != Guid.Empty).ToList() ?? [];
+        if (roomLines.Count == 0)
+        {
+            roomLines.Add(new CheckInReservationRoomUpdateDto
+            {
+                RoomId = fallbackRoomId,
+                RoomTypeId = Guid.Empty,
+                ReservationRoomId = Guid.Empty,
+                NumberOfNights = stayNights
+            });
+        }
+
+        var uniqueRoomIds = roomLines
+            .Select(x => x.RoomId)
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (uniqueRoomIds.Count == 0)
+            return;
+
+        var roomsById = await roomRepository.GetAll()
+            .Where(r => uniqueRoomIds.Contains(r.Id))
+            .Select(r => new { r.Id, r.RoomTypeId, r.RoomNumber })
+            .ToListAsync();
+
+        var roomTypeIds = roomsById.Select(x => x.RoomTypeId).Distinct().ToList();
+        var roomTypes = await roomTypeRepository.GetAll()
+            .Where(rt => roomTypeIds.Contains(rt.Id))
+            .Select(rt => new { rt.Id, rt.Name, rt.BaseRate })
+            .ToListAsync();
+
+        var roomTypeById = roomTypes.ToDictionary(x => x.Id, x => x);
+        var lineByRoomId = roomLines
+            .GroupBy(x => x.RoomId)
+            .ToDictionary(g => g.Key, g => g.First());
+        decimal totalPostedCharges = 0m;
+
+        foreach (var room in roomsById)
+        {
+            if (!roomTypeById.TryGetValue(room.RoomTypeId, out var roomType))
+                continue;
+
+            lineByRoomId.TryGetValue(room.Id, out var inputLine);
+
+            var nights = inputLine?.NumberOfNights > 0 ? inputLine.NumberOfNights : stayNights;
+            var unitPrice = inputLine?.RatePerNight > 0 ? inputLine.RatePerNight : roomType.BaseRate;
+            var fallbackAmount = unitPrice * nights;
+
+            var amount = inputLine?.Amount > 0 ? inputLine.Amount : fallbackAmount;
+            var discountAmount = inputLine?.DiscountAmount > 0 ? inputLine.DiscountAmount : 0m;
+            var netAmount = inputLine?.NetAmount > 0
+                ? inputLine.NetAmount
+                : Math.Max(0m, amount - discountAmount);
+
+            if (netAmount <= 0)
+                continue;
+
+            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            {
+                FolioId = folio.Id,
+                TransactionDate = Clock.Now,
+                TransactionType = FolioTransactionType.Charge,
+                ChargeTypeId = roomChargeTypeId,
+                Description = $"Room charge - {roomType.Name} ({room.RoomNumber})",
+                Quantity = 1,
+                UnitPrice = unitPrice,
+                Amount = amount,
+                DiscountAmount = discountAmount,
+                NetAmount = netAmount,
+                IsVoided = false
+            });
+
+            totalPostedCharges += netAmount;
+        }
+
+        if (totalPostedCharges > 0)
+        {
+            folio.Balance += totalPostedCharges;
+            await folioRepository.UpdateAsync(folio);
+        }
+    }
+
+    private async Task<Guid> ResolveChargeTypeIdByRoomChargeTypeAsync(RoomChargeType roomChargeType)
+    {
+        var activeChargeTypeId = await chargeTypeRepository.GetAll()
+            .Where(x => x.IsActive && x.RoomChargeType == roomChargeType)
+            .Select(x => x.Id)
+            .FirstOrDefaultAsync();
+
+        if (activeChargeTypeId != Guid.Empty)
+        {
+            return activeChargeTypeId;
+        }
+
+        var chargeTypeId = await chargeTypeRepository.GetAll()
+            .Where(x => x.RoomChargeType == roomChargeType)
+            .Select(x => x.Id)
+            .FirstOrDefaultAsync();
+
+        if (chargeTypeId == Guid.Empty)
+        {
+            throw new UserFriendlyException($"No ChargeType is configured for RoomChargeType '{roomChargeType}'.");
+        }
+
+        return chargeTypeId;
     }
 
     private async Task PostAdvancePaymentAsync(

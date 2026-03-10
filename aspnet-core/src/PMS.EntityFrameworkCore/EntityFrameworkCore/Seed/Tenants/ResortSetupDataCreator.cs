@@ -53,8 +53,8 @@ public class ResortSetupDataCreator
                 Name = "Superior Twin Room",
                 Description = "2 twin beds; 40 m2; Balcony; Sea view; Air conditioning; Attached bathroom; Free toiletries",
                 MaxAdults = 2,
-                MaxChildren = 1,
-                BaseRate = 4073m,
+                MaxChildren = 2,
+                BaseRate = 3215m,
                 LegacyNames = new[] { "Standard" }
             },
             new
@@ -149,13 +149,13 @@ public class ResortSetupDataCreator
     {
         var definitions = new[]
         {
-            new ChargeType { Name = "Room Charge", Category = "Room", IsRoomCharge = true, IsActive = true },
-            new ChargeType { Name = "Extra Bed", Category = "Room", IsRoomCharge = true, IsActive = true },
-            new ChargeType { Name = "Mini Bar", Category = "Food", IsRoomCharge = false, IsActive = true },
-            new ChargeType { Name = "Restaurant", Category = "Food", IsRoomCharge = false, IsActive = true },
-            new ChargeType { Name = "Laundry", Category = "Service", IsRoomCharge = false, IsActive = true },
-            new ChargeType { Name = "Spa", Category = "Service", IsRoomCharge = false, IsActive = true },
-            new ChargeType { Name = "Airport Transfer", Category = "Transport", IsRoomCharge = false, IsActive = true },
+            new ChargeType { Name = "Room Charge", Category = "Room", IsRoomCharge = true, RoomChargeType = RoomChargeType.Room, Sort = 0, IsActive = true },
+            new ChargeType { Name = "Extra Bed", Category = "Room", IsRoomCharge = true, RoomChargeType = RoomChargeType.ExtraBed, Sort = 1, IsActive = true },
+            new ChargeType { Name = "Mini Bar", Category = "Food", IsRoomCharge = false, RoomChargeType = RoomChargeType.None, Sort = 2, IsActive = true },
+            new ChargeType { Name = "Restaurant", Category = "Food", IsRoomCharge = false, RoomChargeType = RoomChargeType.None, Sort = 2, IsActive = true },
+            new ChargeType { Name = "Laundry", Category = "Service", IsRoomCharge = false, RoomChargeType = RoomChargeType.None, Sort = 2, IsActive = true },
+            new ChargeType { Name = "Spa", Category = "Service", IsRoomCharge = false, RoomChargeType = RoomChargeType.None, Sort = 2, IsActive = true },
+            new ChargeType { Name = "Airport Transfer", Category = "Transport", IsRoomCharge = false, RoomChargeType = RoomChargeType.None, Sort = 2, IsActive = true },
         };
 
         _context.ChargeTypes.AddRange(definitions);

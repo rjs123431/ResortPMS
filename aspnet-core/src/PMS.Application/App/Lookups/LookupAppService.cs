@@ -59,24 +59,49 @@ public class ChargeTypeAppService(
             .WhereIf(input.IsActive.HasValue, x => x.IsActive == input.IsActive);
 
         var total = await query.CountAsync();
-        var items = await query.OrderBy(input.Sorting ?? "Name").PageBy(input).ToListAsync();
+        var items = await query.OrderBy(input.Sorting ?? "Sort asc, Name asc").PageBy(input).ToListAsync();
         return new PagedResultDto<ChargeTypeListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<ChargeTypeListDto>>(items));
     }
 
     public async Task<System.Collections.Generic.List<ChargeTypeListDto>> GetAllActiveAsync()
     {
-        var items = await chargeTypeRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+        var items = await chargeTypeRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Sort).ThenBy(x => x.Name).ToListAsync();
         return ObjectMapper.Map<System.Collections.Generic.List<ChargeTypeListDto>>(items);
     }
 
     [AbpAuthorize(PermissionNames.Pages_ChargeTypes_Create)]
     public async Task<Guid> CreateAsync(CreateChargeTypeDto input)
     {
-        var exists = await chargeTypeRepository.GetAll().AnyAsync(x => x.Name == input.Name.Trim());
+        var name = input.Name?.Trim() ?? string.Empty;
+        var category = input.Category?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new UserFriendlyException("Charge type name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            throw new UserFriendlyException("Category is required.");
+        }
+
+        var exists = await chargeTypeRepository.GetAll().AnyAsync(x => x.Name == name);
         if (exists) throw new UserFriendlyException(L("ChargeTypeNameAlreadyExists"));
 
+        if (input.RoomChargeType != RoomChargeType.None)
+        {
+            var duplicateRoomChargeType = await chargeTypeRepository.GetAll()
+                .AnyAsync(x => x.RoomChargeType == input.RoomChargeType);
+
+            if (duplicateRoomChargeType)
+            {
+                throw new UserFriendlyException("Only one charge type can use the selected RoomChargeType.");
+            }
+        }
+
         var entity = ObjectMapper.Map<ChargeType>(input);
-        entity.Name = input.Name.Trim();
+        entity.Name = name;
+        entity.Category = category;
         entity.IsActive = true;
 
         return await chargeTypeRepository.InsertAndGetIdAsync(entity);
@@ -86,8 +111,33 @@ public class ChargeTypeAppService(
     public async Task UpdateAsync(ChargeTypeDto input)
     {
         var entity = await chargeTypeRepository.GetAsync(input.Id);
+        var name = input.Name?.Trim() ?? string.Empty;
+        var category = input.Category?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new UserFriendlyException("Charge type name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            throw new UserFriendlyException("Category is required.");
+        }
+
+        if (input.RoomChargeType != RoomChargeType.None)
+        {
+            var duplicateRoomChargeType = await chargeTypeRepository.GetAll()
+                .AnyAsync(x => x.Id != input.Id && x.RoomChargeType == input.RoomChargeType);
+
+            if (duplicateRoomChargeType)
+            {
+                throw new UserFriendlyException("Only one charge type can use the selected RoomChargeType.");
+            }
+        }
+
         ObjectMapper.Map(input, entity);
-        entity.Name = input.Name.Trim();
+        entity.Name = name;
+        entity.Category = category;
         await chargeTypeRepository.UpdateAsync(entity);
     }
 }

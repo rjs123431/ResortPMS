@@ -32,6 +32,12 @@ export enum StayStatus {
   Cancelled = 3,
 }
 
+export enum RoomChargeType {
+  None = 0,
+  Room = 1,
+  ExtraBed = 2,
+}
+
 export interface GuestListDto {
   id: string;
   guestCode: string;
@@ -248,8 +254,17 @@ export interface CheckOutStatementDto {
   totalPayments: number;
   balanceDue: number;
   overPayment: number;
+  stayRooms?: StayRoomRecordDto[];
   transactions?: StatementLineDto[];
   payments?: StatementPaymentDto[];
+}
+
+export interface StayRoomRecordDto {
+  stayRoomId: string;
+  roomId: string;
+  roomNumber: string;
+  assignedAt: string;
+  releasedAt?: string;
 }
 
 export interface StatementLineDto {
@@ -396,6 +411,27 @@ export interface CreateLookupDto {
 }
 
 export interface LookupDto extends CreateLookupDto {
+  id: string;
+  isActive: boolean;
+}
+
+export interface ChargeTypeListDto {
+  id: string;
+  name: string;
+  category: string;
+  sort: number;
+  roomChargeType: RoomChargeType;
+  isActive: boolean;
+}
+
+export interface CreateChargeTypeDto {
+  name: string;
+  category: string;
+  sort: number;
+  roomChargeType: RoomChargeType;
+}
+
+export interface ChargeTypeDto extends CreateChargeTypeDto {
   id: string;
   isActive: boolean;
 }

@@ -15,6 +15,14 @@ public class ChargeTypeDto : EntityDto<Guid>
     [StringLength(64)]
     public string Name { get; set; }
 
+    [Required]
+    [StringLength(64)]
+    public string Category { get; set; }
+
+    public int Sort { get; set; }
+
+    public RoomChargeType RoomChargeType { get; set; }
+
     public bool IsActive { get; set; }
 }
 
@@ -22,6 +30,9 @@ public class ChargeTypeDto : EntityDto<Guid>
 public class ChargeTypeListDto : EntityDto<Guid>
 {
     public string Name { get; set; }
+    public string Category { get; set; }
+    public int Sort { get; set; }
+    public RoomChargeType RoomChargeType { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -32,6 +43,14 @@ public class CreateChargeTypeDto
     [StringLength(64)]
     public string Name { get; set; }
 
+    [Required]
+    [StringLength(64)]
+    public string Category { get; set; }
+
+    public int Sort { get; set; }
+
+    public RoomChargeType RoomChargeType { get; set; }
+
 }
 
 public class GetChargeTypesInput : PagedResultFilterRequestDto, IShouldNormalize
@@ -40,7 +59,7 @@ public class GetChargeTypesInput : PagedResultFilterRequestDto, IShouldNormalize
 
     public void Normalize()
     {
-        Sorting ??= "Name";
+        Sorting ??= "Sort asc, Name asc";
     }
 }
 

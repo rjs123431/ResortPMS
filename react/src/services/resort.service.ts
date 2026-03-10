@@ -1,7 +1,10 @@
 import { api } from './api.service';
 import {
   ApiResponse,
+  ChargeTypeDto,
+  ChargeTypeListDto,
   CheckInResultDto,
+  CreateChargeTypeDto,
   CreateLookupDto,
   CheckOutResultDto,
   CheckOutStatementDto,
@@ -259,6 +262,43 @@ export const resortService = {
     return response.data.result;
   },
 
+  checkInWalkIn: async (input: {
+    guestId: string;
+    roomId: string;
+    reservationRoomId?: string;
+    expectedCheckOutDate?: string;
+    reservationRooms?: {
+      reservationRoomId?: string;
+      roomTypeId: string;
+      roomId: string;
+      ratePerNight?: number;
+      numberOfNights?: number;
+      amount?: number;
+      discountAmount?: number;
+      netAmount?: number;
+    }[];
+    extraBeds?: {
+      extraBedTypeId?: string;
+      arrivalDate: string;
+      departureDate: string;
+      quantity: number;
+      ratePerNight: number;
+      numberOfNights: number;
+      amount: number;
+    }[];
+    payments?: { paymentMethodId: string; amount: number; paidDate?: string; referenceNo?: string }[];
+    refundableCashDepositAmount?: number;
+    refundableCashDepositPaymentMethodId?: string;
+    refundableCashDepositReference?: string;
+    additionalGuestIds?: string[];
+  }) => {
+    const response = await api.post<ApiResponse<CheckInResultDto>>('/api/services/app/CheckIn/CheckInWalkIn', {
+      ...input,
+      additionalGuestIds: input.additionalGuestIds ?? [],
+    });
+    return response.data.result;
+  },
+
   getInHouseStays: async (filter = '', skipCount = 0, maxResultCount = 50) => {
     const response = await api.get<ApiResponse<PagedResultDto<StayListDto>>>('/api/services/app/Stay/GetInHouse', {
       params: {
@@ -286,15 +326,15 @@ export const resortService = {
   },
 
   getChargeTypes: async () => {
-    const response = await api.get<ApiResponse<LookupListDto[]>>('/api/services/app/ChargeType/GetAllActive');
+    const response = await api.get<ApiResponse<ChargeTypeListDto[]>>('/api/services/app/ChargeType/GetAllActive');
     return response.data.result;
   },
 
   getChargeTypesPaged: async (filter = '', skipCount = 0, maxResultCount = 100) => {
-    const response = await api.get<ApiResponse<PagedResultDto<LookupListDto>>>('/api/services/app/ChargeType/GetAll', {
+    const response = await api.get<ApiResponse<PagedResultDto<ChargeTypeListDto>>>('/api/services/app/ChargeType/GetAll', {
       params: {
         Filter: filter,
-        Sorting: 'Name asc',
+        Sorting: 'Sort asc, Name asc',
         SkipCount: skipCount,
         MaxResultCount: maxResultCount,
       },
@@ -303,18 +343,18 @@ export const resortService = {
   },
 
   getChargeType: async (id: string) => {
-    const response = await api.get<ApiResponse<LookupDto>>('/api/services/app/ChargeType/Get', {
+    const response = await api.get<ApiResponse<ChargeTypeDto>>('/api/services/app/ChargeType/Get', {
       params: { id },
     });
     return response.data.result;
   },
 
-  createChargeType: async (input: CreateLookupDto) => {
+  createChargeType: async (input: CreateChargeTypeDto) => {
     const response = await api.post<ApiResponse<string>>('/api/services/app/ChargeType/Create', input);
     return response.data.result;
   },
 
-  updateChargeType: async (input: LookupDto) => {
+  updateChargeType: async (input: ChargeTypeDto) => {
     await api.put('/api/services/app/ChargeType/Update', input);
   },
 
@@ -405,6 +445,10 @@ export const resortService = {
     await api.post('/api/services/app/Stay/PostPayment', input);
   },
 
+  postRefund: async (input: { stayId: string; amount: number; description?: string }) => {
+    await api.post('/api/services/app/Stay/PostRefund', input);
+  },
+
   getCheckoutStatement: async (stayId: string) => {
     const response = await api.get<ApiResponse<CheckOutStatementDto>>('/api/services/app/CheckOut/GetStatement', {
       params: { stayId },
@@ -412,11 +456,32 @@ export const resortService = {
     return response.data.result;
   },
 
-  processCheckout: async (stayId: string, paymentMethodId: string, amount: number, referenceNo?: string) => {
-    const response = await api.post<ApiResponse<CheckOutResultDto>>('/api/services/app/CheckOut/ProcessCheckOut', {
-      stayId,
-      payments: [{ paymentMethodId, amount, referenceNo }],
-    });
+  processCheckout: async (
+    inputOrStayId:
+      | {
+          stayId: string;
+          payments?: { paymentMethodId: string; amount: number; referenceNo?: string }[];
+        }
+      | string,
+    paymentMethodId?: string,
+    amount?: number,
+    referenceNo?: string,
+  ) => {
+    const payload =
+      typeof inputOrStayId === 'string'
+        ? {
+            stayId: inputOrStayId,
+            payments:
+              paymentMethodId && amount && amount > 0
+                ? [{ paymentMethodId, amount, referenceNo }]
+                : [],
+          }
+        : {
+            stayId: inputOrStayId.stayId,
+            payments: inputOrStayId.payments ?? [],
+          };
+
+    const response = await api.post<ApiResponse<CheckOutResultDto>>('/api/services/app/CheckOut/ProcessCheckOut', payload);
     return response.data.result;
   },
 

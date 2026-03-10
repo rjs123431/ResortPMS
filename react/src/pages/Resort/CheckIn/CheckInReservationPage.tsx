@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus } from '@/types/resort.types';
-import { AddExtraBedDialog } from '../Reservations/AddExtraBedDialog';
-import { AddPaymentDialog } from '../Reservations/AddPaymentDialog';
+import { ReservationStatus, RoomStatus } from '@/types/resort.types';
+import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
+import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
+import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 
 type ReservationRoomEdit = {
   reservationRoomId: string;
@@ -154,7 +155,10 @@ export const CheckInReservationPage = () => {
     );
 
     return (availableRooms ?? []).filter(
-      (room) => room.roomTypeId === assignDialogRoomLine.roomTypeId && !assignedRoomIds.has(room.id),
+      (room) =>
+        room.roomTypeId === assignDialogRoomLine.roomTypeId &&
+        (room.status === RoomStatus.VacantClean || room.status === RoomStatus.VacantDirty) &&
+        !assignedRoomIds.has(room.id),
     );
   }, [assignDialogRoomLine, roomEdits, availableRooms]);
 
@@ -339,27 +343,6 @@ export const CheckInReservationPage = () => {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reservation Detail Check-In</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Review reservation details and process check-in.</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded bg-primary-600 px-3 py-2 text-sm text-white disabled:opacity-50"
-              disabled={
-                checkInMutation.isPending ||
-                Boolean(cannotCheckInMessage) ||
-                !reservationId ||
-                !selectedReservationRoomId ||
-                !selectedStayRoomId ||
-                !expectedCheckOutDate ||
-                (refundableDeposit > 0 && !refundableDepositPaymentMethodId)
-              }
-              onClick={() => checkInMutation.mutate()}
-            >
-              {checkInMutation.isPending ? 'Checking In...' : 'Complete Check-In'}
-            </button>
-            <Link to="/reservations" className="rounded border px-3 py-2 text-sm dark:border-gray-600">
-              Back
-            </Link>
-          </div>
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
@@ -417,11 +400,11 @@ export const CheckInReservationPage = () => {
                               <td className="p-2 text-center">
                                 <button
                                   type="button"
-                                  className="rounded bg-primary-600 px-2 py-1 text-xs text-white disabled:opacity-50"
+                                  className="rounded bg-primary-600 px-2 py-1 text-xs text-white hover:bg-primary-700 disabled:opacity-50"
                                   disabled={Boolean(cannotCheckInMessage)}
                                   onClick={() => openAssignRoomDialog(room.id)}
                                 >
-                                  {roomNumber ? 'Change Room' : 'Assign'}
+                                  {roomNumber ? 'Change Room' : 'Assign Room'}
                                 </button>
                               </td>
                               <td className="p-2 text-right tabular-nums">{formatMoney(room.ratePerNight)}</td>
@@ -585,8 +568,33 @@ export const CheckInReservationPage = () => {
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className="rounded border px-4 py-2 dark:border-gray-600" onClick={() => navigate(`/reservations/${reservationId}`)}>Cancel</button>
+              <div className="flex flex-wrap justify-end gap-2 border-t pt-3 dark:border-gray-700">
+                {reservationDetail.status === ReservationStatus.CheckedIn ? (
+                  <button
+                    type="button"
+                    className="rounded bg-emerald-700 px-4 py-2 text-sm text-white"
+                    onClick={() => navigate('/stays')}
+                  >
+                    Open Stay Information
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="rounded bg-primary-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+                    disabled={
+                      checkInMutation.isPending ||
+                      Boolean(cannotCheckInMessage) ||
+                      !reservationId ||
+                      !selectedReservationRoomId ||
+                      !selectedStayRoomId ||
+                      !expectedCheckOutDate ||
+                      (refundableDeposit > 0 && !refundableDepositPaymentMethodId)
+                    }
+                    onClick={() => checkInMutation.mutate()}
+                  >
+                    {checkInMutation.isPending ? 'Checking In...' : 'Complete Check-In'}
+                  </button>
+                )}
               </div>
             </div>
           ) : null}
@@ -622,84 +630,16 @@ export const CheckInReservationPage = () => {
         }}
       />
 
-      {assignDialogReservationRoomId ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">{isChangeRoomDialog ? 'Change Room' : 'Assign Room'}</h3>
-              <button
-                type="button"
-                className="rounded border px-2 py-1 text-xs dark:border-gray-600"
-                onClick={closeAssignRoomDialog}
-              >
-                Close
-              </button>
-            </div>
-
-            <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">
-              {assignDialogRoomLine ? `Select available ${assignDialogRoomLine.roomTypeName} room.` : 'Select available room.'}
-            </p>
-
-            {assignDialogAvailableRooms.length === 0 ? (
-              <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-200">
-                No available rooms for this room type.
-              </p>
-            ) : (
-              <div className="max-h-64 overflow-y-auto rounded border dark:border-gray-700">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left dark:border-gray-700">
-                      <th className="p-2">Select</th>
-                      <th className="p-2">Room No.</th>
-                      <th className="p-2">Floor</th>
-                      <th className="p-2 text-right">Base Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {assignDialogAvailableRooms.map((room) => (
-                      <tr
-                        key={room.id}
-                        className={`border-b dark:border-gray-700 ${assignDialogSelectedRoomId === room.id ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'} cursor-pointer`}
-                        onClick={() => setAssignDialogSelectedRoomId(room.id)}
-                      >
-                        <td className="p-2">
-                          <input
-                            type="radio"
-                            name="assign-room"
-                            checked={assignDialogSelectedRoomId === room.id}
-                            onChange={() => setAssignDialogSelectedRoomId(room.id)}
-                          />
-                        </td>
-                        <td className="p-2">{room.roomNumber}</td>
-                        <td className="p-2">{room.floor || '-'}</td>
-                        <td className="p-2 text-right tabular-nums">{formatMoney(room.baseRate)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                className="rounded border px-3 py-1.5 text-sm dark:border-gray-600"
-                onClick={closeAssignRoomDialog}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="rounded bg-primary-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-                disabled={!assignDialogSelectedRoomId}
-                onClick={confirmAssignRoom}
-              >
-                Assign Room
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AssignRoomDialog
+        open={Boolean(assignDialogReservationRoomId)}
+        isChangeRoom={isChangeRoomDialog}
+        roomTypeName={assignDialogRoomLine?.roomTypeName}
+        rooms={assignDialogAvailableRooms}
+        selectedRoomId={assignDialogSelectedRoomId}
+        onSelectRoom={setAssignDialogSelectedRoomId}
+        onClose={closeAssignRoomDialog}
+        onConfirm={confirmAssignRoom}
+      />
     </MainLayout>
   );
 };

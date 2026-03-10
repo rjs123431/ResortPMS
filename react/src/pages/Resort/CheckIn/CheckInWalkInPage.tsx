@@ -5,9 +5,11 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
+import { RoomStatus } from '@/types/resort.types';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
+import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 
 const formatDateLocal = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -22,6 +24,26 @@ const parseDateOnly = (value: string) => {
 const round2 = (value: number) => Math.round(value * 100) / 100;
 const formatMoney = (value: number) =>
   round2(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const getErrorMessage = (error: unknown) => {
+  if (error && typeof error === 'object') {
+    const apiError = error as {
+      message?: string;
+      response?: {
+        data?: {
+          error?: {
+            message?: string;
+            details?: string;
+          };
+        };
+      };
+    };
+
+    return apiError.response?.data?.error?.message || apiError.response?.data?.error?.details || apiError.message || 'Unable to complete check-in.';
+  }
+
+  return 'Unable to complete check-in.';
+};
 
 const SC_DISCOUNT_PERCENT = 20;
 const VAT_RATE = 0.12;
@@ -87,7 +109,7 @@ const splitFullName = (fullName: string) => {
   };
 };
 
-export const ReservationPage = () => {
+export const CheckInWalkInPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [stayRange, setStayRange] = useState<[Date | null, Date | null]>(() => {
@@ -109,6 +131,9 @@ export const ReservationPage = () => {
   const [showReservationDetails, setShowReservationDetails] = useState(false);
   const [showGuestInfoStep, setShowGuestInfoStep] = useState(false);
   const [seniorCountsByRoom, setSeniorCountsByRoom] = useState<Record<string, number>>({});
+  const [assignedRoomByLine, setAssignedRoomByLine] = useState<Record<string, string>>({});
+  const [assignDialogLineId, setAssignDialogLineId] = useState('');
+  const [assignDialogSelectedRoomId, setAssignDialogSelectedRoomId] = useState('');
   const [extraBedRows, setExtraBedRows] = useState<ExtraBedSelectionRow[]>([]);
   const [showAddExtraBedDialog, setShowAddExtraBedDialog] = useState(false);
   const [showGuestDialog, setShowGuestDialog] = useState(false);
@@ -126,8 +151,12 @@ export const ReservationPage = () => {
   const [reservationConditions, setReservationConditions] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [confirmError, setConfirmError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [initialDeposits, setInitialDeposits] = useState<InitialDepositRow[]>([]);
   const [showDepositDialog, setShowDepositDialog] = useState(false);
+  const [refundableDepositAmount, setRefundableDepositAmount] = useState('');
+  const [refundableDepositPaymentMethodId, setRefundableDepositPaymentMethodId] = useState('');
+  const [refundableDepositReference, setRefundableDepositReference] = useState('');
 
   const [startDate, endDate] = stayRange;
 
@@ -295,6 +324,11 @@ export const ReservationPage = () => {
     [reservationDetailLines]
   );
 
+  const hasUnassignedRooms = useMemo(
+    () => reservationDetailLines.some((line) => !(assignedRoomByLine[line.lineId] ?? '').trim()),
+    [reservationDetailLines, assignedRoomByLine]
+  );
+
   const stayNights = useMemo(() => {
     if (!searchCriteria) return 0;
     const arrival = parseDateOnly(searchCriteria.arrivalDate);
@@ -360,6 +394,7 @@ export const ReservationPage = () => {
     setShowReservationDetails(false);
     setShowGuestInfoStep(false);
     setSeniorCountsByRoom({});
+    setAssignedRoomByLine({});
     setExtraBedRows([]);
     setShowAddExtraBedDialog(false);
     setShowGuestDialog(false);
@@ -376,8 +411,14 @@ export const ReservationPage = () => {
     setTransactionNotes('');
     setReservationConditions('');
     setSpecialRequests('');
+    setSuccessMessage('');
+    setConfirmError('');
     setInitialDeposits([]);
     setShowDepositDialog(false);
+    setRefundableDepositAmount('');
+    setRefundableDepositPaymentMethodId('');
+    setRefundableDepositReference('');
+    closeAssignRoomDialog();
     setSearchCriteria(nextCriteria);
     searchMutation.mutate(nextCriteria);
   };
@@ -432,6 +473,70 @@ export const ReservationPage = () => {
       delete next[lineId];
       return next;
     });
+
+    setAssignedRoomByLine((prev) => {
+      const next = { ...prev };
+      delete next[lineId];
+      return next;
+    });
+
+    if (assignDialogLineId === lineId) {
+      closeAssignRoomDialog();
+    }
+  };
+
+  const getAssignableRoomsForLine = (lineId: string, roomTypeId: string) => {
+    const currentlyAssigned = assignedRoomByLine[lineId] ?? '';
+    const takenRoomIds = new Set(
+      Object.entries(assignedRoomByLine)
+        .filter(([otherLineId, roomId]) => otherLineId !== lineId && Boolean(roomId))
+        .map(([, roomId]) => roomId)
+    );
+
+    return (searchMutation.data ?? []).filter(
+      (room) =>
+        room.roomTypeId === roomTypeId &&
+        (room.status === RoomStatus.VacantClean || room.status === RoomStatus.VacantDirty) &&
+        (!takenRoomIds.has(room.id) || room.id === currentlyAssigned)
+    );
+  };
+
+  const handleAssignRoom = (lineId: string, roomId: string) => {
+    setAssignedRoomByLine((prev) => ({
+      ...prev,
+      [lineId]: roomId,
+    }));
+  };
+
+  const assignDialogLine = useMemo(
+    () => reservationDetailLines.find((line) => line.lineId === assignDialogLineId),
+    [reservationDetailLines, assignDialogLineId]
+  );
+
+  const assignDialogAvailableRooms = useMemo(() => {
+    if (!assignDialogLine) return [];
+    return getAssignableRoomsForLine(assignDialogLine.lineId, assignDialogLine.roomTypeId);
+  }, [assignDialogLine, assignedRoomByLine, searchMutation.data]);
+
+  const isChangeRoomDialog = useMemo(
+    () => Boolean(assignDialogLineId && assignedRoomByLine[assignDialogLineId]),
+    [assignDialogLineId, assignedRoomByLine]
+  );
+
+  const openAssignRoomDialog = (lineId: string) => {
+    setAssignDialogLineId(lineId);
+    setAssignDialogSelectedRoomId(assignedRoomByLine[lineId] ?? '');
+  };
+
+  const closeAssignRoomDialog = () => {
+    setAssignDialogLineId('');
+    setAssignDialogSelectedRoomId('');
+  };
+
+  const confirmAssignRoom = () => {
+    if (!assignDialogLineId || !assignDialogSelectedRoomId) return;
+    handleAssignRoom(assignDialogLineId, assignDialogSelectedRoomId);
+    closeAssignRoomDialog();
   };
 
   const openAddExtraBedDialog = () => {
@@ -504,7 +609,9 @@ export const ReservationPage = () => {
     setInitialDeposits((prev) => prev.filter((row) => row.id !== id));
   };
 
-  const createMutation = useMutation({
+  const refundableDeposit = Number(refundableDepositAmount || 0);
+
+  const completeCheckInMutation = useMutation({
     mutationFn: async () => {
       if (!searchCriteria) {
         throw new Error('Missing reservation search criteria.');
@@ -515,81 +622,88 @@ export const ReservationPage = () => {
       if (reservationDetailLines.length === 0) {
         throw new Error('No room selections found for this reservation.');
       }
-
-      const roomEntries = reservationDetailLines.map((line) => ({
-        roomTypeId: line.roomTypeId,
-        ratePerNight: round2(line.ratePerNight),
-        numberOfNights: line.nights,
-        amount: round2(line.grossAmount),
-        discountPercent: 0,
-        discountAmount: 0,
-        seniorCitizenCount: line.seniorCount,
-        seniorCitizenPercent: SC_DISCOUNT_PERCENT,
-        seniorCitizenDiscountAmount: round2(line.seniorDiscountAmount),
-        netAmount: round2(line.netAmount),
-      }));
-
-      const extraBedEntries = extraBedRows.map((row) => ({
-        extraBedTypeId: row.extraBedTypeId,
-        arrivalDate: searchCriteria.arrivalDate,
-        departureDate: searchCriteria.departureDate,
-        quantity: row.quantity,
-        ratePerNight: round2(row.ratePerNight),
-        numberOfNights: row.nights,
-        amount: round2(row.quantity * row.ratePerNight * row.nights),
-        discountPercent: 0,
-        discountAmount: 0,
-        seniorCitizenCount: 0,
-        seniorCitizenPercent: SC_DISCOUNT_PERCENT,
-        seniorCitizenDiscountAmount: 0,
-        netAmount: round2(row.quantity * row.ratePerNight * row.nights),
-      }));
-
-      const depositPercentage =
-        selectionGrandTotal > 0 ? round2((initialDepositTotal / selectionGrandTotal) * 100) : 0;
-
-      const reservationId = await resortService.createReservation({
-        guestId: selectedGuest.id,
-        arrivalDate: searchCriteria.arrivalDate,
-        departureDate: searchCriteria.departureDate,
-        adults,
-        children,
-        totalAmount: round2(selectionGrandTotal),
-        depositPercentage,
-        depositRequired: round2(initialDepositTotal),
-        notes: transactionNotes.trim() || undefined,
-        reservationConditions: reservationConditions.trim() || undefined,
-        specialRequests: specialRequests.trim() || undefined,
-        firstName: guestInfoForm.firstName.trim() || undefined,
-        lastName: guestInfoForm.lastName.trim() || undefined,
-        phone: guestInfoForm.phone.trim() || undefined,
-        email: guestInfoForm.email.trim() || undefined,
-        rooms: roomEntries,
-        extraBeds: extraBedEntries,
-        additionalGuestIds: [],
-      });
-
-      const validDeposits = initialDeposits.filter((row) => row.amount > 0 && row.paymentMethodId && row.paidDate);
-      for (const row of validDeposits) {
-        await resortService.recordReservationDeposit({
-          reservationId,
-          amount: round2(row.amount),
-          paymentMethodId: row.paymentMethodId,
-          paidDate: row.paidDate,
-          referenceNo: row.referenceNo || undefined,
-        });
+      if (reservationDetailLines.some((line) => !assignedRoomByLine[line.lineId])) {
+        throw new Error('Please assign a room for each selected room line before confirming.');
+      }
+      if (refundableDeposit > 0 && !refundableDepositPaymentMethodId) {
+        throw new Error('Please select a payment method for refundable cash deposit.');
       }
 
-      return reservationId;
+      const reservationRooms = reservationDetailLines
+        .map((line) => {
+          const assignedRoomId = assignedRoomByLine[line.lineId];
+          if (!assignedRoomId) return null;
+
+          return {
+            roomTypeId: line.roomTypeId,
+            roomId: assignedRoomId,
+            ratePerNight: round2(line.ratePerNight),
+            numberOfNights: line.nights,
+            amount: round2(line.grossAmount),
+            discountAmount: round2(line.grossAmount - line.netAmount),
+            netAmount: round2(line.netAmount),
+          };
+        })
+        .filter(
+          (
+            row,
+          ): row is {
+            roomTypeId: string;
+            roomId: string;
+            ratePerNight: number;
+            numberOfNights: number;
+            amount: number;
+            discountAmount: number;
+            netAmount: number;
+          } => Boolean(row)
+        );
+
+      if (reservationRooms.length === 0) {
+        throw new Error('No assigned room lines found for walk-in check-in.');
+      }
+
+      const validPayments = initialDeposits.filter(
+        (row) => row.amount > 0 && row.paymentMethodId && row.paidDate
+      );
+
+      const checkInResult = await resortService.checkInWalkIn({
+        guestId: selectedGuest.id,
+        roomId: reservationRooms[0].roomId,
+        expectedCheckOutDate: searchCriteria.departureDate,
+        reservationRooms,
+        extraBeds: extraBedRows.map((row) => ({
+          extraBedTypeId: row.extraBedTypeId || undefined,
+          arrivalDate: searchCriteria.arrivalDate,
+          departureDate: searchCriteria.departureDate,
+          quantity: row.quantity,
+          ratePerNight: round2(row.ratePerNight),
+          numberOfNights: row.nights,
+          amount: round2(row.quantity * row.ratePerNight * row.nights),
+        })),
+        payments: validPayments.map((row) => ({
+          paymentMethodId: row.paymentMethodId,
+          amount: round2(row.amount),
+          paidDate: row.paidDate,
+          referenceNo: row.referenceNo || undefined,
+        })),
+        refundableCashDepositAmount: refundableDeposit > 0 ? round2(refundableDeposit) : undefined,
+        refundableCashDepositPaymentMethodId: refundableDepositPaymentMethodId || undefined,
+        refundableCashDepositReference: refundableDepositReference || undefined,
+      });
+
+      return checkInResult;
     },
-    onSuccess: (reservationId) => {
+    onSuccess: (result) => {
       setConfirmError('');
+      setSuccessMessage(`Check-in completed. Stay ${result.stayNo} and Folio ${result.folioNo} were created.`);
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      navigate(`/reservations/${reservationId}`);
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-stays'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Unable to save reservation.';
-      setConfirmError(message);
+      setSuccessMessage('');
+      setConfirmError(getErrorMessage(error));
     },
   });
 
@@ -854,6 +968,8 @@ export const ReservationPage = () => {
                   <thead className="bg-gray-50 dark:bg-gray-700/40">
                     <tr>
                       <th className="border border-gray-200 p-2 text-left dark:border-gray-700">Room Type</th>
+                      <th className="border border-gray-200 p-2 text-left dark:border-gray-700">Room No.</th>
+                      <th className="border border-gray-200 p-2 text-center dark:border-gray-700">Action</th>
                       <th className="border border-gray-200 p-2 text-right dark:border-gray-700">Nights</th>
                       <th className="border border-gray-200 p-2 text-right dark:border-gray-700">Rate/Night</th>
                       <th className="border border-gray-200 p-2 text-right dark:border-gray-700">Gross</th>
@@ -877,6 +993,18 @@ export const ReservationPage = () => {
                               x
                             </button>
                           </div>
+                        </td>
+                        <td className="border border-gray-200 p-2 dark:border-gray-700">
+                          {(searchMutation.data ?? []).find((room) => room.id === assignedRoomByLine[line.lineId])?.roomNumber ?? 'Unassigned'}
+                        </td>
+                        <td className="border border-gray-200 p-2 text-center dark:border-gray-700">
+                          <button
+                            type="button"
+                            className="rounded bg-primary-600 px-2 py-1 text-xs text-white hover:bg-primary-700 disabled:opacity-50"
+                            onClick={() => openAssignRoomDialog(line.lineId)}
+                          >
+                            {assignedRoomByLine[line.lineId] ? 'Change Room' : 'Assign Room'}
+                          </button>
                         </td>
                         <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{line.nights}</td>
                         <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{formatMoney(line.ratePerNight)}</td>
@@ -924,6 +1052,9 @@ export const ReservationPage = () => {
               <p className="mt-3 text-right text-base font-semibold text-gray-900 dark:text-white">
                 Room Total: {formatMoney(reservationDetailTotal)}
               </p>
+              {hasUnassignedRooms ? (
+                <p className="mt-2 text-sm text-rose-600">Assign a room for each selected line to continue.</p>
+              ) : null}
             </div>
 
             <div className="mt-4 rounded border border-gray-200 p-3 dark:border-gray-700">
@@ -1105,7 +1236,8 @@ export const ReservationPage = () => {
               <button
                 type="button"
                 onClick={() => setShowGuestInfoStep(true)}
-                className="inline-flex items-center gap-1 rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
+                disabled={hasUnassignedRooms}
+                className="inline-flex items-center gap-1 rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
               >
                 <span>Next</span>
                 <span aria-hidden="true">&rarr;</span>
@@ -1297,9 +1429,56 @@ export const ReservationPage = () => {
                     <p>BALANCE</p>
                     <p className="text-right tabular-nums">{formatMoney(balanceDue)}</p>
                   </div>
+
+                  <div className="mt-4 rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800/50">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Refundable Cash Deposit</p>
+                    <div className="mt-2 grid grid-cols-1 gap-2">
+                      <input
+                        className="rounded border border-gray-300 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                        type="number"
+                        min={0}
+                        value={refundableDepositAmount}
+                        onChange={(e) => setRefundableDepositAmount(e.target.value)}
+                        placeholder="Amount"
+                      />
+                      <select
+                        className="rounded border border-gray-300 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                        value={refundableDepositPaymentMethodId}
+                        onChange={(e) => setRefundableDepositPaymentMethodId(e.target.value)}
+                      >
+                        <option value="">Payment method</option>
+                        {(paymentMethods ?? []).map((method) => (
+                          <option key={method.id} value={method.id}>
+                            {method.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="rounded border border-gray-300 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                        value={refundableDepositReference}
+                        onChange={(e) => setRefundableDepositReference(e.target.value)}
+                        placeholder="Reference"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {successMessage ? (
+              <div className="mt-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-700/40 dark:bg-emerald-900/20 dark:text-emerald-200">
+                <p>{successMessage}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white"
+                    onClick={() => navigate('/stays')}
+                  >
+                    Open In-House Stays
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-4 flex items-center justify-start">
               <button
@@ -1314,17 +1493,20 @@ export const ReservationPage = () => {
                 type="button"
                 onClick={() => {
                   setConfirmError('');
-                  createMutation.mutate();
+                  setSuccessMessage('');
+                  completeCheckInMutation.mutate();
                 }}
                 disabled={
-                  createMutation.isPending ||
+                  completeCheckInMutation.isPending ||
                   !searchCriteria ||
                   !selectedGuest?.id ||
-                  reservationDetailLines.length === 0
+                  reservationDetailLines.length === 0 ||
+                  hasUnassignedRooms ||
+                  (refundableDeposit > 0 && !refundableDepositPaymentMethodId)
                 }
                 className="ml-auto inline-flex items-center gap-1 rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
               >
-                <span>{createMutation.isPending ? 'Saving...' : 'Create Reservation'}</span>
+                <span>{completeCheckInMutation.isPending ? 'Checking In...' : 'Complete Check-In'}</span>
                 <span aria-hidden="true">&rarr;</span>
               </button>
             </div>
@@ -1343,6 +1525,17 @@ export const ReservationPage = () => {
           paymentMethods={paymentMethods ?? []}
           onClose={() => setShowDepositDialog(false)}
           onSave={saveDepositDialog}
+        />
+
+        <AssignRoomDialog
+          open={Boolean(assignDialogLineId)}
+          isChangeRoom={isChangeRoomDialog}
+          roomTypeName={assignDialogLine?.roomTypeName}
+          rooms={assignDialogAvailableRooms}
+          selectedRoomId={assignDialogSelectedRoomId}
+          onSelectRoom={setAssignDialogSelectedRoomId}
+          onClose={closeAssignRoomDialog}
+          onConfirm={confirmAssignRoom}
         />
       </div>
     </MainLayout>

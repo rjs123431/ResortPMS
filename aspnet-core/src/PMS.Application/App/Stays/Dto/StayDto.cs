@@ -144,6 +144,13 @@ public class PostPaymentDto
     [StringLength(512)] public string Notes { get; set; }
 }
 
+public class PostRefundDto
+{
+    [Required] public Guid StayId { get; set; }
+    [Range(0.01, double.MaxValue)] public decimal Amount { get; set; }
+    [StringLength(512)] public string Description { get; set; }
+}
+
 public class VoidTransactionDto
 {
     [Required] public Guid StayId { get; set; }

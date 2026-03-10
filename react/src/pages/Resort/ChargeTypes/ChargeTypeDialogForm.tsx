@@ -1,15 +1,15 @@
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import type { LookupDto } from '@/types/resort.types';
+import { RoomChargeType, type ChargeTypeDto } from '@/types/resort.types';
 
 type ChargeTypeDialogFormProps = {
   isOpen: boolean;
   editingId: string | null;
-  form: LookupDto;
+  form: ChargeTypeDto;
   canCreate: boolean;
   canEdit: boolean;
   isSaving: boolean;
   onClose: () => void;
-  onFormChange: (updater: (prev: LookupDto) => LookupDto) => void;
+  onFormChange: (updater: (prev: ChargeTypeDto) => ChargeTypeDto) => void;
   onSave: () => void;
 };
 
@@ -39,7 +39,23 @@ export const ChargeTypeDialogForm = ({
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Charge Type Name</label>
-            <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.name} onChange={(e) => onFormChange((s) => ({ ...s, name: e.target.value }))} />
+            <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.name ?? ''} onChange={(e) => onFormChange((s) => ({ ...s, name: e.target.value }))} />
+          </div>
+          <div className="mt-3">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+            <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.category ?? ''} onChange={(e) => onFormChange((s) => ({ ...s, category: e.target.value }))} />
+          </div>
+          <div className="mt-3">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Room Charge Type</label>
+            <select
+              className="w-full rounded border p-2 dark:bg-gray-700"
+              value={form.roomChargeType}
+              onChange={(e) => onFormChange((s) => ({ ...s, roomChargeType: Number(e.target.value) as RoomChargeType }))}
+            >
+              <option value={RoomChargeType.None}>None</option>
+              <option value={RoomChargeType.Room}>Room</option>
+              <option value={RoomChargeType.ExtraBed}>Extra Bed</option>
+            </select>
           </div>
           {editingId ? (
             <label className="mt-3 flex items-center gap-2 text-sm">
@@ -50,7 +66,7 @@ export const ChargeTypeDialogForm = ({
           <button
             type="button"
             className="mt-3 rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
-            disabled={isSaving || !form.name || (editingId ? !canEdit : !canCreate)}
+            disabled={isSaving || !(form.name ?? '').trim() || !(form.category ?? '').trim() || (editingId ? !canEdit : !canCreate)}
             onClick={onSave}
           >
             {isSaving ? 'Saving...' : 'Save'}

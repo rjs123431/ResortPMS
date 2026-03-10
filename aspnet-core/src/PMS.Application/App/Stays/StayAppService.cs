@@ -29,6 +29,7 @@ public interface IStayAppService : IApplicationService
     Task<FolioDto> GetFolioAsync(Guid stayId);
     Task<Guid> PostChargeAsync(PostChargeDto input);
     Task<Guid> PostPaymentAsync(PostPaymentDto input);
+    Task<Guid> PostRefundAsync(PostRefundDto input);
     Task VoidTransactionAsync(VoidTransactionDto input);
     Task<FolioSummaryDto> GetFolioSummaryAsync(Guid stayId);
 }
@@ -213,6 +214,65 @@ public class StayAppService(
         await folioRepository.UpdateAsync(folio);
 
         return payId;
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Stays_PostPayment)]
+    [UnitOfWork]
+    public async Task<Guid> PostRefundAsync(PostRefundDto input)
+    {
+        var folio = await folioRepository.GetAll()
+            .Include(f => f.Transactions)
+            .FirstOrDefaultAsync(f => f.StayId == input.StayId);
+
+        if (folio == null) throw new UserFriendlyException(L("FolioNotFound"));
+
+        if (folio.Status == FolioStatus.Voided || folio.Status == FolioStatus.WrittenOff)
+            throw new UserFriendlyException("Cannot post refund to a closed folio.");
+
+        if (input.Amount <= 0)
+            throw new UserFriendlyException(L("PaymentAmountMustBePositive"));
+
+        if (folio.Balance >= 0)
+            throw new UserFriendlyException("Refund is allowed only when folio has overpayment.");
+
+        var maxRefund = Math.Abs(folio.Balance);
+        if (input.Amount > maxRefund)
+            throw new UserFriendlyException("Refund amount cannot exceed current overpayment.");
+
+        var activeTransactions = folio.Transactions.Where(t => !t.IsDeleted && !t.IsVoided).ToList();
+        var hasDepositPayment = activeTransactions.Any(t => t.TransactionType == FolioTransactionType.DepositPayment);
+        var hasDepositRefund = activeTransactions.Any(t => t.TransactionType == FolioTransactionType.DepositRefund);
+
+        var refundType = hasDepositPayment ? FolioTransactionType.DepositRefund : FolioTransactionType.Refund;
+
+        if (refundType == FolioTransactionType.Refund && hasDepositRefund)
+            throw new UserFriendlyException("Cannot process Refund when a DepositRefund transaction already exists.");
+
+        var transaction = new FolioTransaction
+        {
+            FolioId = folio.Id,
+            TransactionDate = Clock.Now,
+            TransactionType = refundType,
+            Description = string.IsNullOrWhiteSpace(input.Description)
+                ? (refundType == FolioTransactionType.DepositRefund ? "Deposit refund" : "Refund")
+                : input.Description,
+            Quantity = 1,
+            UnitPrice = input.Amount,
+            Amount = input.Amount,
+            TaxAmount = 0,
+            DiscountAmount = 0,
+            NetAmount = input.Amount,
+            IsVoided = false
+        };
+
+        var txId = await folioTransactionRepository.InsertAndGetIdAsync(transaction);
+
+        // A refund increases folio balance towards zero from a negative overpayment state.
+        folio.Balance += input.Amount;
+        UpdateFolioStatus(folio);
+        await folioRepository.UpdateAsync(folio);
+
+        return txId;
     }
 
     [AbpAuthorize(PermissionNames.Pages_Stays_VoidTransaction)]

@@ -24,6 +24,11 @@ public class CheckInReservationRoomUpdateDto
     [Required] public Guid ReservationRoomId { get; set; }
     [Required] public Guid RoomTypeId { get; set; }
     [Required] public Guid RoomId { get; set; }
+    public decimal RatePerNight { get; set; }
+    public int NumberOfNights { get; set; }
+    public decimal Amount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal NetAmount { get; set; }
 }
 
 public class CheckInReservationExtraBedDto
@@ -54,6 +59,21 @@ public class WalkInCheckInDto
     public decimal AdvancePaymentAmount { get; set; } = 0;
     public Guid? PaymentMethodId { get; set; }
     [StringLength(64)] public string PaymentReference { get; set; }
+}
+
+public class CheckInWalkInDto
+{
+    [Required] public Guid GuestId { get; set; }
+    [Required] public Guid RoomId { get; set; }
+    public Guid? ReservationRoomId { get; set; }
+    public DateTime? ExpectedCheckOutDate { get; set; }
+    public Guid[] AdditionalGuestIds { get; set; } = [];
+    public List<CheckInReservationRoomUpdateDto> ReservationRooms { get; set; } = [];
+    public List<CheckInReservationExtraBedDto> ExtraBeds { get; set; } = [];
+    public List<CheckInReservationPaymentDto> Payments { get; set; } = [];
+    public decimal? RefundableCashDepositAmount { get; set; }
+    public Guid? RefundableCashDepositPaymentMethodId { get; set; }
+    [StringLength(64)] public string RefundableCashDepositReference { get; set; }
 }
 
 public class CheckInResultDto

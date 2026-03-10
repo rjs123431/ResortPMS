@@ -8,5 +8,6 @@ public enum FolioTransactionType
     Adjustment = 3,
     Refund = 4,
     DepositPayment = 5,
-    DepositRefund = 6
+    DepositRefund = 6,
+    WriteOff = 7
 }

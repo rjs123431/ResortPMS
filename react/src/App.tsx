@@ -31,13 +31,14 @@ const ChargeTypeListPage = lazy(() => import('@pages/Resort/ChargeTypes/ChargeTy
 const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/PaymentMethodsPage').then((m) => ({ default: m.PaymentMethodListPage })));
 const ExtraBedTypeListPage = lazy(() => import('./pages/Resort/ExtraBedTypes/ExtraBedTypesPage').then((m) => ({ default: m.ExtraBedTypeListPage })));
 const ReservationListPage = lazy(() => import('@pages/Resort/Reservations/ReservationsPage').then((m) => ({ default: m.ReservationListPage })));
-const NewReservationPage = lazy(() => import('@pages/Resort/Reservations/NewReservationPage').then((m) => ({ default: m.NewReservationPage })));
 const ReservationDetailPage = lazy(() => import('@pages/Resort/Reservations/ReservationDetailPage').then((m) => ({ default: m.ReservationDetailPage })));
 const ReservationPage = lazy(() => import('@pages/Resort/Reservations/ReservationPage').then((m) => ({ default: m.ReservationPage })));
 const CheckInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInPage').then((m) => ({ default: m.CheckInPage })));
+const CheckInWalkInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInWalkInPage').then((m) => ({ default: m.CheckInWalkInPage })));
 const CheckInReservationPage = lazy(() => import('./pages/Resort/CheckIn/CheckInReservationPage').then((m) => ({ default: m.CheckInReservationPage })));
 const StaysPage = lazy(() => import('@pages/Resort/Stays/StaysPage').then((m) => ({ default: m.StaysPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
+const RoomStatusPage = lazy(() => import('@pages/Resort/RoomStatus/RoomStatusPage').then((m) => ({ default: m.RoomStatusPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -254,15 +255,15 @@ const App: React.FC = () => {
                       element={
                         <PageTitle title="New Reservation">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
-                            <NewReservationPage />
+                            <ReservationPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
                     />
                     <Route
-                      path="/find-available-rooms"
+                      path="/new-reservation"
                       element={
-                        <PageTitle title="Find Available Rooms">
+                        <PageTitle title="New Reservation">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
                             <ReservationPage />
                           </ProtectedRoute>
@@ -290,6 +291,16 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
+                      path="/check-in/walk-in"
+                      element={
+                        <PageTitle title="Walk-In Check-In">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                            <CheckInWalkInPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
                       path="/stays"
                       element={
                         <PageTitle title="In-House Stays">
@@ -305,6 +316,16 @@ const App: React.FC = () => {
                         <PageTitle title="Check-Out">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
                             <CheckOutPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/room-status"
+                      element={
+                        <PageTitle title="Room Status">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                            <RoomStatusPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

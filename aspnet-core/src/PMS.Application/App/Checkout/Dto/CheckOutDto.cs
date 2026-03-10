@@ -20,8 +20,18 @@ public class CheckOutStatementDto
     public decimal TotalPayments { get; set; }
     public decimal BalanceDue { get; set; }
     public decimal OverPayment { get; set; }
+    public List<StayRoomRecordDto> StayRooms { get; set; } = [];
     public List<StatementLineDto> Transactions { get; set; } = [];
     public List<StatementPaymentDto> Payments { get; set; } = [];
+}
+
+public class StayRoomRecordDto
+{
+    public Guid StayRoomId { get; set; }
+    public Guid RoomId { get; set; }
+    public string RoomNumber { get; set; }
+    public DateTime AssignedAt { get; set; }
+    public DateTime? ReleasedAt { get; set; }
 }
 
 public class StatementLineDto

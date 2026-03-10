@@ -62,6 +62,12 @@ public class CheckOutAppService(
             .Where(p => !p.IsDeleted && !p.IsVoided)
             .ToList();
 
+        var stayRooms = await stayRoomRepository.GetAll()
+            .Include(sr => sr.Room)
+            .Where(sr => sr.StayId == stayId)
+            .OrderBy(sr => sr.AssignedAt)
+            .ToListAsync();
+
         var totalCharges = activeTransactions
             .Where(t => t.TransactionType == FolioTransactionType.Charge)
             .Sum(t => t.NetAmount);
@@ -89,6 +95,14 @@ public class CheckOutAppService(
             TotalPayments = totalPayments,
             BalanceDue = balance < 0 ? 0 : balance,
             OverPayment = balance < 0 ? Math.Abs(balance) : 0,
+            StayRooms = stayRooms.Select(sr => new StayRoomRecordDto
+            {
+                StayRoomId = sr.Id,
+                RoomId = sr.RoomId,
+                RoomNumber = sr.Room != null ? sr.Room.RoomNumber : string.Empty,
+                AssignedAt = sr.AssignedAt,
+                ReleasedAt = sr.ReleasedAt
+            }).ToList(),
             Transactions = activeTransactions.Select(t => new StatementLineDto
             {
                 Date = t.TransactionDate,
@@ -199,20 +213,22 @@ public class CheckOutAppService(
             });
         }
 
-        // Release room
-        var stayRoom = await stayRoomRepository.GetAll()
-            .FirstOrDefaultAsync(sr => sr.StayId == input.StayId && sr.ReleasedAt == null);
-        if (stayRoom != null)
-        {
-            stayRoom.ReleasedAt = Clock.Now;
-            await stayRoomRepository.UpdateAsync(stayRoom);
-        }
+        // Release all active stay rooms and return each room to VacantDirty.
+        var activeStayRooms = await stayRoomRepository.GetAll()
+            .Include(sr => sr.Room)
+            .Where(sr => sr.StayId == input.StayId && sr.ReleasedAt == null)
+            .ToListAsync();
 
-        var room = stay.AssignedRoom;
-        if (room != null)
+        foreach (var activeStayRoom in activeStayRooms)
         {
-            room.Status = RoomStatus.VacantDirty;
-            await roomRepository.UpdateAsync(room);
+            activeStayRoom.ReleasedAt = Clock.Now;
+            await stayRoomRepository.UpdateAsync(activeStayRoom);
+
+            if (activeStayRoom.Room != null)
+            {
+                activeStayRoom.Room.Status = RoomStatus.VacantDirty;
+                await roomRepository.UpdateAsync(activeStayRoom.Room);
+            }
         }
 
         // Mark stay complete
