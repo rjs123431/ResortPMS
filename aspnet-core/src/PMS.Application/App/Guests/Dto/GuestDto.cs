@@ -20,6 +20,7 @@ public class GuestDto : EntityDto<Guid>
     public DateTime? DateOfBirth { get; set; }
     [StringLength(16)] public string Gender { get; set; }
     [StringLength(256)] public string Email { get; set; }
+    [Required]
     [StringLength(32)] public string Phone { get; set; }
     [StringLength(64)] public string Nationality { get; set; }
     [StringLength(1024)] public string Notes { get; set; }
@@ -50,6 +51,7 @@ public class CreateGuestDto
     public DateTime? DateOfBirth { get; set; }
     [StringLength(16)] public string Gender { get; set; }
     [StringLength(256)][EmailAddress] public string Email { get; set; }
+    [Required]
     [StringLength(32)] public string Phone { get; set; }
     [StringLength(64)] public string Nationality { get; set; }
     [StringLength(1024)] public string Notes { get; set; }

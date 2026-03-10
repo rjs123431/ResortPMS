@@ -26,6 +26,9 @@ type AvailabilityPrefillState = {
   arrivalDate?: string;
   departureDate?: string;
   roomTypeIds?: string[];
+  roomTypeQuantities?: Record<string, number>;
+  adults?: number;
+  children?: number;
 };
 
 type ExtraBedRow = {
@@ -142,6 +145,7 @@ export const NewReservationPage = () => {
   const [selectedGuestLastName, setSelectedGuestLastName] = useState('');
   const [selectedGuestContactNumber, setSelectedGuestContactNumber] = useState('');
   const [selectedGuestEmail, setSelectedGuestEmail] = useState('');
+  const [prefillRoomTypeQuantities, setPrefillRoomTypeQuantities] = useState<Record<string, number> | null>(null);
   const [showCreateGuest, setShowCreateGuest] = useState(false);
   const [newGuest, setNewGuest] = useState({
     guestCode: `GST${Date.now().toString().slice(-6)}`,
@@ -214,12 +218,45 @@ export const NewReservationPage = () => {
     };
 
     setSelectedRoomTypeIds(prefill.roomTypeIds);
+    setPrefillRoomTypeQuantities(prefill.roomTypeQuantities ?? null);
+    if (typeof prefill.adults === 'number') {
+      setOccupancyAdults(Math.max(1, Math.floor(prefill.adults)));
+    }
+    if (typeof prefill.children === 'number') {
+      setOccupancyChildren(Math.max(0, Math.floor(prefill.children)));
+    }
     setStayRange([arrival, departure]);
     setForm({ searchError: '' });
     setSelectedRoomIds([]);
+    setShowReservationDetails(false);
     setSearchCriteria(nextCriteria);
     searchMutation.mutate(nextCriteria);
   }, [location.state]);
+
+  useEffect(() => {
+    if (!prefillRoomTypeQuantities || !searchMutation.data || !searchCriteria) return;
+
+    const availableByType = new Map<string, string[]>();
+    for (const room of searchMutation.data) {
+      const list = availableByType.get(room.roomTypeId);
+      if (list) {
+        list.push(room.id);
+      } else {
+        availableByType.set(room.roomTypeId, [room.id]);
+      }
+    }
+
+    const nextSelectedRoomIds: string[] = [];
+    for (const [roomTypeId, quantity] of Object.entries(prefillRoomTypeQuantities)) {
+      const availableIds = availableByType.get(roomTypeId) ?? [];
+      const requestedQty = Math.max(0, Math.floor(quantity));
+      nextSelectedRoomIds.push(...availableIds.slice(0, requestedQty));
+    }
+
+    setSelectedRoomIds(nextSelectedRoomIds);
+    setShowReservationDetails(nextSelectedRoomIds.length > 0);
+    setPrefillRoomTypeQuantities(null);
+  }, [prefillRoomTypeQuantities, searchMutation.data, searchCriteria]);
 
   const createMutation = useMutation({
     mutationFn: async (input: Parameters<typeof resortService.createReservation>[0]) => {
@@ -1314,7 +1351,7 @@ export const NewReservationPage = () => {
                       <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.email} onChange={(e) => setNewGuest((s) => ({ ...s, email: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Contact Number</label>
                       <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.phone} onChange={(e) => setNewGuest((s) => ({ ...s, phone: e.target.value }))} />
                     </div>
                     <div>
@@ -1329,7 +1366,13 @@ export const NewReservationPage = () => {
                   <button
                     type="button"
                     className="mt-3 rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
-                    disabled={createGuestMutation.isPending || !newGuest.guestCode || !newGuest.firstName || !newGuest.lastName}
+                    disabled={
+                      createGuestMutation.isPending ||
+                      !newGuest.guestCode ||
+                      !newGuest.firstName.trim() ||
+                      !newGuest.lastName.trim() ||
+                      !newGuest.phone.trim()
+                    }
                     onClick={() => createGuestMutation.mutate(newGuest)}
                   >
                     {createGuestMutation.isPending ? 'Saving Guest...' : 'Save Guest'}

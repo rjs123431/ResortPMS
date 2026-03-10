@@ -50,7 +50,7 @@ export interface CreateGuestDto {
   lastName: string;
   middleName?: string;
   email?: string;
-  phone?: string;
+  phone: string;
   nationality?: string;
   notes?: string;
 }

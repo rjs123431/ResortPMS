@@ -34,6 +34,66 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         ),
       },
       {
+        label: 'Front Desk',
+        icon: (
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-8 4h6m-8 6h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        ),
+        children: [
+          {
+            path: '/find-available-rooms',
+            label: 'Find Available Rooms',
+            permissions: [PermissionNames.Pages_Reservations],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 01.553-.894L9 2m0 18l6-3m-6 3V2m6 15l6 3m0 0V8m0 12V8m0 0l-6-3m6 3l-6 3m0-6L9 2" />
+              </svg>
+            ),
+          },
+          {
+            path: '/reservations',
+            label: 'Reservations',
+            permissions: [PermissionNames.Pages_Reservations],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            ),
+          },
+          {
+            path: '/check-in',
+            label: 'Check-In',
+            permissions: [PermissionNames.Pages_CheckIn],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 8l2 2 4-4" />
+              </svg>
+            ),
+          },
+          {
+            path: '/stays',
+            label: 'In-House',
+            permissions: [PermissionNames.Pages_Stays],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-6 4h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            ),
+          },
+          {
+            path: '/check-out',
+            label: 'Check-Out',
+            permissions: [PermissionNames.Pages_CheckOut],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V7m-6 14h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            ),
+          },
+        ],
+      },
+      {
         label: 'Setup',
         icon: (
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,66 +158,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 12h8M8 17h5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z" />
-              </svg>
-            ),
-          },
-        ],
-      },
-      {
-        label: 'Front Desk',
-        icon: (
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-8 4h6m-8 6h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        ),
-        children: [
-          {
-            path: '/find-available-rooms',
-            label: 'Find Available Rooms',
-            permissions: [PermissionNames.Pages_Reservations],
-            icon: (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 01.553-.894L9 2m0 18l6-3m-6 3V2m6 15l6 3m0 0V8m0 12V8m0 0l-6-3m6 3l-6 3m0-6L9 2" />
-              </svg>
-            ),
-          },
-          {
-            path: '/reservations',
-            label: 'Reservations',
-            permissions: [PermissionNames.Pages_Reservations],
-            icon: (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            ),
-          },
-          {
-            path: '/check-in',
-            label: 'Check-In',
-            permissions: [PermissionNames.Pages_CheckIn],
-            icon: (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 8l2 2 4-4" />
-              </svg>
-            ),
-          },
-          {
-            path: '/stays',
-            label: 'In-House',
-            permissions: [PermissionNames.Pages_Stays],
-            icon: (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-6 4h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            ),
-          },
-          {
-            path: '/check-out',
-            label: 'Check-Out',
-            permissions: [PermissionNames.Pages_CheckOut],
-            icon: (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V7m-6 14h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             ),
           },
