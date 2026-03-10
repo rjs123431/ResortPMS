@@ -255,7 +255,7 @@ export const ReservationDetailPage = () => {
               <button
                 type="button"
                 className="rounded bg-primary-600 px-3 py-2 text-sm text-white"
-                onClick={() => navigate('/check-in')}
+                onClick={() => navigate(`/check-in/reservations/${id}`)}
               >
                 Check-In
               </button>

@@ -35,6 +35,7 @@ const NewReservationPage = lazy(() => import('@pages/Resort/Reservations/NewRese
 const ReservationDetailPage = lazy(() => import('@pages/Resort/Reservations/ReservationDetailPage').then((m) => ({ default: m.ReservationDetailPage })));
 const ReservationPage = lazy(() => import('@pages/Resort/Reservations/ReservationPage').then((m) => ({ default: m.ReservationPage })));
 const CheckInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInPage').then((m) => ({ default: m.CheckInPage })));
+const CheckInReservationPage = lazy(() => import('./pages/Resort/CheckIn/CheckInReservationPage').then((m) => ({ default: m.CheckInReservationPage })));
 const StaysPage = lazy(() => import('@pages/Resort/Stays/StaysPage').then((m) => ({ default: m.StaysPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
 
@@ -274,6 +275,16 @@ const App: React.FC = () => {
                         <PageTitle title="Check-In">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
                             <CheckInPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/check-in/reservations/:reservationId"
+                      element={
+                        <PageTitle title="Check-In Reservation">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                            <CheckInReservationPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

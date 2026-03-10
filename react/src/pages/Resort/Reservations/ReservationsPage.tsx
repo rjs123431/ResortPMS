@@ -63,6 +63,9 @@ export const ReservationListPage = () => {
                     <td className="p-2">
                       <div className="flex flex-wrap gap-2">
                         <Link to={`/reservations/${r.id}`} className="rounded bg-slate-700 px-2 py-1 text-white">View</Link>
+                        {r.status === ReservationStatus.Confirmed ? (
+                          <Link to={`/check-in/reservations/${r.id}`} className="rounded bg-primary-600 px-2 py-1 text-white hover:bg-primary-700">Check-In</Link>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

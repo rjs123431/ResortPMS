@@ -198,13 +198,49 @@ export const resortService = {
     });
   },
 
-  checkInFromReservation: async (reservationId: string, roomId: string, expectedCheckOutDate?: string) => {
-    const response = await api.post<ApiResponse<CheckInResultDto>>('/api/services/app/CheckIn/CheckInFromReservation', {
-      reservationId,
-      roomId,
-      expectedCheckOutDate,
-      additionalGuestIds: [],
-    });
+  checkInFromReservation: async (
+    reservationIdOrInput:
+      | string
+      | {
+          reservationId: string;
+          roomId: string;
+          reservationRoomId?: string;
+          expectedCheckOutDate?: string;
+          reservationRooms?: { reservationRoomId: string; roomTypeId: string; roomId: string }[];
+          extraBeds?: {
+            extraBedTypeId?: string;
+            arrivalDate: string;
+            departureDate: string;
+            quantity: number;
+            ratePerNight: number;
+            numberOfNights: number;
+            amount: number;
+          }[];
+          payments?: { paymentMethodId: string; amount: number; paidDate?: string; referenceNo?: string }[];
+          refundableCashDepositAmount?: number;
+          refundableCashDepositPaymentMethodId?: string;
+          refundableCashDepositReference?: string;
+          additionalGuestIds?: string[];
+        },
+    roomId?: string,
+    expectedCheckOutDate?: string,
+    reservationRoomId?: string,
+  ) => {
+    const payload =
+      typeof reservationIdOrInput === 'string'
+        ? {
+            reservationId: reservationIdOrInput,
+            roomId: roomId ?? '',
+            reservationRoomId,
+            expectedCheckOutDate,
+            additionalGuestIds: [],
+          }
+        : {
+            ...reservationIdOrInput,
+            additionalGuestIds: reservationIdOrInput.additionalGuestIds ?? [],
+          };
+
+    const response = await api.post<ApiResponse<CheckInResultDto>>('/api/services/app/CheckIn/CheckInFromReservation', payload);
     return response.data.result;
   },
 
