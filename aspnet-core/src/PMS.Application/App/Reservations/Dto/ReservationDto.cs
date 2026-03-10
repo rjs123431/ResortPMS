@@ -144,6 +144,13 @@ public class RemoveReservationGuestDto
     [Required] public Guid ReservationGuestId { get; set; }
 }
 
+public class AssignReservationRoomDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    [Required] public Guid ReservationRoomId { get; set; }
+    [Required] public Guid RoomId { get; set; }
+}
+
 // ── Children DTOs ─────────────────────────────────────────────────────────────
 [AutoMapFrom(typeof(ReservationRoom))]
 public class ReservationRoomDto : EntityDto<Guid>

@@ -101,6 +101,7 @@ public class GetAvailableRoomsInput
     public Guid? RoomTypeId { get; set; }
     public DateTime? ArrivalDate { get; set; }
     public DateTime? DepartureDate { get; set; }
+    public Guid? ReservationId { get; set; }
 }
 
 public class UpdateRoomStatusDto

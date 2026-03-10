@@ -123,11 +123,12 @@ export const resortService = {
     await api.put('/api/services/app/Room/Update', input);
   },
 
-  getAvailableRooms: async (roomTypeId?: string, arrivalDate?: string, departureDate?: string) => {
+  getAvailableRooms: async (roomTypeId?: string, arrivalDate?: string, departureDate?: string, reservationId?: string) => {
     const params: Record<string, string> = {};
     if (roomTypeId) params.RoomTypeId = roomTypeId;
     if (arrivalDate) params.ArrivalDate = arrivalDate;
     if (departureDate) params.DepartureDate = departureDate;
+    if (reservationId) params.ReservationId = reservationId;
 
     const response = await api.get<ApiResponse<RoomListDto[]>>('/api/services/app/Room/GetAvailableRooms', {
       params,
@@ -199,6 +200,10 @@ export const resortService = {
         reservationGuestId,
       },
     });
+  },
+
+  assignReservationRoom: async (input: { reservationId: string; reservationRoomId: string; roomId: string }) => {
+    await api.post('/api/services/app/Reservation/AssignRoom', input);
   },
 
   checkInFromReservation: async (

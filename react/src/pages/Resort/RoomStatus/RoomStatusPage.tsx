@@ -54,6 +54,13 @@ const STATUS_STYLES: Record<
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
+const toDateInputValue = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const toDateKey = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -68,6 +75,7 @@ const toDateKey = (value: string) => {
 
 export const RoomStatusPage = () => {
   const [activeStatuses, setActiveStatuses] = useState<StatusKey[]>(STATUS_FILTERS.map((s) => s.key));
+  const [selectedDate, setSelectedDate] = useState(() => toDateInputValue(new Date()));
 
   const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
     queryKey: ['resort-room-status-rooms'],
@@ -85,15 +93,15 @@ export const RoomStatusPage = () => {
   });
 
   const arrivalTodayReservationIds = useMemo(() => {
-    const today = toDateKey(new Date().toISOString());
+    const targetDate = toDateKey(selectedDate);
     return (reservationsData?.items ?? [])
       .filter((reservation) => {
-        const isArrivalToday = toDateKey(reservation.arrivalDate) === today;
+        const isArrivalToday = toDateKey(reservation.arrivalDate) === targetDate;
         const isReservedState = reservation.status === ReservationStatus.Confirmed || reservation.status === ReservationStatus.Pending;
         return isArrivalToday && isReservedState;
       })
       .map((reservation) => reservation.id);
-  }, [reservationsData]);
+  }, [reservationsData, selectedDate]);
 
   const { data: reservationDetails, isLoading: isLoadingReservationDetails } = useQuery({
     queryKey: ['resort-room-status-reservation-details', arrivalTodayReservationIds],
@@ -206,6 +214,16 @@ export const RoomStatusPage = () => {
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="mb-4">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
+            <input
+              type="date"
+              className="w-full max-w-xs rounded border p-2 dark:bg-gray-700"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </div>
+
           <div className="mb-4">
             <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Filter By Status</p>
             <div className="flex flex-wrap gap-3">

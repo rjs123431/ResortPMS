@@ -122,7 +122,7 @@ export const CheckInReservationPage = () => {
 
   const { data: availableRooms } = useQuery({
     queryKey: ['resort-checkin-available-rooms', reservationId, arrivalDate, departureDate],
-    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate),
+    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, reservationId),
     enabled: Boolean(reservationId && arrivalDate && departureDate),
   });
 

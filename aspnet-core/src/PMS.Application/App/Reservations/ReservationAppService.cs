@@ -30,6 +30,7 @@ public interface IReservationAppService : IApplicationService
     Task<int> AddGuestsAsync(AddReservationGuestsDto input);
     Task UpdateGuestAgeAsync(UpdateReservationGuestAgeDto input);
     Task RemoveGuestAsync(RemoveReservationGuestDto input);
+    Task AssignRoomAsync(AssignReservationRoomDto input);
     Task<ReservationDto> GetByNumberAsync(string reservationNo);
 }
 
@@ -41,6 +42,7 @@ public class ReservationAppService(
     IRepository<ReservationDeposit, Guid> depositRepository,
     IRepository<ReservationGuest, Guid> reservationGuestRepository,
     IRepository<Guest, Guid> guestRepository,
+    IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
     IDocumentNumberService documentNumberService
 ) : PMSAppServiceBase, IReservationAppService
@@ -403,6 +405,59 @@ public class ReservationAppService(
             throw new UserFriendlyException("Primary guest cannot be removed.");
 
         await reservationGuestRepository.DeleteAsync(guest);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
+    public async Task AssignRoomAsync(AssignReservationRoomDto input)
+    {
+        var reservation = await reservationRepository.GetAsync(input.ReservationId);
+        if (reservation.Status == ReservationStatus.Cancelled ||
+            reservation.Status == ReservationStatus.NoShow ||
+            reservation.Status == ReservationStatus.CheckedIn ||
+            reservation.Status == ReservationStatus.Completed)
+        {
+            throw new UserFriendlyException("Cannot assign room for this reservation status.");
+        }
+
+        var reservationRoom = await reservationRoomRepository.FirstOrDefaultAsync(x =>
+            x.Id == input.ReservationRoomId && x.ReservationId == input.ReservationId);
+
+        if (reservationRoom == null)
+            throw new UserFriendlyException("Reservation room entry not found.");
+
+        var room = await roomRepository.FirstOrDefaultAsync(input.RoomId);
+        if (room == null)
+            throw new UserFriendlyException(L("RoomNotFound"));
+
+        if (room.RoomTypeId != reservationRoom.RoomTypeId)
+            throw new UserFriendlyException("Selected room does not match reservation room type.");
+
+        var hasReservationConflict = await reservationRoomRepository.GetAll()
+            .Include(rr => rr.Reservation)
+            .Where(rr => rr.RoomId == input.RoomId)
+            .Where(rr => rr.ReservationId != input.ReservationId)
+            .Where(rr => rr.ArrivalDate < reservation.DepartureDate.Date && rr.DepartureDate > reservation.ArrivalDate.Date)
+            .AnyAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
+                           rr.Reservation.Status == ReservationStatus.Confirmed ||
+                           rr.Reservation.Status == ReservationStatus.CheckedIn);
+
+        if (hasReservationConflict)
+            throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+
+        var hasStayConflict = await stayRoomRepository.GetAll()
+            .Include(sr => sr.Stay)
+            .Where(sr => sr.RoomId == input.RoomId)
+            .Where(sr => sr.AssignedAt.Date < reservation.DepartureDate.Date)
+            .Where(sr => (sr.ReleasedAt.HasValue ? sr.ReleasedAt.Value.Date : sr.Stay.ExpectedCheckOutDateTime.Date) > reservation.ArrivalDate.Date)
+            .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
+
+        if (hasStayConflict)
+            throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+
+        reservationRoom.RoomId = room.Id;
+        reservationRoom.RoomNumber = room.RoomNumber;
+        await reservationRoomRepository.UpdateAsync(reservationRoom);
     }
 
     public async Task<ReservationDto> GetAsync(Guid id)

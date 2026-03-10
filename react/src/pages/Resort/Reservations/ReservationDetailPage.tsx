@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus } from '@/types/resort.types';
+import { ReservationStatus, RoomStatus } from '@/types/resort.types';
+import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 
 const formatDateLocal = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -48,6 +49,8 @@ export const ReservationDetailPage = () => {
   const [guestAgeDrafts, setGuestAgeDrafts] = useState<Record<string, string>>({});
   const guestAgeSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [showCreateGuest, setShowCreateGuest] = useState(false);
+  const [assignDialogReservationRoomId, setAssignDialogReservationRoomId] = useState('');
+  const [assignDialogSelectedRoomId, setAssignDialogSelectedRoomId] = useState('');
   const [newGuest, setNewGuest] = useState({
     guestCode: `GST${Date.now().toString().slice(-6)}`,
     firstName: '',
@@ -76,6 +79,15 @@ export const ReservationDetailPage = () => {
       const result = await resortService.getRooms('', 0, 500);
       return result.items;
     },
+  });
+
+  const arrivalDate = reservationDetail ? formatDateLocal(new Date(reservationDetail.arrivalDate)) : '';
+  const departureDate = reservationDetail ? formatDateLocal(new Date(reservationDetail.departureDate)) : '';
+
+  const { data: availableRooms } = useQuery({
+    queryKey: ['resort-reservation-detail-available-rooms', id, arrivalDate, departureDate],
+    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, id),
+    enabled: Boolean(id && arrivalDate && departureDate),
   });
 
   const { data: guestLookup, isLoading: isGuestLookupLoading } = useQuery({
@@ -167,6 +179,17 @@ export const ReservationDetailPage = () => {
     },
   });
 
+  const assignRoomMutation = useMutation({
+    mutationFn: resortService.assignReservationRoom,
+    onSuccess: () => {
+      setAssignDialogReservationRoomId('');
+      setAssignDialogSelectedRoomId('');
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail-available-rooms', id] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-rooms-lookup'] });
+    },
+  });
+
   const rooms = reservationDetail?.rooms ?? [];
   const extraBeds = reservationDetail?.extraBeds ?? [];
   const guests = reservationDetail?.guests ?? [];
@@ -206,6 +229,64 @@ export const ReservationDetailPage = () => {
     });
     return map;
   }, [roomLookup]);
+
+  const assignDialogRoomLine = useMemo(
+    () => reservationDetail?.rooms?.find((room) => room.id === assignDialogReservationRoomId),
+    [reservationDetail, assignDialogReservationRoomId],
+  );
+
+  const assignDialogAvailableRooms = useMemo(() => {
+    if (!assignDialogRoomLine) return [];
+
+    const assignedRoomIds = new Set(
+      (reservationDetail?.rooms ?? [])
+        .filter((room) => room.id !== assignDialogRoomLine.id)
+        .map((room) => room.roomId)
+        .filter((roomId): roomId is string => Boolean(roomId)),
+    );
+
+    return (availableRooms ?? []).filter(
+      (room) =>
+        room.roomTypeId === assignDialogRoomLine.roomTypeId &&
+        (room.status === RoomStatus.VacantClean || room.status === RoomStatus.VacantDirty) &&
+        !assignedRoomIds.has(room.id),
+    );
+  }, [assignDialogRoomLine, availableRooms, reservationDetail?.rooms]);
+
+  const isChangeRoomDialog = useMemo(() => {
+    if (!assignDialogReservationRoomId) return false;
+    const roomLine = (reservationDetail?.rooms ?? []).find((row) => row.id === assignDialogReservationRoomId);
+    return Boolean(roomLine?.roomId);
+  }, [assignDialogReservationRoomId, reservationDetail?.rooms]);
+
+  const canAssignRooms = useMemo(() => {
+    if (!reservationDetail) return false;
+    return ![
+      ReservationStatus.Cancelled,
+      ReservationStatus.NoShow,
+      ReservationStatus.CheckedIn,
+      ReservationStatus.Completed,
+    ].includes(reservationDetail.status);
+  }, [reservationDetail]);
+
+  const openAssignRoomDialog = (reservationRoomId: string, currentRoomId?: string) => {
+    setAssignDialogReservationRoomId(reservationRoomId);
+    setAssignDialogSelectedRoomId(currentRoomId ?? '');
+  };
+
+  const closeAssignRoomDialog = () => {
+    setAssignDialogReservationRoomId('');
+    setAssignDialogSelectedRoomId('');
+  };
+
+  const confirmAssignRoom = () => {
+    if (!id || !assignDialogReservationRoomId || !assignDialogSelectedRoomId) return;
+    assignRoomMutation.mutate({
+      reservationId: id,
+      reservationRoomId: assignDialogReservationRoomId,
+      roomId: assignDialogSelectedRoomId,
+    });
+  };
 
   useEffect(() => {
     const nextDrafts: Record<string, string> = {};
@@ -328,6 +409,7 @@ export const ReservationDetailPage = () => {
                         <tr className="border-b text-left">
                           <th className="p-2">Room Type</th>
                           <th className="p-2">Room No.</th>
+                          <th className="p-2 text-right">Actions</th>
                           <th className="p-2 text-right">Rate/Night</th>
                           <th className="p-2 text-right">Nights</th>
                           <th className="p-2 text-right">Amount</th>
@@ -339,6 +421,16 @@ export const ReservationDetailPage = () => {
                           <tr key={room.id} className="border-b">
                             <td className="p-2">{room.roomTypeName}</td>
                             <td className="p-2">{room.roomNumber || (room.roomId ? roomNumberById.get(room.roomId) : undefined) || 'Unassigned'}</td>
+                            <td className="p-2 text-right">
+                              <button
+                                type="button"
+                                className="rounded bg-primary-600 px-2 py-1 text-xs text-white disabled:opacity-50"
+                                disabled={!canAssignRooms}
+                                onClick={() => openAssignRoomDialog(room.id, room.roomId)}
+                              >
+                                {room.roomId ? 'Change Room' : 'Assign Room'}
+                              </button>
+                            </td>
                             <td className="p-2 text-right tabular-nums">{formatMoney(room.ratePerNight)}</td>
                             <td className="p-2 text-right tabular-nums">{room.numberOfNights}</td>
                             <td className="p-2 text-right tabular-nums">{formatMoney(room.amount)}</td>
@@ -775,6 +867,17 @@ export const ReservationDetailPage = () => {
             </div>
           </div>
         </Dialog>
+
+        <AssignRoomDialog
+          open={Boolean(assignDialogReservationRoomId)}
+          isChangeRoom={isChangeRoomDialog}
+          roomTypeName={assignDialogRoomLine?.roomTypeName}
+          rooms={assignDialogAvailableRooms}
+          selectedRoomId={assignDialogSelectedRoomId}
+          onSelectRoom={setAssignDialogSelectedRoomId}
+          onClose={closeAssignRoomDialog}
+          onConfirm={confirmAssignRoom}
+        />
       </div>
     </MainLayout>
   );

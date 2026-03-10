@@ -165,6 +165,7 @@ public class RoomAppService(
             var reservedRoomIds = await reservationRoomRepository.GetAll()
                 .Include(rr => rr.Reservation)
                 .Where(rr => rr.RoomId.HasValue)
+                .WhereIf(input.ReservationId.HasValue, rr => rr.ReservationId != input.ReservationId.Value)
                 .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
                 .Where(rr => blockingReservationStatuses.Contains(rr.Reservation.Status))
                 .Select(rr => rr.RoomId!.Value)
