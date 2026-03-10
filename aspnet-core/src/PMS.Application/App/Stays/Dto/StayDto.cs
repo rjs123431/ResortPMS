@@ -18,7 +18,6 @@ public class StayDto : EntityDto<Guid>
     public DateTime ExpectedCheckOutDateTime { get; set; }
     public DateTime? ActualCheckOutDateTime { get; set; }
     public StayStatus Status { get; set; }
-    public Guid AssignedRoomId { get; set; }
     public string RoomNumber { get; set; }
     public string RoomTypeName { get; set; }
     public List<StayGuestDto> Guests { get; set; } = [];

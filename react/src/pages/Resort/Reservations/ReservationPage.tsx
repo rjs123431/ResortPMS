@@ -165,7 +165,13 @@ export const ReservationPage = () => {
     mutationFn: async (input: SearchCriteria) => {
       const responseList = await Promise.all(
         input.roomTypeIds.map((roomTypeId) =>
-          resortService.getAvailableRooms(roomTypeId, input.arrivalDate, input.departureDate)
+          resortService.getAvailableRooms(
+            roomTypeId,
+            input.arrivalDate,
+            input.departureDate,
+            undefined,
+            true,
+          )
         )
       );
       return responseList.flat();

@@ -132,6 +132,7 @@ public class RoomAppService(
     public async Task<System.Collections.Generic.List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input)
     {
         var hasDateRange = input.ArrivalDate.HasValue && input.DepartureDate.HasValue;
+        var excludeReservedWithoutAssignedRoom = hasDateRange && input.ExcludeReservedWithoutAssignedRoom;
 
         if (input.ArrivalDate.HasValue != input.DepartureDate.HasValue)
             throw new UserFriendlyException(L("InvalidArrivalDepartureDate"));
@@ -193,6 +194,49 @@ public class RoomAppService(
         }
 
         var items = await query.OrderBy(r => r.RoomNumber).ToListAsync();
+
+        if (excludeReservedWithoutAssignedRoom)
+        {
+            var arrivalDate = input.ArrivalDate!.Value.Date;
+            var departureDate = input.DepartureDate!.Value.Date;
+
+            var blockingReservationStatuses = new[]
+            {
+                ReservationStatus.Pending,
+                ReservationStatus.Confirmed,
+                ReservationStatus.CheckedIn,
+            };
+
+            var unassignedCountsByRoomType = await reservationRoomRepository.GetAll()
+                .Include(rr => rr.Reservation)
+                .Where(rr => rr.RoomId == null)
+                .WhereIf(input.ReservationId.HasValue, rr => rr.ReservationId != input.ReservationId.Value)
+                .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
+                .Where(rr => blockingReservationStatuses.Contains(rr.Reservation.Status))
+                .GroupBy(rr => rr.RoomTypeId)
+                .Select(g => new { RoomTypeId = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            if (unassignedCountsByRoomType.Count > 0)
+            {
+                var remainingExclusions = unassignedCountsByRoomType.ToDictionary(x => x.RoomTypeId, x => x.Count);
+                var filteredItems = new System.Collections.Generic.List<Room>();
+
+                foreach (var room in items)
+                {
+                    if (remainingExclusions.TryGetValue(room.RoomTypeId, out var count) && count > 0)
+                    {
+                        remainingExclusions[room.RoomTypeId] = count - 1;
+                        continue;
+                    }
+
+                    filteredItems.Add(room);
+                }
+
+                items = filteredItems;
+            }
+        }
+
         return items.Select(MapToRoomListDto).ToList();
     }
 

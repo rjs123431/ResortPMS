@@ -102,6 +102,7 @@ public class GetAvailableRoomsInput
     public DateTime? ArrivalDate { get; set; }
     public DateTime? DepartureDate { get; set; }
     public Guid? ReservationId { get; set; }
+    public bool ExcludeReservedWithoutAssignedRoom { get; set; }
 }
 
 public class UpdateRoomStatusDto

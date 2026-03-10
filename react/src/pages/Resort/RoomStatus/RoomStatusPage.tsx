@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { MainLayout } from '@components/layout/MainLayout';
 import { ReservationStatus, RoomStatus } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
@@ -61,7 +63,7 @@ const toDateInputValue = (value: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const toDateKey = (value: string) => {
+const toDateKey = (value: Date | string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return '';
@@ -75,7 +77,9 @@ const toDateKey = (value: string) => {
 
 export const RoomStatusPage = () => {
   const [activeStatuses, setActiveStatuses] = useState<StatusKey[]>(STATUS_FILTERS.map((s) => s.key));
-  const [selectedDate, setSelectedDate] = useState(() => toDateInputValue(new Date()));
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const selectedDateKey = useMemo(() => toDateInputValue(selectedDate), [selectedDate]);
 
   const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
     queryKey: ['resort-room-status-rooms'],
@@ -88,7 +92,7 @@ export const RoomStatusPage = () => {
   });
 
   const { data: reservationsData, isLoading: isLoadingReservations } = useQuery({
-    queryKey: ['resort-room-status-reservations'],
+    queryKey: ['resort-room-status-reservations', selectedDateKey],
     queryFn: () => resortService.getReservations('', 0, 200),
   });
 
@@ -104,7 +108,7 @@ export const RoomStatusPage = () => {
   }, [reservationsData, selectedDate]);
 
   const { data: reservationDetails, isLoading: isLoadingReservationDetails } = useQuery({
-    queryKey: ['resort-room-status-reservation-details', arrivalTodayReservationIds],
+    queryKey: ['resort-room-status-reservation-details', selectedDateKey, arrivalTodayReservationIds],
     enabled: arrivalTodayReservationIds.length > 0,
     queryFn: async () => Promise.all(arrivalTodayReservationIds.map((reservationId) => resortService.getReservation(reservationId))),
   });
@@ -216,11 +220,11 @@ export const RoomStatusPage = () => {
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-            <input
-              type="date"
+            <DatePicker
+              selected={selectedDate}
+              onChange={(date: Date | null) => setSelectedDate(date ?? new Date())}
+              dateFormat="yyyy-MM-dd"
               className="w-full max-w-xs rounded border p-2 dark:bg-gray-700"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
             />
           </div>
 

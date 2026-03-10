@@ -453,7 +453,7 @@ public class CheckInAppService(
             CheckInDateTime = Clock.Now,
             ExpectedCheckOutDateTime = expectedCheckOut.Date.AddHours(12),
             Status = StayStatus.InHouse,
-            AssignedRoomId = primaryRoom.Id,
+            AssignedRoom = primaryRoom,
             RoomNumber = string.Join(", ", effectiveRooms.Select(r => r.RoomNumber))
         };
 

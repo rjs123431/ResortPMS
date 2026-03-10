@@ -16,7 +16,7 @@ internal class StayConfiguration : IEntityTypeConfiguration<Stay>
 
         entity.HasIndex(e => e.StayNo).IsUnique();
         entity.HasIndex(e => e.Status);
-        entity.HasIndex(e => e.AssignedRoomId);
+        entity.HasIndex("AssignedRoomId");
 
         entity.HasOne(e => e.Guest)
             .WithMany()
@@ -30,7 +30,7 @@ internal class StayConfiguration : IEntityTypeConfiguration<Stay>
 
         entity.HasOne(e => e.AssignedRoom)
             .WithMany()
-            .HasForeignKey(e => e.AssignedRoomId)
+            .HasForeignKey("AssignedRoomId")
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

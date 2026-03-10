@@ -14,7 +14,6 @@ public class Stay : FullAuditedEntity<Guid>
     public DateTime ExpectedCheckOutDateTime { get; set; }
     public DateTime? ActualCheckOutDateTime { get; set; }
     public StayStatus Status { get; set; } = StayStatus.CheckedIn;
-    public Guid AssignedRoomId { get; set; }
 
     // Snapshot: guest name at check-in time
     public string GuestName { get; set; } = string.Empty;

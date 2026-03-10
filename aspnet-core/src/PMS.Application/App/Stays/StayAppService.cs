@@ -86,7 +86,15 @@ public class StayAppService(
         if (stay.Status != StayStatus.InHouse && stay.Status != StayStatus.CheckedIn)
             throw new UserFriendlyException(L("CannotTransferRoomForNonActiveStay"));
 
-        if (stay.AssignedRoomId == input.ToRoomId)
+        var activeStayRoom = await stayRoomRepository.GetAll()
+            .Where(sr => sr.StayId == input.StayId && sr.ReleasedAt == null)
+            .OrderByDescending(sr => sr.AssignedAt)
+            .FirstOrDefaultAsync();
+
+        if (activeStayRoom == null)
+            throw new UserFriendlyException("Active room assignment not found for stay.");
+
+        if (activeStayRoom.RoomId == input.ToRoomId)
             throw new UserFriendlyException(L("CannotTransferToSameRoom"));
 
         var newRoom = await roomRepository.GetAsync(input.ToRoomId);
@@ -94,16 +102,11 @@ public class StayAppService(
             throw new UserFriendlyException(L("TargetRoomIsOccupied"));
 
         // Release old room
-        var oldStayRoom = await stayRoomRepository.GetAll()
-            .FirstOrDefaultAsync(sr => sr.StayId == input.StayId && sr.ReleasedAt == null);
-        if (oldStayRoom != null)
-        {
-            oldStayRoom.ReleasedAt = Clock.Now;
-            await stayRoomRepository.UpdateAsync(oldStayRoom);
-        }
+        activeStayRoom.ReleasedAt = Clock.Now;
+        await stayRoomRepository.UpdateAsync(activeStayRoom);
 
         // Update old room status
-        var oldRoom = await roomRepository.GetAsync(stay.AssignedRoomId);
+        var oldRoom = await roomRepository.GetAsync(activeStayRoom.RoomId);
         oldRoom.Status = RoomStatus.VacantDirty;
         await roomRepository.UpdateAsync(oldRoom);
 
@@ -116,13 +119,12 @@ public class StayAppService(
         await roomTransferRepository.InsertAsync(new RoomTransfer
         {
             StayId = input.StayId,
-            FromRoomId = stay.AssignedRoomId,
+            FromRoomId = activeStayRoom.RoomId,
             ToRoomId = input.ToRoomId,
             TransferDate = Clock.Now,
             Reason = input.Reason ?? string.Empty
         });
 
-        stay.AssignedRoomId = input.ToRoomId;
         stay.RoomNumber = newRoom.RoomNumber;
         await stayRepository.UpdateAsync(stay);
 

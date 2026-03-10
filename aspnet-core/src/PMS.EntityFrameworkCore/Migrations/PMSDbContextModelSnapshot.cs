@@ -2802,7 +2802,7 @@ namespace PMS.Migrations
                     b.Property<DateTime?>("ActualCheckOutDateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("AssignedRoomId")
+                    b.Property<Guid?>("AssignedRoomId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CheckInDateTime")
@@ -3795,8 +3795,7 @@ namespace PMS.Migrations
                     b.HasOne("PMS.App.Room", "AssignedRoom")
                         .WithMany()
                         .HasForeignKey("AssignedRoomId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("PMS.App.Guest", "Guest")
                         .WithMany()
