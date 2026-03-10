@@ -12,7 +12,13 @@ internal class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
 
         entity.Property(e => e.ReservationNo).HasMaxLength(32).IsUnicode(false).IsRequired();
         entity.Property(e => e.GuestName).HasMaxLength(256);
+        entity.Property(e => e.FirstName).HasMaxLength(128);
+        entity.Property(e => e.LastName).HasMaxLength(128);
+        entity.Property(e => e.Phone).HasMaxLength(64).IsUnicode(false);
+        entity.Property(e => e.Email).HasMaxLength(256);
         entity.Property(e => e.Notes).HasMaxLength(1024);
+        entity.Property(e => e.ReservationConditions).HasMaxLength(2048);
+        entity.Property(e => e.SpecialRequests).HasMaxLength(2048);
         entity.Property(e => e.TotalAmount).HasPrecision(18, 4);
         entity.Property(e => e.DepositPercentage).HasPrecision(5, 2);
         entity.Property(e => e.DepositRequired).HasPrecision(18, 4);

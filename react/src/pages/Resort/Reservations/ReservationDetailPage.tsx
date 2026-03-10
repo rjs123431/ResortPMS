@@ -282,6 +282,8 @@ export const ReservationDetailPage = () => {
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Check-In:</div><div className="font-semibold">{new Date(reservationDetail.arrivalDate).toLocaleDateString()}</div></div>
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Guest:</div><div className="font-semibold">{reservationDetail.guestName}</div></div>
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Check-Out:</div><div className="font-semibold">{new Date(reservationDetail.departureDate).toLocaleDateString()}</div></div>
+                <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Contact No.:</div><div className="font-semibold">{reservationDetail.phone?.trim() ? reservationDetail.phone : '-'}</div></div>
+                <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Email:</div><div className="font-semibold">{reservationDetail.email?.trim() ? reservationDetail.email : '-'}</div></div>
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Adults:</div><div className="font-semibold">{reservationDetail.adults}</div></div>
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Nights:</div><div className="font-semibold">{reservationDetail.nights}</div></div>
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Children:</div><div className="font-semibold">{reservationDetail.children}</div></div>
@@ -301,6 +303,18 @@ export const ReservationDetailPage = () => {
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Deposit Paid:</div><div className="font-semibold">{formatMoney(reservationDetail.depositPaid)}</div></div>
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">Deposit Balance:</div><div className="font-semibold">{formatMoney(depositBalance)}</div></div>
                 <div className="grid grid-cols-[140px_1fr] items-center gap-2"><div className="font-medium">BALANCE:</div><div className="font-semibold">{formatMoney(totalAmountBalance)}</div></div>
+                <div className="grid grid-cols-[140px_1fr] items-start gap-2 md:col-span-2">
+                  <div className="font-medium">Notes:</div>
+                  <div className="font-semibold whitespace-pre-line">{reservationDetail.notes?.trim() ? reservationDetail.notes : '-'}</div>
+                </div>
+                <div className="grid grid-cols-[140px_1fr] items-start gap-2 md:col-span-2">
+                  <div className="font-medium">Reservation Conditions:</div>
+                  <div className="font-semibold whitespace-pre-line">{reservationDetail.reservationConditions?.trim() ? reservationDetail.reservationConditions : '-'}</div>
+                </div>
+                <div className="grid grid-cols-[140px_1fr] items-start gap-2 md:col-span-2">
+                  <div className="font-medium">Special Requests:</div>
+                  <div className="font-semibold whitespace-pre-line">{reservationDetail.specialRequests?.trim() ? reservationDetail.specialRequests : '-'}</div>
+                </div>
               </div>
 
               <div>

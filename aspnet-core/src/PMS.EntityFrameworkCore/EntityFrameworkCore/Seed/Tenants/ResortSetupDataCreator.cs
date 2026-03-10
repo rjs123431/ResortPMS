@@ -19,6 +19,11 @@ public class ResortSetupDataCreator
 
     public void Create()
     {
+        if (HasExistingSeedData())
+        {
+            return;
+        }
+
         var roomTypes = EnsureRoomTypes();
         EnsureRooms(roomTypes);
         EnsureChargeTypes();
@@ -26,6 +31,17 @@ public class ResortSetupDataCreator
         EnsurePaymentMethods();
         EnsureGuests();
         EnsureDocumentSequences();
+    }
+
+    private bool HasExistingSeedData()
+    {
+        return _context.RoomTypes.Any()
+               || _context.Rooms.Any()
+               || _context.ChargeTypes.Any()
+               || _context.ExtraBedTypes.Any()
+               || _context.PaymentMethods.Any()
+               || _context.Guests.Any()
+               || _context.DocumentSequences.Any(x => x.TenantId == _tenantId);
     }
 
     private Dictionary<string, Guid> EnsureRoomTypes()
@@ -72,29 +88,15 @@ public class ResortSetupDataCreator
 
         foreach (var def in definitions)
         {
-            var existing = _context.RoomTypes.FirstOrDefault(x => x.Name == def.Name)
-                ?? _context.RoomTypes.FirstOrDefault(x => def.LegacyNames.Contains(x.Name));
-
-            if (existing == null)
+            _context.RoomTypes.Add(new RoomType
             {
-                _context.RoomTypes.Add(new RoomType
-                {
-                    Name = def.Name,
-                    Description = def.Description,
-                    MaxAdults = def.MaxAdults,
-                    MaxChildren = def.MaxChildren,
-                    BaseRate = def.BaseRate,
-                    IsActive = true,
-                });
-                continue;
-            }
-
-            existing.Name = def.Name;
-            existing.Description = def.Description;
-            existing.MaxAdults = def.MaxAdults;
-            existing.MaxChildren = def.MaxChildren;
-            existing.BaseRate = def.BaseRate;
-            existing.IsActive = true;
+                Name = def.Name,
+                Description = def.Description,
+                MaxAdults = def.MaxAdults,
+                MaxChildren = def.MaxChildren,
+                BaseRate = def.BaseRate,
+                IsActive = true,
+            });
         }
 
         _context.SaveChanges();
@@ -156,11 +158,7 @@ public class ResortSetupDataCreator
             new ChargeType { Name = "Airport Transfer", Category = "Transport", IsRoomCharge = false, IsActive = true },
         };
 
-        foreach (var def in definitions)
-        {
-            if (_context.ChargeTypes.Any(x => x.Name == def.Name)) continue;
-            _context.ChargeTypes.Add(def);
-        }
+        _context.ChargeTypes.AddRange(definitions);
 
         _context.SaveChanges();
     }
@@ -171,7 +169,6 @@ public class ResortSetupDataCreator
 
         foreach (var name in names)
         {
-            if (_context.PaymentMethods.Any(x => x.Name == name)) continue;
             _context.PaymentMethods.Add(new PaymentMethod { Name = name, IsActive = true });
         }
 
@@ -186,18 +183,7 @@ public class ResortSetupDataCreator
             new ExtraBedType { Name = "Adult", BasePrice = 1000m, IsActive = true },
         };
 
-        foreach (var def in definitions)
-        {
-            var existing = _context.ExtraBedTypes.FirstOrDefault(x => x.Name == def.Name);
-            if (existing == null)
-            {
-                _context.ExtraBedTypes.Add(def);
-                continue;
-            }
-
-            existing.BasePrice = def.BasePrice;
-            existing.IsActive = true;
-        }
+        _context.ExtraBedTypes.AddRange(definitions);
 
         _context.SaveChanges();
     }
@@ -205,7 +191,7 @@ public class ResortSetupDataCreator
     private void EnsureGuests()
     {
         const int targetCount = 30;
-        var existingCodes = new HashSet<string>(_context.Guests.Select(x => x.GuestCode));
+        var existingCodes = new HashSet<string>();
 
         var firstNames = new[]
         {
@@ -223,14 +209,9 @@ public class ResortSetupDataCreator
 
         var nationalities = new[] { "Filipino", "American", "Japanese", "Korean", "Singaporean", "Australian" };
 
-        var currentCount = _context.Guests.Count();
-        if (currentCount >= targetCount) return;
-
-        for (var i = currentCount + 1; i <= targetCount; i++)
+        for (var i = 1; i <= targetCount; i++)
         {
             var code = $"GST{i:0000}";
-            if (existingCodes.Contains(code)) continue;
-
             var firstName = firstNames[(i - 1) % firstNames.Length];
             var lastName = lastNames[(i - 1) % lastNames.Length];
 
@@ -268,9 +249,6 @@ public class ResortSetupDataCreator
 
         foreach (var def in definitions)
         {
-            var exists = _context.DocumentSequences.Any(x => x.DocumentType == def.Type && x.Year == year && x.TenantId == _tenantId);
-            if (exists) continue;
-
             _context.DocumentSequences.Add(new DocumentSequence
             {
                 DocumentType = def.Type,

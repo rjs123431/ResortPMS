@@ -21,9 +21,15 @@ public class Reservation : FullAuditedEntity<Guid>
     public decimal DepositRequired { get; set; }
     public decimal DepositPaid { get; set; }
     public string Notes { get; set; } = string.Empty;
+    public string ReservationConditions { get; set; } = string.Empty;
+    public string SpecialRequests { get; set; } = string.Empty;
 
     // Snapshot: guest name at reservation time for quick display
     public string GuestName { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
 
     public virtual Guest Guest { get; set; }
     public virtual ICollection<ReservationRoom> Rooms { get; set; } = [];

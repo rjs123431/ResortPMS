@@ -33,7 +33,7 @@ const ExtraBedTypeListPage = lazy(() => import('./pages/Resort/ExtraBedTypes/Ext
 const ReservationListPage = lazy(() => import('@pages/Resort/Reservations/ReservationsPage').then((m) => ({ default: m.ReservationListPage })));
 const NewReservationPage = lazy(() => import('@pages/Resort/Reservations/NewReservationPage').then((m) => ({ default: m.NewReservationPage })));
 const ReservationDetailPage = lazy(() => import('@pages/Resort/Reservations/ReservationDetailPage').then((m) => ({ default: m.ReservationDetailPage })));
-const FindAvailableRoomPage = lazy(() => import('@pages/Resort/Reservations/FindAvailableRoomPage').then((m) => ({ default: m.FindAvailableRoomPage })));
+const ReservationPage = lazy(() => import('@pages/Resort/Reservations/ReservationPage').then((m) => ({ default: m.ReservationPage })));
 const CheckInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInPage').then((m) => ({ default: m.CheckInPage })));
 const StaysPage = lazy(() => import('@pages/Resort/Stays/StaysPage').then((m) => ({ default: m.StaysPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
@@ -263,7 +263,7 @@ const App: React.FC = () => {
                       element={
                         <PageTitle title="Find Available Rooms">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
-                            <FindAvailableRoomPage />
+                            <ReservationPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

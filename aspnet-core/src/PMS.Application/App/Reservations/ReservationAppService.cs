@@ -62,12 +62,20 @@ public class ReservationAppService(
             throw new UserFriendlyException(L("ArrivalDateMustBeFutureOrToday"));
 
         var reservationNo = await documentNumberService.GenerateNextDocumentNumberAsync("RESERVATION", "RES-");
+        var firstName = string.IsNullOrWhiteSpace(input.FirstName) ? guest.FirstName : input.FirstName.Trim();
+        var lastName = string.IsNullOrWhiteSpace(input.LastName) ? guest.LastName : input.LastName.Trim();
+        var phone = string.IsNullOrWhiteSpace(input.Phone) ? (guest.Phone ?? string.Empty) : input.Phone.Trim();
+        var email = string.IsNullOrWhiteSpace(input.Email) ? (guest.Email ?? string.Empty) : input.Email.Trim();
 
         var reservation = new Reservation
         {
             ReservationNo = reservationNo,
             GuestId = input.GuestId,
-            GuestName = $"{guest.FirstName} {guest.LastName}".Trim(),
+            GuestName = $"{firstName} {lastName}".Trim(),
+            FirstName = firstName,
+            LastName = lastName,
+            Phone = phone,
+            Email = email,
             ReservationDate = Clock.Now,
             ArrivalDate = input.ArrivalDate.Date,
             DepartureDate = input.DepartureDate.Date,
@@ -78,7 +86,9 @@ public class ReservationAppService(
             TotalAmount = input.TotalAmount,
             DepositPercentage = input.DepositPercentage,
             DepositRequired = input.DepositRequired,
-            Notes = input.Notes ?? string.Empty
+            Notes = input.Notes ?? string.Empty,
+            ReservationConditions = input.ReservationConditions ?? string.Empty,
+            SpecialRequests = input.SpecialRequests ?? string.Empty,
         };
 
         // Attach room entries
@@ -210,6 +220,8 @@ public class ReservationAppService(
         reservation.DepositPercentage = input.DepositPercentage;
         reservation.DepositRequired = input.DepositRequired;
         reservation.Notes = input.Notes ?? string.Empty;
+        reservation.ReservationConditions = input.ReservationConditions ?? string.Empty;
+        reservation.SpecialRequests = input.SpecialRequests ?? string.Empty;
 
         await reservationRepository.UpdateAsync(reservation);
     }

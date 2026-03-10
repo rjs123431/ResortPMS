@@ -15,6 +15,10 @@ public class ReservationDto : EntityDto<Guid>
     public string ReservationNo { get; set; }
     public Guid GuestId { get; set; }
     public string GuestName { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Phone { get; set; }
+    public string Email { get; set; }
     public DateTime ReservationDate { get; set; }
     public DateTime ArrivalDate { get; set; }
     public DateTime DepartureDate { get; set; }
@@ -27,6 +31,8 @@ public class ReservationDto : EntityDto<Guid>
     public decimal DepositRequired { get; set; }
     public decimal DepositPaid { get; set; }
     public string Notes { get; set; }
+    public string ReservationConditions { get; set; }
+    public string SpecialRequests { get; set; }
     public List<ReservationRoomDto> Rooms { get; set; } = [];
     public List<ReservationExtraBedDto> ExtraBeds { get; set; } = [];
     public List<ReservationGuestDto> Guests { get; set; } = [];
@@ -40,6 +46,10 @@ public class ReservationListDto : EntityDto<Guid>
     public string ReservationNo { get; set; }
     public Guid GuestId { get; set; }
     public string GuestName { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Phone { get; set; }
+    public string Email { get; set; }
     public DateTime ArrivalDate { get; set; }
     public DateTime DepartureDate { get; set; }
     public int Nights { get; set; }
@@ -61,6 +71,12 @@ public class CreateReservationDto : IValidatableObject
     [Range(0, 100)] public decimal DepositPercentage { get; set; }
     public decimal DepositRequired { get; set; }
     [StringLength(1024)] public string Notes { get; set; }
+    [StringLength(2048)] public string ReservationConditions { get; set; }
+    [StringLength(2048)] public string SpecialRequests { get; set; }
+    [StringLength(128)] public string FirstName { get; set; }
+    [StringLength(128)] public string LastName { get; set; }
+    [StringLength(64)] public string Phone { get; set; }
+    [StringLength(256)] public string Email { get; set; }
     [Required][MinLength(1)] public List<CreateReservationRoomDto> Rooms { get; set; } = [];
     public List<CreateReservationExtraBedDto> ExtraBeds { get; set; } = [];
     public List<Guid> AdditionalGuestIds { get; set; } = [];
@@ -84,6 +100,8 @@ public class UpdateReservationDto
     [Range(0, 100)] public decimal DepositPercentage { get; set; }
     public decimal DepositRequired { get; set; }
     [StringLength(1024)] public string Notes { get; set; }
+    [StringLength(2048)] public string ReservationConditions { get; set; }
+    [StringLength(2048)] public string SpecialRequests { get; set; }
 }
 
 public class CancelReservationDto

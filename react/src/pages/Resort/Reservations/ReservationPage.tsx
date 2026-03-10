@@ -87,7 +87,7 @@ const splitFullName = (fullName: string) => {
   };
 };
 
-export const FindAvailableRoomPage = () => {
+export const ReservationPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [stayRange, setStayRange] = useState<[Date | null, Date | null]>(() => {
@@ -123,6 +123,8 @@ export const FindAvailableRoomPage = () => {
     nationality: '',
   });
   const [transactionNotes, setTransactionNotes] = useState('');
+  const [reservationConditions, setReservationConditions] = useState('');
+  const [specialRequests, setSpecialRequests] = useState('');
   const [confirmError, setConfirmError] = useState('');
   const [initialDeposits, setInitialDeposits] = useState<InitialDepositRow[]>([]);
   const [showDepositDialog, setShowDepositDialog] = useState(false);
@@ -368,6 +370,8 @@ export const FindAvailableRoomPage = () => {
       nationality: '',
     });
     setTransactionNotes('');
+    setReservationConditions('');
+    setSpecialRequests('');
     setInitialDeposits([]);
     setShowDepositDialog(false);
     setSearchCriteria(nextCriteria);
@@ -535,6 +539,12 @@ export const FindAvailableRoomPage = () => {
         depositPercentage,
         depositRequired: round2(initialDepositTotal),
         notes: transactionNotes.trim() || undefined,
+        reservationConditions: reservationConditions.trim() || undefined,
+        specialRequests: specialRequests.trim() || undefined,
+        firstName: guestInfoForm.firstName.trim() || undefined,
+        lastName: guestInfoForm.lastName.trim() || undefined,
+        phone: guestInfoForm.phone.trim() || undefined,
+        email: guestInfoForm.email.trim() || undefined,
         rooms: roomEntries,
         extraBeds: extraBedEntries,
         additionalGuestIds: [],
@@ -559,7 +569,7 @@ export const FindAvailableRoomPage = () => {
       navigate(`/reservations/${reservationId}`);
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Unable to confirm reservation.';
+      const message = error instanceof Error ? error.message : 'Unable to save reservation.';
       setConfirmError(message);
     },
   });
@@ -1162,15 +1172,37 @@ export const FindAvailableRoomPage = () => {
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, nationality: e.target.value }))}
                     />
                   </div>
-                  <div className="md:col-span-3">
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-                    <textarea
-                      rows={3}
-                      className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                      value={transactionNotes}
-                      onChange={(e) => setTransactionNotes(e.target.value)}
-                      placeholder="Transaction note"
-                    />
+                  <div className="md:col-span-3 grid grid-cols-1 gap-2 md:grid-cols-1">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                      <textarea
+                        rows={3}
+                        className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                        value={transactionNotes}
+                        onChange={(e) => setTransactionNotes(e.target.value)}
+                        placeholder="Transaction note"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reservation Conditions</label>
+                      <textarea
+                        rows={3}
+                        className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                        value={reservationConditions}
+                        onChange={(e) => setReservationConditions(e.target.value)}
+                        placeholder="Optional reservation conditions"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Special Requests</label>
+                      <textarea
+                        rows={3}
+                        className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                        value={specialRequests}
+                        onChange={(e) => setSpecialRequests(e.target.value)}
+                        placeholder="Optional special requests"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1275,7 +1307,7 @@ export const FindAvailableRoomPage = () => {
                 }
                 className="ml-auto inline-flex items-center gap-1 rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
               >
-                <span>{createMutation.isPending ? 'Confirming...' : 'Confirm Reservation'}</span>
+                <span>{createMutation.isPending ? 'Saving...' : 'Create Reservation'}</span>
                 <span aria-hidden="true">&rarr;</span>
               </button>
             </div>

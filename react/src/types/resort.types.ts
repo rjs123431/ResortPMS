@@ -181,6 +181,12 @@ export interface CreateReservationDto {
   depositPercentage: number;
   depositRequired: number;
   notes?: string;
+  reservationConditions?: string;
+  specialRequests?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
   rooms: ReservationRoomDto[];
   extraBeds: ReservationExtraBedDto[];
   additionalGuestIds: string[];
@@ -282,6 +288,10 @@ export interface ReservationDetailDto {
   id: string;
   reservationNo: string;
   guestName: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
   arrivalDate: string;
   departureDate: string;
   nights: number;
@@ -293,6 +303,8 @@ export interface ReservationDetailDto {
   depositRequired: number;
   depositPaid: number;
   notes?: string;
+  reservationConditions?: string;
+  specialRequests?: string;
   rooms: ReservationRoomDetailDto[];
   extraBeds: ReservationExtraBedDetailDto[];
   guests: ReservationGuestDto[];
