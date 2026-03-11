@@ -62,8 +62,9 @@ export const AssignRoomDialog = ({
       return result.items.filter((r) => r.roomTypeId === roomTypeId && r.operationalStatus === RoomOperationalStatus.Vacant);
     },
     enabled: open && !!roomTypeId,
+    staleTime: 10 * 1000,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
-    refetchOnMount: true,
   });
 
   const filteredRooms = rooms.filter(

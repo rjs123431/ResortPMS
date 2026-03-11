@@ -23,6 +23,9 @@ export const CheckInPage = () => {
   const { data: reservationsData, isLoading } = useQuery({
     queryKey: ['resort-reservations-checkin-today', serverFilter],
     queryFn: () => resortService.getReservations(serverFilter, 0, 300),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const todayDateOnly = useMemo(() => formatDateOnly(new Date()), []);

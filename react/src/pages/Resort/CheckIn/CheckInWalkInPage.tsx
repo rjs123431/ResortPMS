@@ -675,6 +675,7 @@ export const CheckInWalkInPage = () => {
       setConfirmError('');
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin-today'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-stays'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
       navigate('/check-in/confirmation', {
