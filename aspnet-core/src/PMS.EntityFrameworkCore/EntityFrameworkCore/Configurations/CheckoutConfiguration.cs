@@ -102,14 +102,37 @@ internal class HousekeepingLogConfiguration : IEntityTypeConfiguration<Housekeep
     {
         entity.ToTable("HousekeepingLog");
 
-        entity.Property(e => e.Status).HasMaxLength(32).IsUnicode(false).IsRequired();
-        entity.Property(e => e.Notes).HasMaxLength(512);
+        entity.Property(e => e.OldStatus).HasConversion<int>();
+        entity.Property(e => e.NewStatus).HasConversion<int>();
+        entity.Property(e => e.Remarks).HasMaxLength(512);
 
-        entity.HasIndex(e => new { e.RoomId, e.LoggedAt });
+        entity.HasIndex(e => new { e.RoomId, e.CreationTime });
 
         entity.HasOne(e => e.Room)
             .WithMany()
             .HasForeignKey(e => e.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.Staff)
+            .WithMany()
+            .HasForeignKey(e => e.StaffId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class StaffConfiguration : IEntityTypeConfiguration<Staff>
+{
+    public void Configure(EntityTypeBuilder<Staff> entity)
+    {
+        entity.ToTable("Staff");
+
+        entity.Property(e => e.StaffCode).HasMaxLength(64).IsUnicode(false).IsRequired();
+        entity.Property(e => e.FullName).HasMaxLength(128).IsRequired();
+        entity.Property(e => e.Department).HasMaxLength(64);
+        entity.Property(e => e.Position).HasMaxLength(64);
+        entity.Property(e => e.PhoneNumber).HasMaxLength(32).IsUnicode(false);
+
+        entity.HasIndex(e => e.StaffCode).IsUnique();
+        entity.HasIndex(e => e.FullName);
     }
 }

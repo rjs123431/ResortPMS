@@ -92,12 +92,52 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ),
           },
           {
-            path: '/room-status',
+            path: '/room-rack',
+            label: 'Room Rack',
+            permissions: [PermissionNames.Pages_Rooms],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2m0 0v10a2 2 0 01-2 2H8a2 2 0 01-2-2V7m4 4h4m-4 4h4" />
+              </svg>
+            ),
+          },
+        ],
+      },
+      {
+        label: 'Housekeeping',
+        icon: (
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        ),
+        children: [
+          {
+            path: '/housekeeping/cleaning-board',
+            label: 'Cleaning Board',
+            permissions: [PermissionNames.Pages_Rooms],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            ),
+          },
+          {
+            path: '/housekeeping/room-status',
             label: 'Room Status',
             permissions: [PermissionNames.Pages_Rooms],
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2m0 0v10a2 2 0 01-2 2H8a2 2 0 01-2-2V7m4 4h4m-4 4h4" />
+              </svg>
+            ),
+          },
+          {
+            path: '/housekeeping/tasks',
+            label: 'Tasks',
+            permissions: [PermissionNames.Pages_Rooms],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             ),
           },
@@ -168,6 +208,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 12h8M8 17h5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z" />
+              </svg>
+            ),
+          },
+          {
+            path: '/staff',
+            label: 'Staff',
+            permissions: [PermissionNames.Pages_Staff],
+            icon: (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V4H2v16h5m10 0v-4a3 3 0 00-3-3H10a3 3 0 00-3 3v4m10 0H7m10-9a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             ),
           },

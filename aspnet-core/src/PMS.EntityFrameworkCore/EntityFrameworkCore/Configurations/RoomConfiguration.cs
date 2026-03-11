@@ -26,6 +26,8 @@ internal class RoomConfiguration : IEntityTypeConfiguration<Room>
 
         entity.Property(e => e.RoomNumber).HasMaxLength(16).IsUnicode(false).IsRequired();
         entity.Property(e => e.Floor).HasMaxLength(32).IsUnicode(false);
+        entity.Property(e => e.OperationalStatus).HasConversion<int>();
+        entity.Property(e => e.HousekeepingStatus).HasConversion<int>();
 
         entity.HasIndex(e => e.RoomNumber).IsUnique();
 
@@ -43,11 +45,33 @@ internal class RoomStatusLogConfiguration : IEntityTypeConfiguration<RoomStatusL
         entity.ToTable("RoomStatusLog");
 
         entity.Property(e => e.Remarks).HasMaxLength(256);
+        entity.Property(e => e.OperationalStatus).HasConversion<int?>();
+        entity.Property(e => e.HousekeepingStatus).HasConversion<int?>();
 
         entity.HasIndex(e => new { e.RoomId, e.ChangedAt });
 
         entity.HasOne(e => e.Room)
             .WithMany(r => r.StatusLogs)
+            .HasForeignKey(e => e.RoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class HousekeepingTaskConfiguration : IEntityTypeConfiguration<HousekeepingTask>
+{
+    public void Configure(EntityTypeBuilder<HousekeepingTask> entity)
+    {
+        entity.ToTable("HousekeepingTask");
+
+        entity.Property(e => e.Remarks).HasMaxLength(512);
+        entity.Property(e => e.TaskType).HasConversion<int>();
+        entity.Property(e => e.Status).HasConversion<int>();
+
+        entity.HasIndex(e => new { e.RoomId, e.TaskDate });
+        entity.HasIndex(e => e.Status);
+
+        entity.HasOne(e => e.Room)
+            .WithMany(r => r.HousekeepingTasks)
             .HasForeignKey(e => e.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
     }

@@ -127,7 +127,8 @@ public class ResortSetupDataCreator
                     RoomNumber = room.Number,
                     RoomTypeId = roomTypes[room.Type],
                     Floor = room.Floor,
-                    Status = RoomStatus.VacantClean,
+                    OperationalStatus = RoomOperationalStatus.Vacant,
+                    HousekeepingStatus = HousekeepingStatus.Clean,
                     IsActive = true,
                 });
                 continue;
@@ -136,9 +137,10 @@ public class ResortSetupDataCreator
             existing.RoomTypeId = roomTypes[room.Type];
             existing.Floor = room.Floor;
             existing.IsActive = true;
-            if (existing.Status is RoomStatus.OutOfOrder or RoomStatus.Maintenance)
+            if (existing.OperationalStatus is RoomOperationalStatus.OutOfOrder or RoomOperationalStatus.OutOfService)
             {
-                existing.Status = RoomStatus.VacantClean;
+                existing.OperationalStatus = RoomOperationalStatus.Vacant;
+                existing.HousekeepingStatus = HousekeepingStatus.Clean;
             }
         }
 

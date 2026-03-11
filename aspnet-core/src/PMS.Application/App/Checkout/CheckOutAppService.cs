@@ -35,6 +35,7 @@ public class CheckOutAppService(
     IRepository<ReceiptPayment, Guid> receiptPaymentRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
+    IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IDocumentNumberService documentNumberService
 ) : PMSAppServiceBase, ICheckOutAppService
 {
@@ -226,8 +227,19 @@ public class CheckOutAppService(
 
             if (activeStayRoom.Room != null)
             {
-                activeStayRoom.Room.Status = RoomStatus.VacantDirty;
+                var oldStatus = activeStayRoom.Room.HousekeepingStatus;
+                activeStayRoom.Room.OperationalStatus = RoomOperationalStatus.Vacant;
+                activeStayRoom.Room.HousekeepingStatus = HousekeepingStatus.Dirty;
                 await roomRepository.UpdateAsync(activeStayRoom.Room);
+
+                await housekeepingLogRepository.InsertAsync(new HousekeepingLog
+                {
+                    RoomId = activeStayRoom.Room.Id,
+                    OldStatus = oldStatus,
+                    NewStatus = HousekeepingStatus.Dirty,
+                    StaffId = null,
+                    Remarks = "System (Checkout)",
+                });
             }
         }
 

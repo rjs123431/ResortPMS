@@ -21,6 +21,9 @@ import {
   GuestListDto,
   LookupDto,
   LookupListDto,
+  StaffDto,
+  StaffListDto,
+  CreateStaffDto,
   PagedResultDto,
   ReceiptDto,
   RecordReservationDepositDto,
@@ -31,6 +34,16 @@ import {
   RoomTypeDto,
   RoomTypeListDto,
   StayListDto,
+  RoomOperationalStatus,
+  HousekeepingStatus,
+  HousekeepingTaskDto,
+  CreateHousekeepingTaskDto,
+  UpdateHousekeepingTaskStatusDto,
+  CleaningBoardRoomDto,
+  HousekeepingTaskStatus,
+  HousekeepingTaskType,
+  HousekeepingLogDto,
+  UpdateHousekeepingStatusDto,
 } from '@/types/resort.types';
 
 export const resortService = {
@@ -129,6 +142,7 @@ export const resortService = {
     departureDate?: string,
     reservationId?: string,
     excludeReservedWithoutAssignedRoom?: boolean,
+    checkInReadyOnly?: boolean,
   ) => {
     const params: Record<string, string> = {};
     if (roomTypeId) params.RoomTypeId = roomTypeId;
@@ -137,6 +151,9 @@ export const resortService = {
     if (reservationId) params.ReservationId = reservationId;
     if (excludeReservedWithoutAssignedRoom !== undefined) {
       params.ExcludeReservedWithoutAssignedRoom = String(excludeReservedWithoutAssignedRoom);
+    }
+    if (checkInReadyOnly !== undefined) {
+      params.CheckInReadyOnly = String(checkInReadyOnly);
     }
 
     const response = await api.get<ApiResponse<RoomListDto[]>>('/api/services/app/Room/GetAvailableRooms', {
@@ -508,5 +525,91 @@ export const resortService = {
       params: { stayId },
     });
     return response.data.result;
+  },
+
+  updateRoomOperationalStatus: async (roomId: string, operationalStatus: RoomOperationalStatus, remarks?: string) => {
+    await api.put('/api/services/app/Room/UpdateOperationalStatus', { roomId, operationalStatus, remarks });
+  },
+
+  updateRoomHousekeepingStatus: async (roomId: string, housekeepingStatus: HousekeepingStatus, remarks?: string, staffId?: string) => {
+    const payload: UpdateHousekeepingStatusDto = { roomId, housekeepingStatus, remarks, staffId };
+    await api.put('/api/services/app/Room/UpdateHousekeepingStatus', payload);
+  },
+
+  getCleaningBoard: async (date?: string) => {
+    const params: Record<string, string> = {};
+    if (date) params.Date = date;
+    const response = await api.get<ApiResponse<CleaningBoardRoomDto[]>>('/api/services/app/Housekeeping/GetCleaningBoard', { params });
+    return response.data.result;
+  },
+
+  getHousekeepingTasks: async (params?: {
+    status?: HousekeepingTaskStatus;
+    taskType?: HousekeepingTaskType;
+    roomId?: string;
+    taskDate?: string;
+    skipCount?: number;
+    maxResultCount?: number;
+  }) => {
+    const query: Record<string, string> = {};
+    if (params?.status !== undefined) query.Status = String(params.status);
+    if (params?.taskType !== undefined) query.TaskType = String(params.taskType);
+    if (params?.roomId) query.RoomId = params.roomId;
+    if (params?.taskDate) query.TaskDate = params.taskDate;
+    if (params?.skipCount !== undefined) query.SkipCount = String(params.skipCount);
+    if (params?.maxResultCount !== undefined) query.MaxResultCount = String(params.maxResultCount);
+    const response = await api.get<ApiResponse<PagedResultDto<HousekeepingTaskDto>>>('/api/services/app/Housekeeping/GetTasks', { params: query });
+    return response.data.result;
+  },
+
+  createHousekeepingTask: async (input: CreateHousekeepingTaskDto) => {
+    const response = await api.post<ApiResponse<string>>('/api/services/app/Housekeeping/CreateTask', input);
+    return response.data.result;
+  },
+
+  updateHousekeepingTaskStatus: async (input: UpdateHousekeepingTaskStatusDto) => {
+    await api.put('/api/services/app/Housekeeping/UpdateTaskStatus', input);
+  },
+
+  getHousekeepingLogs: async (params?: { roomId?: string; fromDate?: string; toDate?: string; skipCount?: number; maxResultCount?: number }) => {
+    const query: Record<string, string> = {};
+    if (params?.roomId) query.RoomId = params.roomId;
+    if (params?.fromDate) query.FromDate = params.fromDate;
+    if (params?.toDate) query.ToDate = params.toDate;
+    if (params?.skipCount !== undefined) query.SkipCount = String(params.skipCount);
+    if (params?.maxResultCount !== undefined) query.MaxResultCount = String(params.maxResultCount);
+    const response = await api.get<ApiResponse<PagedResultDto<HousekeepingLogDto>>>('/api/services/app/Housekeeping/GetLogs', { params: query });
+    return response.data.result;
+  },
+
+  getStaffsPaged: async (filter = '', skipCount = 0, maxResultCount = 100) => {
+    const response = await api.get<ApiResponse<PagedResultDto<StaffListDto>>>('/api/services/app/Staff/GetAll', {
+      params: {
+        Filter: filter,
+        Sorting: 'FullName asc',
+        SkipCount: skipCount,
+        MaxResultCount: maxResultCount,
+      },
+    });
+    return response.data.result;
+  },
+
+  getStaffs: async () => {
+    const response = await api.get<ApiResponse<StaffListDto[]>>('/api/services/app/Staff/GetAllActive');
+    return response.data.result;
+  },
+
+  getStaff: async (id: string) => {
+    const response = await api.get<ApiResponse<StaffDto>>('/api/services/app/Staff/Get', { params: { id } });
+    return response.data.result;
+  },
+
+  createStaff: async (input: CreateStaffDto) => {
+    const response = await api.post<ApiResponse<string>>('/api/services/app/Staff/Create', input);
+    return response.data.result;
+  },
+
+  updateStaff: async (input: StaffDto) => {
+    await api.put('/api/services/app/Staff/Update', input);
   },
 };

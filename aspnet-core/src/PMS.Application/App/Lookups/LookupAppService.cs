@@ -41,6 +41,15 @@ public interface IExtraBedTypeAppService : IApplicationService
     Task UpdateAsync(ExtraBedTypeDto input);
 }
 
+public interface IStaffAppService : IApplicationService
+{
+    Task<StaffDto> GetAsync(Guid id);
+    Task<PagedResultDto<StaffListDto>> GetAllAsync(GetStaffInput input);
+    Task<System.Collections.Generic.List<StaffListDto>> GetAllActiveAsync();
+    Task<Guid> CreateAsync(CreateStaffDto input);
+    Task UpdateAsync(StaffDto input);
+}
+
 [AbpAuthorize(PermissionNames.Pages_ChargeTypes)]
 public class ChargeTypeAppService(
     IRepository<ChargeType, Guid> chargeTypeRepository
@@ -241,5 +250,73 @@ public class ExtraBedTypeAppService(
         ObjectMapper.Map(input, entity);
         entity.Name = input.Name.Trim();
         await extraBedTypeRepository.UpdateAsync(entity);
+    }
+}
+
+[AbpAuthorize(PermissionNames.Pages_Staff)]
+public class StaffAppService(
+    IRepository<Staff, Guid> staffRepository
+) : PMSAppServiceBase, IStaffAppService
+{
+    public async Task<StaffDto> GetAsync(Guid id)
+    {
+        var entity = await staffRepository.GetAsync(id);
+        return ObjectMapper.Map<StaffDto>(entity);
+    }
+
+    public async Task<PagedResultDto<StaffListDto>> GetAllAsync(GetStaffInput input)
+    {
+        var query = staffRepository.GetAll()
+            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.StaffCode.Contains(input.Filter) || x.FullName.Contains(input.Filter))
+            .WhereIf(input.IsActive.HasValue, x => x.IsActive == input.IsActive);
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(input.Sorting ?? "FullName").PageBy(input).ToListAsync();
+        return new PagedResultDto<StaffListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<StaffListDto>>(items));
+    }
+
+    public async Task<System.Collections.Generic.List<StaffListDto>> GetAllActiveAsync()
+    {
+        var items = await staffRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.FullName).ToListAsync();
+        return ObjectMapper.Map<System.Collections.Generic.List<StaffListDto>>(items);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Staff_Create)]
+    public async Task<Guid> CreateAsync(CreateStaffDto input)
+    {
+        var code = input.StaffCode?.Trim().ToUpper() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(code)) throw new UserFriendlyException("Staff code is required.");
+
+        var exists = await staffRepository.GetAll().AnyAsync(x => x.StaffCode == code);
+        if (exists) throw new UserFriendlyException("Staff code already exists.");
+
+        var entity = ObjectMapper.Map<Staff>(input);
+        entity.StaffCode = code;
+        entity.FullName = input.FullName?.Trim() ?? string.Empty;
+        entity.Department = input.Department?.Trim() ?? string.Empty;
+        entity.Position = input.Position?.Trim() ?? string.Empty;
+        entity.PhoneNumber = input.PhoneNumber?.Trim() ?? string.Empty;
+        entity.IsActive = true;
+
+        return await staffRepository.InsertAndGetIdAsync(entity);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Staff_Edit)]
+    public async Task UpdateAsync(StaffDto input)
+    {
+        var entity = await staffRepository.GetAsync(input.Id);
+        var code = input.StaffCode?.Trim().ToUpper() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(code)) throw new UserFriendlyException("Staff code is required.");
+
+        var duplicateCode = await staffRepository.GetAll().AnyAsync(x => x.Id != input.Id && x.StaffCode == code);
+        if (duplicateCode) throw new UserFriendlyException("Staff code already exists.");
+
+        ObjectMapper.Map(input, entity);
+        entity.StaffCode = code;
+        entity.FullName = input.FullName?.Trim() ?? string.Empty;
+        entity.Department = input.Department?.Trim() ?? string.Empty;
+        entity.Position = input.Position?.Trim() ?? string.Empty;
+        entity.PhoneNumber = input.PhoneNumber?.Trim() ?? string.Empty;
+        await staffRepository.UpdateAsync(entity);
     }
 }

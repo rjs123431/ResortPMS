@@ -4,7 +4,7 @@ import { MainLayout } from '@components/layout/MainLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
-import { RoomStatus } from '@/types/resort.types';
+import { RoomOperationalStatus } from '@/types/resort.types';
 import type { RoomDto } from '@/types/resort.types';
 import { RoomDialogForm } from './RoomDialogForm';
 
@@ -21,7 +21,7 @@ export const RoomListPage = () => {
     roomNumber: '',
     roomTypeId: '',
     floor: '',
-    status: RoomStatus.VacantClean,
+    operationalStatus: RoomOperationalStatus.Vacant,
     isActive: true,
   });
 
@@ -63,7 +63,7 @@ export const RoomListPage = () => {
       roomNumber: '',
       roomTypeId: '',
       floor: '',
-      status: RoomStatus.VacantClean,
+      operationalStatus: RoomOperationalStatus.Vacant,
       isActive: true,
     });
   };
@@ -120,7 +120,7 @@ export const RoomListPage = () => {
                     <td className="p-2">{room.roomNumber}</td>
                     <td className="p-2">{room.roomTypeName}</td>
                     <td className="p-2">{room.floor ?? '-'}</td>
-                    <td className="p-2">{RoomStatus[room.status]}</td>
+                    <td className="p-2">{RoomOperationalStatus[room.operationalStatus] ?? '-'}</td>
                     <td className="p-2">
                       {canEdit ? (
                         <button type="button" className="rounded bg-slate-700 px-2 py-1 text-white" onClick={() => void loadForEdit(room.id)}>
@@ -156,7 +156,7 @@ export const RoomListPage = () => {
                 roomNumber: form.roomNumber,
                 roomTypeId: form.roomTypeId,
                 floor: form.floor,
-                status: form.status,
+                operationalStatus: form.operationalStatus,
               });
             }
           }}

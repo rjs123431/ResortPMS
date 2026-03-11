@@ -1,5 +1,5 @@
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { RoomStatus } from '@/types/resort.types';
+import { RoomOperationalStatus } from '@/types/resort.types';
 import type { RoomDto } from '@/types/resort.types';
 
 type RoomTypeOption = {
@@ -77,16 +77,16 @@ export const RoomDialogForm = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Operational Status</label>
             <select
               className="w-full rounded border p-2 dark:bg-gray-700"
-              value={form.status}
-              onChange={(e) => onFormChange((s) => ({ ...s, status: Number(e.target.value) as RoomStatus }))}
+              value={form.operationalStatus}
+              onChange={(e) => onFormChange((s) => ({ ...s, operationalStatus: Number(e.target.value) as RoomOperationalStatus }))}
             >
-              {Object.keys(RoomStatus)
+              {Object.keys(RoomOperationalStatus)
                 .filter((k) => Number.isNaN(Number(k)))
                 .map((key) => (
-                  <option key={key} value={RoomStatus[key as keyof typeof RoomStatus]}>
+                  <option key={key} value={RoomOperationalStatus[key as keyof typeof RoomOperationalStatus]}>
                     {key}
                   </option>
                 ))}

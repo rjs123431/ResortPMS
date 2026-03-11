@@ -7,12 +7,33 @@ export interface ApiResponse<T> {
   result: T;
 }
 
-export enum RoomStatus {
-  VacantClean = 0,
-  VacantDirty = 1,
+export enum RoomOperationalStatus {
+  Vacant = 1,
   Occupied = 2,
-  OutOfOrder = 3,
-  Maintenance = 4,
+  Reserved = 3,
+  OutOfOrder = 4,
+  OutOfService = 5,
+}
+
+export enum HousekeepingStatus {
+  Clean = 1,
+  Dirty = 2,
+  Inspected = 3,
+  Pickup = 4,
+}
+
+export enum HousekeepingTaskType {
+  CheckoutCleaning = 1,
+  StayoverCleaning = 2,
+  PickupCleaning = 3,
+  Inspection = 4,
+}
+
+export enum HousekeepingTaskStatus {
+  Pending = 1,
+  InProgress = 2,
+  Completed = 3,
+  Cancelled = 4,
 }
 
 export enum ReservationStatus {
@@ -88,7 +109,8 @@ export interface RoomListDto {
   maxChildren: number;
   baseRate: number;
   floor?: string;
-  status: RoomStatus;
+  operationalStatus: RoomOperationalStatus;
+  housekeepingStatus: HousekeepingStatus;
   isActive: boolean;
 }
 
@@ -96,12 +118,70 @@ export interface CreateRoomDto {
   roomNumber: string;
   roomTypeId: string;
   floor?: string;
-  status?: RoomStatus;
+  operationalStatus?: RoomOperationalStatus;
+  housekeepingStatus?: HousekeepingStatus;
 }
 
 export interface RoomDto extends CreateRoomDto {
   id: string;
   isActive: boolean;
+}
+
+export interface HousekeepingTaskDto {
+  id: string;
+  roomId: string;
+  roomNumber: string;
+  roomTypeName: string;
+  taskType: HousekeepingTaskType;
+  status: HousekeepingTaskStatus;
+  assignedToUserId?: string;
+  startedAt?: string;
+  completedAt?: string;
+  remarks?: string;
+  taskDate: string;
+}
+
+export interface CreateHousekeepingTaskDto {
+  roomId: string;
+  taskType: HousekeepingTaskType;
+  remarks?: string;
+  taskDate?: string;
+}
+
+export interface UpdateHousekeepingTaskStatusDto {
+  taskId: string;
+  status: HousekeepingTaskStatus;
+  remarks?: string;
+}
+
+export interface UpdateHousekeepingStatusDto {
+  roomId: string;
+  housekeepingStatus: HousekeepingStatus;
+  staffId?: string;
+  remarks?: string;
+}
+
+export interface HousekeepingLogDto {
+  id: string;
+  roomId: string;
+  roomNumber: string;
+  oldStatus: HousekeepingStatus;
+  newStatus: HousekeepingStatus;
+  staffId?: string;
+  staffName?: string;
+  remarks?: string;
+  loggedAt: string;
+}
+
+export interface CleaningBoardRoomDto {
+  roomId: string;
+  roomNumber: string;
+  roomTypeName: string;
+  floor?: string;
+  operationalStatus: RoomOperationalStatus;
+  housekeepingStatus: HousekeepingStatus;
+  cleaningType: string;
+  pendingTaskId?: string;
 }
 
 export interface CreateRoomTypeDto {
@@ -412,6 +492,29 @@ export interface CreateLookupDto {
 
 export interface LookupDto extends CreateLookupDto {
   id: string;
+  isActive: boolean;
+}
+
+export interface CreateStaffDto {
+  staffCode: string;
+  fullName: string;
+  department?: string;
+  position?: string;
+  phoneNumber?: string;
+}
+
+export interface StaffDto extends CreateStaffDto {
+  id: string;
+  isActive: boolean;
+}
+
+export interface StaffListDto {
+  id: string;
+  staffCode: string;
+  fullName: string;
+  department?: string;
+  position?: string;
+  phoneNumber?: string;
   isActive: boolean;
 }
 

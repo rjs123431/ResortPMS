@@ -171,6 +171,7 @@ export const ReservationPage = () => {
             input.departureDate,
             undefined,
             true,
+            false,
           )
         )
       );

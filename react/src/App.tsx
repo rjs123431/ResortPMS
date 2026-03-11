@@ -30,6 +30,7 @@ const RoomTypeListPage = lazy(() => import('@pages/Resort/RoomTypes/RoomTypesPag
 const ChargeTypeListPage = lazy(() => import('@pages/Resort/ChargeTypes/ChargeTypesPage').then((m) => ({ default: m.ChargeTypeListPage })));
 const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/PaymentMethodsPage').then((m) => ({ default: m.PaymentMethodListPage })));
 const ExtraBedTypeListPage = lazy(() => import('./pages/Resort/ExtraBedTypes/ExtraBedTypesPage').then((m) => ({ default: m.ExtraBedTypeListPage })));
+const StaffListPage = lazy(() => import('@pages/Resort/Staff/StaffPage').then((m) => ({ default: m.StaffListPage })));
 const ReservationListPage = lazy(() => import('@pages/Resort/Reservations/ReservationsPage').then((m) => ({ default: m.ReservationListPage })));
 const ReservationDetailPage = lazy(() => import('@pages/Resort/Reservations/ReservationDetailPage').then((m) => ({ default: m.ReservationDetailPage })));
 const ReservationPage = lazy(() => import('@pages/Resort/Reservations/ReservationPage').then((m) => ({ default: m.ReservationPage })));
@@ -38,7 +39,10 @@ const CheckInWalkInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInWalkIn
 const CheckInReservationPage = lazy(() => import('./pages/Resort/CheckIn/CheckInReservationPage').then((m) => ({ default: m.CheckInReservationPage })));
 const StaysPage = lazy(() => import('@pages/Resort/Stays/StaysPage').then((m) => ({ default: m.StaysPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
-const RoomStatusPage = lazy(() => import('@pages/Resort/RoomStatus/RoomStatusPage').then((m) => ({ default: m.RoomStatusPage })));
+const RoomRackPage = lazy(() => import('@pages/Resort/RoomRack/RoomRackPage').then((m) => ({ default: m.RoomRackPage })));
+const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
+const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
+const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -231,6 +235,16 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
+                      path="/staff"
+                      element={
+                        <PageTitle title="Staff">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Staff]}>
+                            <StaffListPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
                       path="/reservations"
                       element={
                         <PageTitle title="Reservations">
@@ -321,11 +335,45 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
-                      path="/room-status"
+                      path="/room-rack"
                       element={
-                        <PageTitle title="Room Status">
+                        <PageTitle title="Room Rack">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
-                            <RoomStatusPage />
+                            <RoomRackPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/room-status"
+                      element={<Navigate to="/room-rack" replace />}
+                    />
+                    <Route
+                      path="/housekeeping/cleaning-board"
+                      element={
+                        <PageTitle title="Cleaning Board">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                            <CleaningBoardPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/housekeeping/room-status"
+                      element={
+                        <PageTitle title="Housekeeping Room Status">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                            <HousekeepingRoomStatusPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/housekeeping/tasks"
+                      element={
+                        <PageTitle title="Housekeeping Tasks">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                            <HousekeepingTasksPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

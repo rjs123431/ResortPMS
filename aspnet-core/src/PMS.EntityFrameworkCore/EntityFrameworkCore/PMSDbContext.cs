@@ -26,6 +26,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<RoomType> RoomTypes { get; set; }
     public DbSet<Room> Rooms { get; set; }
     public DbSet<RoomStatusLog> RoomStatusLogs { get; set; }
+    public DbSet<HousekeepingTask> HousekeepingTasks { get; set; }
 
     // Lookup tables
     public DbSet<ChargeType> ChargeTypes { get; set; }
@@ -62,6 +63,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<GuestRequest> GuestRequests { get; set; }
     public DbSet<Incident> Incidents { get; set; }
     public DbSet<HousekeepingLog> HousekeepingLogs { get; set; }
+    public DbSet<Staff> Staffs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,6 +85,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new RoomTypeConfiguration());
         modelBuilder.ApplyConfiguration(new RoomConfiguration());
         modelBuilder.ApplyConfiguration(new RoomStatusLogConfiguration());
+        modelBuilder.ApplyConfiguration(new HousekeepingTaskConfiguration());
 
         // Lookups
         modelBuilder.ApplyConfiguration(new ChargeTypeConfiguration());
@@ -119,6 +122,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new GuestRequestConfiguration());
         modelBuilder.ApplyConfiguration(new IncidentConfiguration());
         modelBuilder.ApplyConfiguration(new HousekeepingLogConfiguration());
+        modelBuilder.ApplyConfiguration(new StaffConfiguration());
 
     }
 

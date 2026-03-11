@@ -31,7 +31,8 @@ public interface IRoomAppService : IApplicationService
     Task<PagedResultDto<RoomListDto>> GetAllAsync(GetRoomsInput input);
     Task<Guid> CreateAsync(CreateRoomDto input);
     Task UpdateAsync(RoomDto input);
-    Task UpdateStatusAsync(UpdateRoomStatusDto input);
+    Task UpdateOperationalStatusAsync(UpdateRoomOperationalStatusDto input);
+    Task UpdateHousekeepingStatusAsync(UpdateHousekeepingStatusDto input);
     Task<System.Collections.Generic.List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input);
 }
 
@@ -89,6 +90,7 @@ public class RoomTypeAppService(
 public class RoomAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomStatusLog, Guid> roomStatusLogRepository,
+    IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository
 ) : PMSAppServiceBase, IRoomAppService
@@ -120,7 +122,8 @@ public class RoomAppService(
             .Include(r => r.RoomType)
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
                 r => r.RoomNumber.Contains(input.Filter) || r.RoomType.Name.Contains(input.Filter))
-            .WhereIf(input.Status.HasValue, r => r.Status == input.Status)
+            .WhereIf(input.OperationalStatus.HasValue, r => r.OperationalStatus == input.OperationalStatus)
+            .WhereIf(input.HousekeepingStatus.HasValue, r => r.HousekeepingStatus == input.HousekeepingStatus)
             .WhereIf(input.RoomTypeId.HasValue, r => r.RoomTypeId == input.RoomTypeId)
             .WhereIf(input.IsActive.HasValue, r => r.IsActive == input.IsActive);
 
@@ -133,6 +136,7 @@ public class RoomAppService(
     {
         var hasDateRange = input.ArrivalDate.HasValue && input.DepartureDate.HasValue;
         var excludeReservedWithoutAssignedRoom = hasDateRange && input.ExcludeReservedWithoutAssignedRoom;
+        var checkInReadyOnly = input.CheckInReadyOnly;
 
         if (input.ArrivalDate.HasValue != input.DepartureDate.HasValue)
             throw new UserFriendlyException(L("InvalidArrivalDepartureDate"));
@@ -141,20 +145,23 @@ public class RoomAppService(
             throw new UserFriendlyException(L("InvalidArrivalDepartureDate"));
 
         var query = roomRepository.GetAll()
+            .AsNoTracking()
             .Include(r => r.RoomType)
             .Where(r => r.IsActive)
             .WhereIf(input.RoomTypeId.HasValue, r => r.RoomTypeId == input.RoomTypeId)
-            .Where(r => r.Status != RoomStatus.OutOfOrder && r.Status != RoomStatus.Maintenance);
+            .Where(r => r.OperationalStatus != RoomOperationalStatus.OutOfOrder &&
+                        r.OperationalStatus != RoomOperationalStatus.OutOfService);
 
-        if (!hasDateRange)
+        if (!hasDateRange || checkInReadyOnly)
         {
-            var immediateStatuses = new[] { RoomStatus.VacantClean, RoomStatus.VacantDirty };
-            query = query.Where(r => immediateStatuses.Contains(r.Status));
+            query = query.Where(r => r.OperationalStatus == RoomOperationalStatus.Vacant);
         }
-        else
+
+        if (hasDateRange)
         {
             var arrivalDate = input.ArrivalDate!.Value.Date;
             var departureDate = input.DepartureDate!.Value.Date;
+            var arrivalNextDay = arrivalDate.AddDays(1);
 
             var blockingReservationStatuses = new[]
             {
@@ -163,34 +170,34 @@ public class RoomAppService(
                 ReservationStatus.CheckedIn,
             };
 
-            var reservedRoomIds = await reservationRoomRepository.GetAll()
-                .Include(rr => rr.Reservation)
+            var activeStayStatuses = new[] { StayStatus.CheckedIn, StayStatus.InHouse };
+
+            // Materialize blocked room IDs first — correlated cross-repository subqueries
+            // cannot be translated by EF Core; using Contains on pre-fetched ID lists instead.
+            var blockedByReservation = await reservationRoomRepository.GetAll()
+                .AsNoTracking()
                 .Where(rr => rr.RoomId.HasValue)
-                .WhereIf(input.ReservationId.HasValue, rr => rr.ReservationId != input.ReservationId.Value)
+                .WhereIf(input.ReservationId.HasValue, rr => rr.ReservationId != input.ReservationId!.Value)
                 .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
                 .Where(rr => blockingReservationStatuses.Contains(rr.Reservation.Status))
                 .Select(rr => rr.RoomId!.Value)
                 .Distinct()
                 .ToListAsync();
 
-            var activeStayStatuses = new[] { StayStatus.CheckedIn, StayStatus.InHouse };
-
-            var occupiedByStayRoomIds = await stayRoomRepository.GetAll()
-                .Include(sr => sr.Stay)
+            var blockedByStay = await stayRoomRepository.GetAll()
+                .AsNoTracking()
+                .Where(sr => sr.AssignedAt < departureDate)
+                .Where(sr => (sr.ReleasedAt ?? sr.Stay.ExpectedCheckOutDateTime) >= arrivalNextDay)
                 .Where(sr => activeStayStatuses.Contains(sr.Stay.Status))
-                .Where(sr => sr.AssignedAt.Date < departureDate)
-                .Where(sr => (sr.ReleasedAt.HasValue ? sr.ReleasedAt.Value.Date : sr.Stay.ExpectedCheckOutDateTime.Date) > arrivalDate)
                 .Select(sr => sr.RoomId)
                 .Distinct()
                 .ToListAsync();
 
-            var blockedRoomIds = reservedRoomIds
-                .Concat(occupiedByStayRoomIds)
-                .Distinct()
-                .ToList();
+            if (blockedByReservation.Count > 0)
+                query = query.Where(r => !blockedByReservation.Contains(r.Id));
 
-            if (blockedRoomIds.Count > 0)
-                query = query.Where(r => !blockedRoomIds.Contains(r.Id));
+            if (blockedByStay.Count > 0)
+                query = query.Where(r => !blockedByStay.Contains(r.Id));
         }
 
         var items = await query.OrderBy(r => r.RoomNumber).ToListAsync();
@@ -208,7 +215,7 @@ public class RoomAppService(
             };
 
             var unassignedCountsByRoomType = await reservationRoomRepository.GetAll()
-                .Include(rr => rr.Reservation)
+                .AsNoTracking()
                 .Where(rr => rr.RoomId == null)
                 .WhereIf(input.ReservationId.HasValue, rr => rr.ReservationId != input.ReservationId.Value)
                 .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
@@ -260,7 +267,8 @@ public class RoomAppService(
             MaxChildren = room.RoomType?.MaxChildren ?? 0,
             BaseRate = room.RoomType?.BaseRate ?? 0,
             Floor = room.Floor,
-            Status = room.Status,
+            OperationalStatus = room.OperationalStatus,
+            HousekeepingStatus = room.HousekeepingStatus,
             IsActive = room.IsActive,
         };
     }
@@ -367,19 +375,43 @@ public class RoomAppService(
         await roomRepository.UpdateAsync(entity);
     }
 
-    public async Task UpdateStatusAsync(UpdateRoomStatusDto input)
+    public async Task UpdateOperationalStatusAsync(UpdateRoomOperationalStatusDto input)
     {
         var room = await roomRepository.GetAsync(input.RoomId);
-        var previousStatus = room.Status;
-        room.Status = input.Status;
+        room.OperationalStatus = input.OperationalStatus;
         await roomRepository.UpdateAsync(room);
 
         await roomStatusLogRepository.InsertAsync(new RoomStatusLog
         {
             RoomId = input.RoomId,
-            Status = input.Status,
+            OperationalStatus = input.OperationalStatus,
             Remarks = input.Remarks ?? string.Empty,
             ChangedAt = Abp.Timing.Clock.Now
+        });
+    }
+
+    public async Task UpdateHousekeepingStatusAsync(UpdateHousekeepingStatusDto input)
+    {
+        var room = await roomRepository.GetAsync(input.RoomId);
+        var oldStatus = room.HousekeepingStatus;
+        room.HousekeepingStatus = input.HousekeepingStatus;
+        await roomRepository.UpdateAsync(room);
+
+        await roomStatusLogRepository.InsertAsync(new RoomStatusLog
+        {
+            RoomId = input.RoomId,
+            HousekeepingStatus = input.HousekeepingStatus,
+            Remarks = input.Remarks ?? string.Empty,
+            ChangedAt = Abp.Timing.Clock.Now
+        });
+
+        await housekeepingLogRepository.InsertAsync(new HousekeepingLog
+        {
+            RoomId = input.RoomId,
+            OldStatus = oldStatus,
+            NewStatus = input.HousekeepingStatus,
+            StaffId = input.StaffId,
+            Remarks = input.Remarks,
         });
     }
 }

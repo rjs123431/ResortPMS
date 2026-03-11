@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus, RoomStatus } from '@/types/resort.types';
+import { ReservationStatus, RoomOperationalStatus } from '@/types/resort.types';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
@@ -122,7 +122,7 @@ export const CheckInReservationPage = () => {
 
   const { data: availableRooms } = useQuery({
     queryKey: ['resort-checkin-available-rooms', reservationId, arrivalDate, departureDate],
-    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, reservationId),
+    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, reservationId, false, true),
     enabled: Boolean(reservationId && arrivalDate && departureDate),
   });
 
@@ -157,7 +157,7 @@ export const CheckInReservationPage = () => {
     return (availableRooms ?? []).filter(
       (room) =>
         room.roomTypeId === assignDialogRoomLine.roomTypeId &&
-        (room.status === RoomStatus.VacantClean || room.status === RoomStatus.VacantDirty) &&
+        room.operationalStatus === RoomOperationalStatus.Vacant &&
         !assignedRoomIds.has(room.id),
     );
   }, [assignDialogRoomLine, roomEdits, availableRooms]);

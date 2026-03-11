@@ -12,8 +12,8 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260310183529_InitProject")]
-    partial class InitProject
+    [Migration("20260311012921_AddStaffAndHousekeepingLogDetails")]
+    partial class AddStaffAndHousekeepingLogDetails
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2023,27 +2023,75 @@ namespace PMS.Migrations
                     b.Property<long?>("CreatorUserId")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTime>("LoggedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<int>("NewStatus")
+                        .HasColumnType("int");
 
-                    b.Property<string>("Notes")
+                    b.Property<int>("OldStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Remarks")
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(32)");
+                    b.Property<Guid?>("StaffId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoomId", "LoggedAt");
+                    b.HasIndex("StaffId");
+
+                    b.HasIndex("RoomId", "CreationTime");
 
                     b.ToTable("HousekeepingLog", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.HousekeepingTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("TaskDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TaskType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("RoomId", "TaskDate");
+
+                    b.ToTable("HousekeepingTask", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.Incident", b =>
@@ -2631,6 +2679,9 @@ namespace PMS.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(32)");
 
+                    b.Property<int>("HousekeepingStatus")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -2640,6 +2691,9 @@ namespace PMS.Migrations
                     b.Property<long?>("LastModifierUserId")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("OperationalStatus")
+                        .HasColumnType("int");
+
                     b.Property<string>("RoomNumber")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -2648,9 +2702,6 @@ namespace PMS.Migrations
 
                     b.Property<Guid>("RoomTypeId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -2677,15 +2728,18 @@ namespace PMS.Migrations
                     b.Property<long?>("CreatorUserId")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("HousekeepingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OperationalStatus")
+                        .HasColumnType("int");
+
                     b.Property<string>("Remarks")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -2794,6 +2848,61 @@ namespace PMS.Migrations
                         .IsUnique();
 
                     b.ToTable("RoomType", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.Staff", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Department")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Position")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("StaffCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FullName");
+
+                    b.HasIndex("StaffCode")
+                        .IsUnique();
+
+                    b.ToTable("Staff", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.Stay", b =>
@@ -3596,6 +3705,24 @@ namespace PMS.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("PMS.App.Staff", "Staff")
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Room");
+
+                    b.Navigation("Staff");
+                });
+
+            modelBuilder.Entity("PMS.App.HousekeepingTask", b =>
+                {
+                    b.HasOne("PMS.App.Room", "Room")
+                        .WithMany("HousekeepingTasks")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Room");
                 });
 
@@ -4020,6 +4147,8 @@ namespace PMS.Migrations
 
             modelBuilder.Entity("PMS.App.Room", b =>
                 {
+                    b.Navigation("HousekeepingTasks");
+
                     b.Navigation("StatusLogs");
                 });
 

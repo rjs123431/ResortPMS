@@ -433,11 +433,15 @@ public class ReservationAppService(
         if (room.RoomTypeId != reservationRoom.RoomTypeId)
             throw new UserFriendlyException("Selected room does not match reservation room type.");
 
+        var arrivalDate = reservation.ArrivalDate.Date;
+        var departureDate = reservation.DepartureDate.Date;
+        var arrivalNextDay = arrivalDate.AddDays(1);
+
         var hasReservationConflict = await reservationRoomRepository.GetAll()
-            .Include(rr => rr.Reservation)
+            .AsNoTracking()
             .Where(rr => rr.RoomId == input.RoomId)
             .Where(rr => rr.ReservationId != input.ReservationId)
-            .Where(rr => rr.ArrivalDate < reservation.DepartureDate.Date && rr.DepartureDate > reservation.ArrivalDate.Date)
+            .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
             .AnyAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
                            rr.Reservation.Status == ReservationStatus.Confirmed ||
                            rr.Reservation.Status == ReservationStatus.CheckedIn);
@@ -446,10 +450,10 @@ public class ReservationAppService(
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
         var hasStayConflict = await stayRoomRepository.GetAll()
-            .Include(sr => sr.Stay)
+            .AsNoTracking()
             .Where(sr => sr.RoomId == input.RoomId)
-            .Where(sr => sr.AssignedAt.Date < reservation.DepartureDate.Date)
-            .Where(sr => (sr.ReleasedAt.HasValue ? sr.ReleasedAt.Value.Date : sr.Stay.ExpectedCheckOutDateTime.Date) > reservation.ArrivalDate.Date)
+            .Where(sr => sr.AssignedAt < departureDate)
+            .Where(sr => (sr.ReleasedAt ?? sr.Stay.ExpectedCheckOutDateTime) >= arrivalNextDay)
             .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
 
         if (hasStayConflict)

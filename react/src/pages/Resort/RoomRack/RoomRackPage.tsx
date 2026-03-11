@@ -3,12 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { MainLayout } from '@components/layout/MainLayout';
-import { ReservationStatus, RoomStatus } from '@/types/resort.types';
+import { ReservationStatus, RoomOperationalStatus, HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
 
 type StatusKey = 'occupied' | 'reservedArrivalToday' | 'vacantDirty' | 'vacantClean' | 'outOfOrder';
 
-interface RoomStatusRow {
+interface RoomRackRow {
   roomId: string;
   roomNumber: string;
   roomTypeName: string;
@@ -22,16 +22,10 @@ const STATUS_FILTERS: { key: StatusKey; label: string }[] = [
   { key: 'reservedArrivalToday', label: 'Reserved (Arrival Today)' },
   { key: 'vacantDirty', label: 'Vacant Dirty' },
   { key: 'vacantClean', label: 'Vacant Clean' },
-  { key: 'outOfOrder', label: 'Out of Order' },
+  { key: 'outOfOrder', label: 'Out of Order / Out of Service' },
 ];
 
-const STATUS_STYLES: Record<
-  StatusKey,
-  {
-    badgeClass: string;
-    cardClass: string;
-  }
-> = {
+const STATUS_STYLES: Record<StatusKey, { badgeClass: string; cardClass: string }> = {
   occupied: {
     badgeClass: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
     cardClass: 'border-l-4 border-l-rose-500',
@@ -65,140 +59,95 @@ const toDateInputValue = (value: Date) => {
 
 const toDateKey = (value: Date | string) => {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
+  if (Number.isNaN(date.getTime())) return '';
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
-export const RoomStatusPage = () => {
+export const RoomRackPage = () => {
   const [activeStatuses, setActiveStatuses] = useState<StatusKey[]>(STATUS_FILTERS.map((s) => s.key));
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const selectedDateKey = useMemo(() => toDateInputValue(selectedDate), [selectedDate]);
 
   const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
-    queryKey: ['resort-room-status-rooms'],
+    queryKey: ['room-rack-rooms'],
     queryFn: () => resortService.getRooms('', 0, 500),
   });
 
   const { data: inHouseData, isLoading: isLoadingInHouse } = useQuery({
-    queryKey: ['resort-room-status-in-house'],
+    queryKey: ['room-rack-in-house'],
     queryFn: () => resortService.getInHouseStays('', 0, 500),
   });
 
   const { data: reservationsData, isLoading: isLoadingReservations } = useQuery({
-    queryKey: ['resort-room-status-reservations', selectedDateKey],
+    queryKey: ['room-rack-reservations', selectedDateKey],
     queryFn: () => resortService.getReservations('', 0, 200),
   });
 
   const arrivalTodayReservationIds = useMemo(() => {
     const targetDate = toDateKey(selectedDate);
     return (reservationsData?.items ?? [])
-      .filter((reservation) => {
-        const isArrivalToday = toDateKey(reservation.arrivalDate) === targetDate;
-        const isReservedState = reservation.status === ReservationStatus.Confirmed || reservation.status === ReservationStatus.Pending;
+      .filter((r) => {
+        const isArrivalToday = toDateKey(r.arrivalDate) === targetDate;
+        const isReservedState = r.status === ReservationStatus.Confirmed || r.status === ReservationStatus.Pending;
         return isArrivalToday && isReservedState;
       })
-      .map((reservation) => reservation.id);
+      .map((r) => r.id);
   }, [reservationsData, selectedDate]);
 
   const { data: reservationDetails, isLoading: isLoadingReservationDetails } = useQuery({
-    queryKey: ['resort-room-status-reservation-details', selectedDateKey, arrivalTodayReservationIds],
+    queryKey: ['room-rack-reservation-details', selectedDateKey, arrivalTodayReservationIds],
     enabled: arrivalTodayReservationIds.length > 0,
-    queryFn: async () => Promise.all(arrivalTodayReservationIds.map((reservationId) => resortService.getReservation(reservationId))),
+    queryFn: async () => Promise.all(arrivalTodayReservationIds.map((id) => resortService.getReservation(id))),
   });
 
   const rowsByRoomType = useMemo(() => {
     const rooms = roomsData?.items ?? [];
     const inHouseByRoom = new Map((inHouseData?.items ?? []).map((stay) => [stay.roomNumber, stay.guestName]));
-
     const reservedRoomNumbers = new Set<string>();
-    (reservationDetails ?? []).forEach((reservation) => {
-      reservation.rooms.forEach((room) => {
-        if (room.roomNumber) {
-          reservedRoomNumbers.add(room.roomNumber);
-        }
+    (reservationDetails ?? []).forEach((res) => {
+      res.rooms.forEach((rm) => {
+        if (rm.roomNumber) reservedRoomNumbers.add(rm.roomNumber);
       });
     });
 
-    const rows: RoomStatusRow[] = rooms
-      .map((room): RoomStatusRow => {
+    const rows: RoomRackRow[] = rooms
+      .map((room): RoomRackRow => {
         const occupiedGuest = inHouseByRoom.get(room.roomNumber);
 
         if (occupiedGuest) {
-          return {
-            roomId: room.id,
-            roomNumber: room.roomNumber,
-            roomTypeName: room.roomTypeName || 'Unknown Room Type',
-            statusKey: 'occupied',
-            label: `Occupied (${occupiedGuest})`,
-            statusSortOrder: 0,
-          };
+          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'occupied', label: `Occupied (${occupiedGuest})`, statusSortOrder: 0 };
         }
 
-        if (room.status === RoomStatus.OutOfOrder || room.status === RoomStatus.Maintenance) {
-          return {
-            roomId: room.id,
-            roomNumber: room.roomNumber,
-            roomTypeName: room.roomTypeName || 'Unknown Room Type',
-            statusKey: 'outOfOrder',
-            label: 'Out of Order',
-            statusSortOrder: 4,
-          };
+        if (room.operationalStatus === RoomOperationalStatus.OutOfOrder || room.operationalStatus === RoomOperationalStatus.OutOfService) {
+          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'outOfOrder', label: RoomOperationalStatus[room.operationalStatus], statusSortOrder: 4 };
         }
 
         if (reservedRoomNumbers.has(room.roomNumber)) {
-          return {
-            roomId: room.id,
-            roomNumber: room.roomNumber,
-            roomTypeName: room.roomTypeName || 'Unknown Room Type',
-            statusKey: 'reservedArrivalToday',
-            label: 'Reserved (Arrival Today)',
-            statusSortOrder: 1,
-          };
+          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'reservedArrivalToday', label: 'Reserved (Arrival Today)', statusSortOrder: 1 };
         }
 
-        if (room.status === RoomStatus.VacantDirty) {
-          return {
-            roomId: room.id,
-            roomNumber: room.roomNumber,
-            roomTypeName: room.roomTypeName || 'Unknown Room Type',
-            statusKey: 'vacantDirty',
-            label: 'Vacant Dirty',
-            statusSortOrder: 2,
-          };
+        if (room.housekeepingStatus === HousekeepingStatus.Dirty) {
+          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'vacantDirty', label: 'Vacant Dirty', statusSortOrder: 2 };
         }
 
-        return {
-          roomId: room.id,
-          roomNumber: room.roomNumber,
-          roomTypeName: room.roomTypeName || 'Unknown Room Type',
-          statusKey: 'vacantClean',
-          label: 'Vacant Clean',
-          statusSortOrder: 3,
-        };
+        return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'vacantClean', label: 'Vacant Clean', statusSortOrder: 3 };
       })
       .filter((row) => activeStatuses.includes(row.statusKey))
       .sort((a, b) => {
-        if (a.statusSortOrder !== b.statusSortOrder) {
-          return a.statusSortOrder - b.statusSortOrder;
-        }
-
+        if (a.statusSortOrder !== b.statusSortOrder) return a.statusSortOrder - b.statusSortOrder;
         return collator.compare(a.roomNumber, b.roomNumber);
       });
 
-    const grouped = new Map<string, RoomStatusRow[]>();
+    const grouped = new Map<string, RoomRackRow[]>();
     rows.forEach((row) => {
       const current = grouped.get(row.roomTypeName) ?? [];
       current.push(row);
       grouped.set(row.roomTypeName, current);
     });
-
     return grouped;
   }, [activeStatuses, inHouseData, reservationDetails, roomsData]);
 
@@ -213,8 +162,8 @@ export const RoomStatusPage = () => {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Status</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Grouped live room board for front desk checkout and housekeeping coordination.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Rack</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Live front desk room board grouped by room type.</p>
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
@@ -237,13 +186,9 @@ export const RoomStatusPage = () => {
                     type="checkbox"
                     checked={activeStatuses.includes(status.key)}
                     onChange={(e) => {
-                      setActiveStatuses((prev) => {
-                        if (e.target.checked) {
-                          return Array.from(new Set([...prev, status.key]));
-                        }
-
-                        return prev.filter((item) => item !== status.key);
-                      });
+                      setActiveStatuses((prev) =>
+                        e.target.checked ? Array.from(new Set([...prev, status.key])) : prev.filter((item) => item !== status.key),
+                      );
                     }}
                   />
                   <span className="text-gray-700 dark:text-gray-300">{status.label}</span>
@@ -252,34 +197,33 @@ export const RoomStatusPage = () => {
             </div>
           </div>
 
-          {isLoading ? <p className="text-sm text-gray-500">Loading room status...</p> : null}
+          {isLoading ? <p className="text-sm text-gray-500">Loading room rack...</p> : null}
 
           {!isLoading ? (
             <div className="space-y-5">
               {roomTypeGroups.length === 0 ? <p className="text-sm text-gray-500">No rooms found for selected status filters.</p> : null}
               {roomTypeGroups.map(([roomTypeName, rows]) => (
                 <div key={roomTypeName} className="rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-700">
-                      <h2 className="text-sm font-semibold text-gray-900 dark:text-white">{roomTypeName}</h2>
-                      <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">{rows.length}</span>
-                    </div>
-
-                    {rows.length === 0 ? (
-                      <p className="px-4 py-3 text-sm text-gray-500">No rooms in this room type.</p>
-                    ) : (
-                      <ul className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {rows.map((row) => (
-                          <li key={row.roomId} className={`rounded-md border border-gray-200 p-3 dark:border-gray-700 ${STATUS_STYLES[row.statusKey].cardClass}`}>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Room {row.roomNumber}</p>
-                            <p className="mt-2">
-                              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.statusKey].badgeClass}`}>
-                                {row.label}
-                              </span>
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-700">
+                    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">{roomTypeName}</h2>
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">{rows.length}</span>
+                  </div>
+                  {rows.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-gray-500">No rooms in this room type.</p>
+                  ) : (
+                    <ul className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {rows.map((row) => (
+                        <li key={row.roomId} className={`rounded-md border border-gray-200 p-3 dark:border-gray-700 ${STATUS_STYLES[row.statusKey].cardClass}`}>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Room {row.roomNumber}</p>
+                          <p className="mt-2">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.statusKey].badgeClass}`}>
+                              {row.label}
+                            </span>
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ))}
             </div>

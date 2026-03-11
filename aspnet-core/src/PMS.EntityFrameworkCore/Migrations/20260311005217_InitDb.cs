@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PMS.Migrations
 {
     /// <inheritdoc />
-    public partial class InitProject : Migration
+    public partial class InitDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -683,7 +683,8 @@ namespace PMS.Migrations
                     RoomNumber = table.Column<string>(type: "varchar(16)", unicode: false, maxLength: 16, nullable: false),
                     RoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Floor = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false),
+                    OperationalStatus = table.Column<int>(type: "int", nullable: false),
+                    HousekeepingStatus = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
@@ -1147,6 +1148,33 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "HousekeepingTask",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TaskType = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AssignedToUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    TaskDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HousekeepingTask", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingTask_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ReservationRoom",
                 columns: table => new
                 {
@@ -1199,7 +1227,8 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
+                    OperationalStatus = table.Column<int>(type: "int", nullable: true),
+                    HousekeepingStatus = table.Column<int>(type: "int", nullable: true),
                     Remarks = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     ChangedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1882,6 +1911,16 @@ namespace PMS.Migrations
                 columns: new[] { "RoomId", "LoggedAt" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_HousekeepingTask_RoomId_TaskDate",
+                table: "HousekeepingTask",
+                columns: new[] { "RoomId", "TaskDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_HousekeepingTask_Status",
+                table: "HousekeepingTask",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Incident_StayId",
                 table: "Incident",
                 column: "StayId");
@@ -2451,6 +2490,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "HousekeepingLog");
+
+            migrationBuilder.DropTable(
+                name: "HousekeepingTask");
 
             migrationBuilder.DropTable(
                 name: "Incident");

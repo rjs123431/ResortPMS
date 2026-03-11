@@ -57,7 +57,8 @@ public class RoomDto : EntityDto<Guid>
     public Guid RoomTypeId { get; set; }
     public string RoomTypeName { get; set; }
     [StringLength(32)] public string Floor { get; set; }
-    public RoomStatus Status { get; set; }
+    public RoomOperationalStatus OperationalStatus { get; set; }
+    public HousekeepingStatus HousekeepingStatus { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -75,7 +76,8 @@ public class RoomListDto : EntityDto<Guid>
     public int MaxChildren { get; set; }
     public decimal BaseRate { get; set; }
     public string Floor { get; set; }
-    public RoomStatus Status { get; set; }
+    public RoomOperationalStatus OperationalStatus { get; set; }
+    public HousekeepingStatus HousekeepingStatus { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -85,12 +87,14 @@ public class CreateRoomDto
     [Required][StringLength(16)] public string RoomNumber { get; set; }
     public Guid RoomTypeId { get; set; }
     [StringLength(32)] public string Floor { get; set; }
-    public RoomStatus Status { get; set; } = RoomStatus.VacantClean;
+    public RoomOperationalStatus OperationalStatus { get; set; } = RoomOperationalStatus.Vacant;
+    public HousekeepingStatus HousekeepingStatus { get; set; } = HousekeepingStatus.Clean;
 }
 
 public class GetRoomsInput : PagedResultFilterRequestDto, IShouldNormalize
 {
-    public RoomStatus? Status { get; set; }
+    public RoomOperationalStatus? OperationalStatus { get; set; }
+    public HousekeepingStatus? HousekeepingStatus { get; set; }
     public Guid? RoomTypeId { get; set; }
     public bool? IsActive { get; set; }
     public void Normalize() { Sorting ??= "RoomNumber"; }
@@ -103,11 +107,98 @@ public class GetAvailableRoomsInput
     public DateTime? DepartureDate { get; set; }
     public Guid? ReservationId { get; set; }
     public bool ExcludeReservedWithoutAssignedRoom { get; set; }
+    public bool CheckInReadyOnly { get; set; }
 }
 
-public class UpdateRoomStatusDto
+public class UpdateRoomOperationalStatusDto
 {
     [Required] public Guid RoomId { get; set; }
-    public RoomStatus Status { get; set; }
+    public RoomOperationalStatus OperationalStatus { get; set; }
     public string Remarks { get; set; }
 }
+
+public class UpdateHousekeepingStatusDto
+{
+    [Required] public Guid RoomId { get; set; }
+    public HousekeepingStatus HousekeepingStatus { get; set; }
+    public Guid? StaffId { get; set; }
+    public string Remarks { get; set; }
+}
+
+// ── Housekeeping Task DTOs ─────────────────────────────────────────────────
+
+public class HousekeepingTaskDto : EntityDto<Guid>
+{
+    public Guid RoomId { get; set; }
+    public string RoomNumber { get; set; }
+    public string RoomTypeName { get; set; }
+    public HousekeepingTaskType TaskType { get; set; }
+    public HousekeepingTaskStatus Status { get; set; }
+    public Guid? AssignedToUserId { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string Remarks { get; set; }
+    public DateTime TaskDate { get; set; }
+}
+
+public class CreateHousekeepingTaskDto
+{
+    [Required] public Guid RoomId { get; set; }
+    public HousekeepingTaskType TaskType { get; set; }
+    public string Remarks { get; set; }
+    public DateTime? TaskDate { get; set; }
+}
+
+public class UpdateHousekeepingTaskStatusDto
+{
+    [Required] public Guid TaskId { get; set; }
+    public HousekeepingTaskStatus Status { get; set; }
+    public string Remarks { get; set; }
+}
+
+public class GetHousekeepingTasksInput : PagedResultFilterRequestDto, IShouldNormalize
+{
+    public HousekeepingTaskStatus? Status { get; set; }
+    public HousekeepingTaskType? TaskType { get; set; }
+    public Guid? RoomId { get; set; }
+    public DateTime? TaskDate { get; set; }
+    public void Normalize() { Sorting ??= "TaskDate"; }
+}
+
+public class CleaningBoardRoomDto
+{
+    public Guid RoomId { get; set; }
+    public string RoomNumber { get; set; }
+    public string RoomTypeName { get; set; }
+    public string Floor { get; set; }
+    public RoomOperationalStatus OperationalStatus { get; set; }
+    public HousekeepingStatus HousekeepingStatus { get; set; }
+    public string CleaningType { get; set; }
+    public Guid? PendingTaskId { get; set; }
+}
+
+public class HousekeepingLogDto : EntityDto<Guid>
+{
+    public Guid RoomId { get; set; }
+    public string RoomNumber { get; set; }
+    public HousekeepingStatus OldStatus { get; set; }
+    public HousekeepingStatus NewStatus { get; set; }
+    public Guid? StaffId { get; set; }
+    public string StaffName { get; set; }
+    public string Remarks { get; set; }
+    public DateTime LoggedAt { get; set; }
+}
+
+public class GetHousekeepingLogsInput : PagedResultFilterRequestDto, IShouldNormalize
+{
+    public Guid? RoomId { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+
+    public void Normalize()
+    {
+        Sorting ??= "CreationTime desc";
+    }
+}
+
+

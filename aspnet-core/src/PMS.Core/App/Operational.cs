@@ -29,9 +29,11 @@ public class Incident : FullAuditedEntity<Guid>
 public class HousekeepingLog : CreationAuditedEntity<Guid>
 {
     public Guid RoomId { get; set; }
-    public string Status { get; set; } = string.Empty;
-    public DateTime LoggedAt { get; set; } = Clock.Now;
-    public string Notes { get; set; } = string.Empty;
+    public HousekeepingStatus OldStatus { get; set; }
+    public HousekeepingStatus NewStatus { get; set; }
+    public Guid? StaffId { get; set; }
+    public string? Remarks { get; set; }
 
     public virtual Room Room { get; set; }
+    public virtual Staff? Staff { get; set; }
 }

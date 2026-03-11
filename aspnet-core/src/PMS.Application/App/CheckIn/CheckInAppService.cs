@@ -268,10 +268,10 @@ public class CheckInAppService(
         if (room == null)
             throw new UserFriendlyException(L("RoomNotFound"));
 
-        if (room.Status == RoomStatus.Occupied)
+        if (room.OperationalStatus == RoomOperationalStatus.Occupied)
             throw new UserFriendlyException(L("RoomIsAlreadyOccupied"));
 
-        if (room.Status == RoomStatus.OutOfOrder || room.Status == RoomStatus.Maintenance)
+        if (room.OperationalStatus == RoomOperationalStatus.OutOfOrder || room.OperationalStatus == RoomOperationalStatus.OutOfService)
             throw new UserFriendlyException(L("RoomNotAvailableForCheckIn"));
 
         return room;
@@ -386,11 +386,15 @@ public class CheckInAppService(
 
     private async Task EnsureRoomIsAvailableForReservationDatesAsync(Guid reservationId, Guid roomId, DateTime arrivalDate, DateTime departureDate)
     {
+        var arrivalDay = arrivalDate.Date;
+        var departureDay = departureDate.Date;
+        var arrivalNextDay = arrivalDay.AddDays(1);
+
         var hasReservationConflict = await reservationRoomRepository.GetAll()
-            .Include(rr => rr.Reservation)
+            .AsNoTracking()
             .Where(rr => rr.RoomId == roomId)
             .Where(rr => rr.ReservationId != reservationId)
-            .Where(rr => rr.ArrivalDate < departureDate.Date && rr.DepartureDate > arrivalDate.Date)
+            .Where(rr => rr.ArrivalDate < departureDay && rr.DepartureDate > arrivalDay)
             .AnyAsync(rr => rr.Reservation.Status == ReservationStatus.Pending
                             || rr.Reservation.Status == ReservationStatus.Confirmed
                             || rr.Reservation.Status == ReservationStatus.CheckedIn);
@@ -399,10 +403,10 @@ public class CheckInAppService(
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
         var hasStayConflict = await stayRoomRepository.GetAll()
-            .Include(sr => sr.Stay)
+            .AsNoTracking()
             .Where(sr => sr.RoomId == roomId)
-            .Where(sr => sr.AssignedAt.Date < departureDate.Date)
-            .Where(sr => (sr.ReleasedAt.HasValue ? sr.ReleasedAt.Value.Date : sr.Stay.ExpectedCheckOutDateTime.Date) > arrivalDate.Date)
+            .Where(sr => sr.AssignedAt < departureDay)
+            .Where(sr => (sr.ReleasedAt ?? sr.Stay.ExpectedCheckOutDateTime) >= arrivalNextDay)
             .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
 
         if (hasStayConflict)
@@ -475,7 +479,7 @@ public class CheckInAppService(
         // Mark assigned rooms as occupied.
         foreach (var room in effectiveRooms)
         {
-            room.Status = RoomStatus.Occupied;
+            room.OperationalStatus = RoomOperationalStatus.Occupied;
             await roomRepository.UpdateAsync(room);
         }
 

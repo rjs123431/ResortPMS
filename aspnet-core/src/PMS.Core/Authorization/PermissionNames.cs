@@ -115,6 +115,11 @@ namespace PMS.Authorization
         public const string Pages_ExtraBedTypes_Create = "Pages.ExtraBedTypes.Create";
         public const string Pages_ExtraBedTypes_Edit = "Pages.ExtraBedTypes.Edit";
 
+        // SETUP — Staff
+        public const string Pages_Staff = "Pages.Staff";
+        public const string Pages_Staff_Create = "Pages.Staff.Create";
+        public const string Pages_Staff_Edit = "Pages.Staff.Edit";
+
         // RESERVATIONS
         public const string Pages_Reservations = "Pages.Reservations";
         public const string Pages_Reservations_Create = "Pages.Reservations.Create";

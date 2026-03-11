@@ -5,7 +5,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { RoomStatus } from '@/types/resort.types';
+import { RoomOperationalStatus } from '@/types/resort.types';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
@@ -194,7 +194,7 @@ export const CheckInWalkInPage = () => {
     mutationFn: async (input: SearchCriteria) => {
       const responseList = await Promise.all(
         input.roomTypeIds.map((roomTypeId) =>
-          resortService.getAvailableRooms(roomTypeId, input.arrivalDate, input.departureDate)
+          resortService.getAvailableRooms(roomTypeId, input.arrivalDate, input.departureDate, undefined, false, true)
         )
       );
       return responseList.flat();
@@ -496,7 +496,7 @@ export const CheckInWalkInPage = () => {
     return (searchMutation.data ?? []).filter(
       (room) =>
         room.roomTypeId === roomTypeId &&
-        (room.status === RoomStatus.VacantClean || room.status === RoomStatus.VacantDirty) &&
+        room.operationalStatus === RoomOperationalStatus.Vacant &&
         (!takenRoomIds.has(room.id) || room.id === currentlyAssigned)
     );
   };

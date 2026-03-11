@@ -142,3 +142,69 @@ public class GetExtraBedTypesInput : PagedResultFilterRequestDto, IShouldNormali
         Sorting ??= "Name";
     }
 }
+
+[AutoMapFrom(typeof(Staff))]
+[AutoMapTo(typeof(Staff))]
+public class StaffDto : EntityDto<Guid>
+{
+    [Required]
+    [StringLength(64)]
+    public string StaffCode { get; set; }
+
+    [Required]
+    [StringLength(128)]
+    public string FullName { get; set; }
+
+    [StringLength(64)]
+    public string Department { get; set; }
+
+    [StringLength(64)]
+    public string Position { get; set; }
+
+    [StringLength(32)]
+    public string PhoneNumber { get; set; }
+
+    public bool IsActive { get; set; }
+}
+
+[AutoMapFrom(typeof(Staff))]
+public class StaffListDto : EntityDto<Guid>
+{
+    public string StaffCode { get; set; }
+    public string FullName { get; set; }
+    public string Department { get; set; }
+    public string Position { get; set; }
+    public string PhoneNumber { get; set; }
+    public bool IsActive { get; set; }
+}
+
+[AutoMapTo(typeof(Staff))]
+public class CreateStaffDto
+{
+    [Required]
+    [StringLength(64)]
+    public string StaffCode { get; set; }
+
+    [Required]
+    [StringLength(128)]
+    public string FullName { get; set; }
+
+    [StringLength(64)]
+    public string Department { get; set; }
+
+    [StringLength(64)]
+    public string Position { get; set; }
+
+    [StringLength(32)]
+    public string PhoneNumber { get; set; }
+}
+
+public class GetStaffInput : PagedResultFilterRequestDto, IShouldNormalize
+{
+    public bool? IsActive { get; set; }
+
+    public void Normalize()
+    {
+        Sorting ??= "FullName";
+    }
+}

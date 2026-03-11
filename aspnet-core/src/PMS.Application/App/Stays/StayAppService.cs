@@ -98,7 +98,7 @@ public class StayAppService(
             throw new UserFriendlyException(L("CannotTransferToSameRoom"));
 
         var newRoom = await roomRepository.GetAsync(input.ToRoomId);
-        if (newRoom.Status == RoomStatus.Occupied)
+        if (newRoom.OperationalStatus == RoomOperationalStatus.Occupied)
             throw new UserFriendlyException(L("TargetRoomIsOccupied"));
 
         // Release old room
@@ -107,12 +107,13 @@ public class StayAppService(
 
         // Update old room status
         var oldRoom = await roomRepository.GetAsync(activeStayRoom.RoomId);
-        oldRoom.Status = RoomStatus.VacantDirty;
+        oldRoom.OperationalStatus = RoomOperationalStatus.Vacant;
+        oldRoom.HousekeepingStatus = HousekeepingStatus.Dirty;
         await roomRepository.UpdateAsync(oldRoom);
 
         // Assign new room
         await stayRoomRepository.InsertAsync(new StayRoom { StayId = input.StayId, RoomId = input.ToRoomId, AssignedAt = Clock.Now });
-        newRoom.Status = RoomStatus.Occupied;
+        newRoom.OperationalStatus = RoomOperationalStatus.Occupied;
         await roomRepository.UpdateAsync(newRoom);
 
         // Log transfer

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus, RoomStatus } from '@/types/resort.types';
+import { ReservationStatus, RoomOperationalStatus } from '@/types/resort.types';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 
 const formatDateLocal = (value: Date) => {
@@ -86,7 +86,7 @@ export const ReservationDetailPage = () => {
 
   const { data: availableRooms } = useQuery({
     queryKey: ['resort-reservation-detail-available-rooms', id, arrivalDate, departureDate],
-    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, id),
+    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, id, false, true),
     enabled: Boolean(id && arrivalDate && departureDate),
   });
 
@@ -248,7 +248,7 @@ export const ReservationDetailPage = () => {
     return (availableRooms ?? []).filter(
       (room) =>
         room.roomTypeId === assignDialogRoomLine.roomTypeId &&
-        (room.status === RoomStatus.VacantClean || room.status === RoomStatus.VacantDirty) &&
+        room.operationalStatus === RoomOperationalStatus.Vacant &&
         !assignedRoomIds.has(room.id),
     );
   }, [assignDialogRoomLine, availableRooms, reservationDetail?.rooms]);

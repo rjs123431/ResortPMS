@@ -1,0 +1,174 @@
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { MainLayout } from '@components/layout/MainLayout';
+import { HousekeepingStatus, RoomOperationalStatus } from '@/types/resort.types';
+import { resortService } from '@services/resort.service';
+
+const HK_STATUS_BADGE: Record<HousekeepingStatus, string> = {
+  [HousekeepingStatus.Clean]: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  [HousekeepingStatus.Dirty]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+  [HousekeepingStatus.Inspected]: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+  [HousekeepingStatus.Pickup]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+};
+
+const OP_STATUS_BADGE: Record<RoomOperationalStatus, string> = {
+  [RoomOperationalStatus.Vacant]: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+  [RoomOperationalStatus.Occupied]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+  [RoomOperationalStatus.Reserved]: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+  [RoomOperationalStatus.OutOfOrder]: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+  [RoomOperationalStatus.OutOfService]: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+};
+
+export const HousekeepingRoomStatusPage = () => {
+  const queryClient = useQueryClient();
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
+
+  const { data: roomsData, isLoading } = useQuery({
+    queryKey: ['housekeeping-room-status-rooms'],
+    queryFn: () => resortService.getRooms('', 0, 500),
+  });
+
+  const { data: staffData } = useQuery({
+    queryKey: ['resort-staff'],
+    queryFn: () => resortService.getStaffs(),
+  });
+
+  const { data: logsData, isLoading: isLoadingLogs } = useQuery({
+    queryKey: ['housekeeping-logs'],
+    queryFn: () => resortService.getHousekeepingLogs({ maxResultCount: 30 }),
+  });
+
+  const markStatusMutation = useMutation({
+    mutationFn: ({ roomId, status }: { roomId: string; status: HousekeepingStatus }) =>
+      resortService.updateRoomHousekeepingStatus(roomId, status, undefined, selectedStaffId || undefined),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['housekeeping-room-status-rooms'] });
+      void queryClient.invalidateQueries({ queryKey: ['housekeeping-logs'] });
+    },
+  });
+
+  const rooms = roomsData?.items ?? [];
+  const staff = staffData ?? [];
+  const logs = logsData?.items ?? [];
+
+  return (
+    <MainLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Status</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Housekeeping view — update room cleanliness status across the property.</p>
+        </div>
+
+        <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="mb-4">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Performed By (optional)</label>
+            <select
+              className="w-full max-w-sm rounded border p-2 dark:bg-gray-700"
+              value={selectedStaffId}
+              onChange={(e) => setSelectedStaffId(e.target.value)}
+            >
+              <option value="">System / Not specified</option>
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>{`${s.fullName} (${s.staffCode})`}</option>
+              ))}
+            </select>
+          </div>
+
+          {isLoading ? <p className="text-sm text-gray-500">Loading rooms...</p> : null}
+
+          {!isLoading ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="p-2">Room</th>
+                    <th className="p-2">Type</th>
+                    <th className="p-2">Floor</th>
+                    <th className="p-2">Op. Status</th>
+                    <th className="p-2">HK Status</th>
+                    <th className="p-2">Mark As</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rooms.map((room) => (
+                    <tr className="border-b" key={room.id}>
+                      <td className="p-2 font-medium">{room.roomNumber}</td>
+                      <td className="p-2 text-gray-600 dark:text-gray-300">{room.roomTypeName}</td>
+                      <td className="p-2 text-gray-600 dark:text-gray-300">{room.floor ?? '-'}</td>
+                      <td className="p-2">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${OP_STATUS_BADGE[room.operationalStatus]}`}>
+                          {RoomOperationalStatus[room.operationalStatus]}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${HK_STATUS_BADGE[room.housekeepingStatus]}`}>
+                          {HousekeepingStatus[room.housekeepingStatus]}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex flex-wrap gap-1">
+                          {([
+                            { label: 'Clean', value: HousekeepingStatus.Clean, cls: 'bg-emerald-600 hover:bg-emerald-700' },
+                            { label: 'Dirty', value: HousekeepingStatus.Dirty, cls: 'bg-rose-600 hover:bg-rose-700' },
+                          ] as const)
+                            .filter(({ value }) => room.housekeepingStatus !== value)
+                            .map(({ label, value, cls }) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={`rounded px-2 py-1 text-xs text-white disabled:opacity-50 ${cls}`}
+                              disabled={markStatusMutation.isPending}
+                              onClick={() => markStatusMutation.mutate({ roomId: room.id, status: value })}
+                            >
+                              {label}
+                            </button>
+                            ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Housekeeping Logs</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Latest room housekeeping status transitions.</p>
+          </div>
+
+          {isLoadingLogs ? <p className="text-sm text-gray-500">Loading logs...</p> : null}
+
+          {!isLoadingLogs ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="p-2">Time</th>
+                    <th className="p-2">Room</th>
+                    <th className="p-2">Status Change</th>
+                    <th className="p-2">Staff</th>
+                    <th className="p-2">Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr className="border-b" key={log.id}>
+                      <td className="p-2 tabular-nums">{new Date(log.loggedAt).toLocaleString()}</td>
+                      <td className="p-2">{log.roomNumber}</td>
+                      <td className="p-2">{`${HousekeepingStatus[log.oldStatus]} -> ${HousekeepingStatus[log.newStatus]}`}</td>
+                      <td className="p-2">{log.staffName || 'System'}</td>
+                      <td className="p-2">{log.remarks || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
+      </div>
+    </MainLayout>
+  );
+};
