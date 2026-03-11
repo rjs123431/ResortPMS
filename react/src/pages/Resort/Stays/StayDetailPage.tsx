@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
+import { CompleteGuestRequestDialog } from '../Shared/CompleteGuestRequestDialog';
 import { GuestRequestDialog, GUEST_REQUEST_TYPE_OPTIONS } from '../Shared/GuestRequestDialog';
 import { PostChargeDialog } from '../Shared/PostChargeDialog';
 import { GuestRequestType, type StayRoomRecordDto } from '@/types/resort.types';
@@ -67,6 +68,8 @@ export const StayDetailPage = () => {
   const [showPostChargeDialog, setShowPostChargeDialog] = useState(false);
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
   const [showGuestRequestDialog, setShowGuestRequestDialog] = useState(false);
+  const [showCompleteGuestRequestDialog, setShowCompleteGuestRequestDialog] = useState(false);
+  const [selectedGuestRequestId, setSelectedGuestRequestId] = useState('');
 
   const { data: stayLookup, isFetching: isFetchingStayLookup } = useQuery({
     queryKey: ['resort-stays-all-for-detail'],
@@ -101,6 +104,12 @@ export const StayDetailPage = () => {
     queryKey: ['resort-guest-requests', stayId],
     queryFn: () => resortService.getGuestRequests(stayId),
     enabled: !!stayId,
+  });
+
+  const { data: guestRequestCompletionContext, isFetching: isFetchingGuestRequestCompletionContext } = useQuery({
+    queryKey: ['resort-guest-request-completion-context', selectedGuestRequestId],
+    queryFn: () => resortService.getGuestRequestCompletionContext(selectedGuestRequestId),
+    enabled: showCompleteGuestRequestDialog && !!selectedGuestRequestId,
   });
 
   const stayRooms = useMemo(() => {
@@ -162,6 +171,16 @@ export const StayDetailPage = () => {
     },
   });
 
+  const completeGuestRequestMutation = useMutation({
+    mutationFn: (input: { guestRequestId: string; remarks?: string }) =>
+      resortService.completeGuestRequest(input),
+    onSuccess: () => {
+      setShowCompleteGuestRequestDialog(false);
+      setSelectedGuestRequestId('');
+      void queryClient.invalidateQueries({ queryKey: ['resort-guest-requests', stayId] });
+    },
+  });
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -182,32 +201,6 @@ export const StayDetailPage = () => {
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Stay Information</h2>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded bg-primary-600 px-3 py-2 text-sm text-white disabled:opacity-50"
-                onClick={() => setShowPostChargeDialog(true)}
-                disabled={!stayId}
-              >
-                Post Charge
-              </button>
-              <button
-                type="button"
-                className="rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50"
-                onClick={() => setShowAddPaymentDialog(true)}
-                disabled={!stayId}
-              >
-                Add Payment
-              </button>
-              <button
-                type="button"
-                className="rounded bg-amber-600 px-3 py-2 text-sm text-white disabled:opacity-50"
-                onClick={() => setShowGuestRequestDialog(true)}
-                disabled={!stayId}
-              >
-                Add Guest Request
-              </button>
-            </div>
           </div>
 
           {isFetchingStayLookup || isFetchingStatement ? (
@@ -253,7 +246,27 @@ export const StayDetailPage = () => {
         </section>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Folio Ledger</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Folio Ledger</h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded bg-primary-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+                onClick={() => setShowPostChargeDialog(true)}
+                disabled={!stayId}
+              >
+                Post Charge
+              </button>
+              <button
+                type="button"
+                className="rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+                onClick={() => setShowAddPaymentDialog(true)}
+                disabled={!stayId}
+              >
+                Add Payment
+              </button>
+            </div>
+          </div>
           {isFetchingFolio || !folio ? (
             <p className="text-sm text-gray-500">Loading folio ledger...</p>
           ) : (
@@ -324,7 +337,17 @@ export const StayDetailPage = () => {
         </section>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Guest Requests</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Guest Requests</h2>
+            <button
+              type="button"
+              className="rounded bg-amber-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+              onClick={() => setShowGuestRequestDialog(true)}
+              disabled={!stayId}
+            >
+              Add Guest Request
+            </button>
+          </div>
           {isFetchingGuestRequests ? (
             <p className="text-sm text-gray-500">Loading guest requests...</p>
           ) : (
@@ -337,12 +360,13 @@ export const StayDetailPage = () => {
                     <th className="p-2">Description</th>
                     <th className="p-2">Status</th>
                     <th className="p-2">Completed</th>
+                    <th className="p-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(guestRequests ?? []).length === 0 ? (
                     <tr>
-                      <td className="p-2 text-gray-500" colSpan={5}>No guest requests yet.</td>
+                      <td className="p-2 text-gray-500" colSpan={6}>No guest requests yet.</td>
                     </tr>
                   ) : (
                     (guestRequests ?? []).map((request) => (
@@ -352,6 +376,22 @@ export const StayDetailPage = () => {
                         <td className="p-2">{request.description || '-'}</td>
                         <td className="p-2">{request.status}</td>
                         <td className="p-2">{request.completedAt ? toDateTime(request.completedAt) : '-'}</td>
+                        <td className="p-2">
+                          {request.status.toLowerCase() === 'completed' ? (
+                            <span className="text-xs text-gray-500">Completed</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="rounded bg-slate-700 px-2 py-1 text-xs text-white"
+                              onClick={() => {
+                                setSelectedGuestRequestId(request.id);
+                                setShowCompleteGuestRequestDialog(true);
+                              }}
+                            >
+                              Complete
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -388,6 +428,24 @@ export const StayDetailPage = () => {
         isSaving={guestRequestMutation.isPending}
         onClose={() => setShowGuestRequestDialog(false)}
         onSave={(values) => guestRequestMutation.mutate(values)}
+      />
+
+      <CompleteGuestRequestDialog
+        open={showCompleteGuestRequestDialog}
+        context={guestRequestCompletionContext}
+        isLoading={isFetchingGuestRequestCompletionContext}
+        isSaving={completeGuestRequestMutation.isPending}
+        onClose={() => {
+          setShowCompleteGuestRequestDialog(false);
+          setSelectedGuestRequestId('');
+        }}
+        onComplete={(remarks) => {
+          if (!selectedGuestRequestId) return;
+          completeGuestRequestMutation.mutate({
+            guestRequestId: selectedGuestRequestId,
+            remarks,
+          });
+        }}
       />
     </MainLayout>
   );

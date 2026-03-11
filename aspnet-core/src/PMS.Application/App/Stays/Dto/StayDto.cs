@@ -83,6 +83,36 @@ public class GuestRequestListDto : EntityDto<Guid>
     public DateTime? CompletedAt { get; set; }
 }
 
+public class CompleteGuestRequestDto
+{
+    [Required] public Guid GuestRequestId { get; set; }
+    [StringLength(512)] public string Remarks { get; set; }
+}
+
+public class GuestRequestTaskStatusDto
+{
+    public Guid TaskId { get; set; }
+    public string RoomNumber { get; set; }
+    public HousekeepingTaskType TaskType { get; set; }
+    public HousekeepingTaskStatus Status { get; set; }
+    public DateTime TaskDate { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string Remarks { get; set; }
+}
+
+public class GuestRequestCompletionContextDto
+{
+    public Guid GuestRequestId { get; set; }
+    public Guid StayId { get; set; }
+    public GuestRequestType RequestTypes { get; set; }
+    public string Description { get; set; }
+    public string Status { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public List<GuestRequestTaskStatusDto> RelatedTasks { get; set; } = [];
+}
+
 // ── Folio DTOs ────────────────────────────────────────────────────────────────
 public class FolioDto : EntityDto<Guid>
 {

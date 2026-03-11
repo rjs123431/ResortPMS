@@ -21,10 +21,12 @@ public interface IStayAppService : IApplicationService
 {
     Task<StayDto> GetAsync(Guid stayId);
     Task<List<GuestRequestListDto>> GetGuestRequestsAsync(Guid stayId);
+    Task<GuestRequestCompletionContextDto> GetGuestRequestCompletionContextAsync(Guid guestRequestId);
     Task<PagedResultDto<StayListDto>> GetInHouseAsync(GetStaysInput input);
     Task TransferRoomAsync(TransferRoomDto input);
     Task ExtendStayAsync(ExtendStayDto input);
     Task<Guid> AddGuestRequestAsync(AddGuestRequestDto input);
+    Task CompleteGuestRequestAsync(CompleteGuestRequestDto input);
     Task<Guid> AddIncidentAsync(AddIncidentDto input);
 
     // Folio operations
@@ -100,6 +102,44 @@ public class StayAppService(
             .ToListAsync();
 
         return requests;
+    }
+
+    public async Task<GuestRequestCompletionContextDto> GetGuestRequestCompletionContextAsync(Guid guestRequestId)
+    {
+        var request = await guestRequestRepository.GetAll()
+            .FirstOrDefaultAsync(gr => gr.Id == guestRequestId);
+
+        if (request == null)
+            throw new UserFriendlyException("Guest request not found.");
+
+        var relatedTasks = await housekeepingTaskRepository.GetAll()
+            .Include(t => t.Room)
+            .Where(t => t.GuestRequestId == guestRequestId)
+            .OrderByDescending(t => t.TaskDate)
+            .Select(t => new GuestRequestTaskStatusDto
+            {
+                TaskId = t.Id,
+                RoomNumber = t.Room.RoomNumber,
+                TaskType = t.TaskType,
+                Status = t.Status,
+                TaskDate = t.TaskDate,
+                StartedAt = t.StartedAt,
+                CompletedAt = t.CompletedAt,
+                Remarks = t.Remarks,
+            })
+            .ToListAsync();
+
+        return new GuestRequestCompletionContextDto
+        {
+            GuestRequestId = request.Id,
+            StayId = request.StayId,
+            RequestTypes = request.RequestTypes,
+            Description = request.Description,
+            Status = request.Status,
+            RequestedAt = request.RequestedAt,
+            CompletedAt = request.CompletedAt,
+            RelatedTasks = relatedTasks,
+        };
     }
 
     [AbpAuthorize(PermissionNames.Pages_Stays_Transfer)]
@@ -385,12 +425,35 @@ public class StayAppService(
             RequestedAt = Clock.Now
         });
 
-        await CreateHousekeepingTasksForGuestRequestAsync(stay.Id, selectedTypes, input.Description);
+        await CreateHousekeepingTasksForGuestRequestAsync(stay.Id, requestId, selectedTypes, input.Description);
 
         return requestId;
     }
 
-    private async Task CreateHousekeepingTasksForGuestRequestAsync(Guid stayId, List<GuestRequestType> selectedTypes, string? description)
+    [UnitOfWork]
+    public async Task CompleteGuestRequestAsync(CompleteGuestRequestDto input)
+    {
+        var request = await guestRequestRepository.FirstOrDefaultAsync(input.GuestRequestId);
+        if (request == null)
+            throw new UserFriendlyException("Guest request not found.");
+
+        if (string.Equals(request.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            throw new UserFriendlyException("Guest request is already completed.");
+
+        request.Status = "Completed";
+        request.CompletedAt = Clock.Now;
+
+        if (!string.IsNullOrWhiteSpace(input.Remarks))
+        {
+            request.Description = string.IsNullOrWhiteSpace(request.Description)
+                ? input.Remarks.Trim()
+                : $"{request.Description} | Completion: {input.Remarks.Trim()}";
+        }
+
+        await guestRequestRepository.UpdateAsync(request);
+    }
+
+    private async Task CreateHousekeepingTasksForGuestRequestAsync(Guid stayId, Guid guestRequestId, List<GuestRequestType> selectedTypes, string? description)
     {
         var taskTypes = selectedTypes
             .Select(MapGuestRequestTypeToHousekeepingTaskType)
@@ -427,6 +490,7 @@ public class StayAppService(
             await housekeepingTaskRepository.InsertAsync(new HousekeepingTask
             {
                 RoomId = activeStayRoom.RoomId,
+                GuestRequestId = guestRequestId,
                 TaskType = taskType,
                 Status = HousekeepingTaskStatus.Pending,
                 TaskDate = today,

@@ -69,6 +69,7 @@ internal class HousekeepingTaskConfiguration : IEntityTypeConfiguration<Housekee
 
         entity.HasIndex(e => new { e.RoomId, e.TaskDate });
         entity.HasIndex(e => e.Status);
+        entity.HasIndex(e => e.GuestRequestId);
 
         entity.HasOne(e => e.Room)
             .WithMany(r => r.HousekeepingTasks)
@@ -79,5 +80,10 @@ internal class HousekeepingTaskConfiguration : IEntityTypeConfiguration<Housekee
             .WithMany()
             .HasForeignKey(e => e.AssignedToStaffId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.GuestRequest)
+            .WithMany()
+            .HasForeignKey(e => e.GuestRequestId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

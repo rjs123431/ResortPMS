@@ -46,6 +46,7 @@ public class RoomStatusLog : CreationAuditedEntity<Guid>
 public class HousekeepingTask : CreationAuditedEntity<Guid>
 {
     public Guid RoomId { get; set; }
+    public Guid? GuestRequestId { get; set; }
     public HousekeepingTaskType TaskType { get; set; }
     public HousekeepingTaskStatus Status { get; set; } = HousekeepingTaskStatus.Pending;
     public Guid? AssignedToStaffId { get; set; }
@@ -55,5 +56,6 @@ public class HousekeepingTask : CreationAuditedEntity<Guid>
     public DateTime TaskDate { get; set; } = Clock.Now;
 
     public virtual Room Room { get; set; }
+    public virtual GuestRequest? GuestRequest { get; set; }
     public virtual Staff? AssignedToStaff { get; set; }
 }

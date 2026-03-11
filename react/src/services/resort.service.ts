@@ -45,6 +45,8 @@ import {
   HousekeepingLogDto,
   UpdateHousekeepingStatusDto,
   AddGuestRequestDto,
+  CompleteGuestRequestDto,
+  GuestRequestCompletionContextDto,
   GuestRequestListDto,
 } from '@/types/resort.types';
 
@@ -492,6 +494,17 @@ export const resortService = {
       params: { stayId },
     });
     return response.data.result;
+  },
+
+  getGuestRequestCompletionContext: async (guestRequestId: string) => {
+    const response = await api.get<ApiResponse<GuestRequestCompletionContextDto>>('/api/services/app/Stay/GetGuestRequestCompletionContext', {
+      params: { guestRequestId },
+    });
+    return response.data.result;
+  },
+
+  completeGuestRequest: async (input: CompleteGuestRequestDto) => {
+    await api.post('/api/services/app/Stay/CompleteGuestRequest', input);
   },
 
   getCheckoutStatement: async (stayId: string) => {

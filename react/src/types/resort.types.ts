@@ -344,6 +344,33 @@ export interface GuestRequestListDto {
   completedAt?: string;
 }
 
+export interface CompleteGuestRequestDto {
+  guestRequestId: string;
+  remarks?: string;
+}
+
+export interface GuestRequestTaskStatusDto {
+  taskId: string;
+  roomNumber: string;
+  taskType: HousekeepingTaskType;
+  status: HousekeepingTaskStatus;
+  taskDate: string;
+  startedAt?: string;
+  completedAt?: string;
+  remarks?: string;
+}
+
+export interface GuestRequestCompletionContextDto {
+  guestRequestId: string;
+  stayId: string;
+  requestTypes: GuestRequestType;
+  description?: string;
+  status: string;
+  requestedAt: string;
+  completedAt?: string;
+  relatedTasks: GuestRequestTaskStatusDto[];
+}
+
 export interface FolioSummaryDto {
   folioId: string;
   folioNo: string;
