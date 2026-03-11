@@ -48,11 +48,12 @@ public class HousekeepingTask : CreationAuditedEntity<Guid>
     public Guid RoomId { get; set; }
     public HousekeepingTaskType TaskType { get; set; }
     public HousekeepingTaskStatus Status { get; set; } = HousekeepingTaskStatus.Pending;
-    public Guid? AssignedToUserId { get; set; }
+    public Guid? AssignedToStaffId { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public string Remarks { get; set; } = string.Empty;
     public DateTime TaskDate { get; set; } = Clock.Now;
 
     public virtual Room Room { get; set; }
+    public virtual Staff? AssignedToStaff { get; set; }
 }

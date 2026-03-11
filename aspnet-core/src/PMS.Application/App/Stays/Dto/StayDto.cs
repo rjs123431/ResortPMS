@@ -64,7 +64,7 @@ public class ExtendStayDto
 public class AddGuestRequestDto
 {
     [Required] public Guid StayId { get; set; }
-    [Required][StringLength(64)] public string RequestType { get; set; }
+    [Required] public List<GuestRequestType> RequestTypes { get; set; } = [];
     [StringLength(1024)] public string Description { get; set; }
 }
 
@@ -72,6 +72,15 @@ public class AddIncidentDto
 {
     [Required] public Guid StayId { get; set; }
     [Required][StringLength(2048)] public string Description { get; set; }
+}
+
+public class GuestRequestListDto : EntityDto<Guid>
+{
+    public GuestRequestType RequestTypes { get; set; }
+    public string Description { get; set; }
+    public string Status { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
 }
 
 // ── Folio DTOs ────────────────────────────────────────────────────────────────

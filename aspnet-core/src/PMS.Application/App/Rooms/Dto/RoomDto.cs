@@ -134,7 +134,8 @@ public class HousekeepingTaskDto : EntityDto<Guid>
     public string RoomTypeName { get; set; }
     public HousekeepingTaskType TaskType { get; set; }
     public HousekeepingTaskStatus Status { get; set; }
-    public Guid? AssignedToUserId { get; set; }
+    public Guid? AssignedToStaffId { get; set; }
+    public string AssignedToStaffName { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public string Remarks { get; set; }
@@ -145,6 +146,7 @@ public class CreateHousekeepingTaskDto
 {
     [Required] public Guid RoomId { get; set; }
     public HousekeepingTaskType TaskType { get; set; }
+    public Guid? AssignedToStaffId { get; set; }
     public string Remarks { get; set; }
     public DateTime? TaskDate { get; set; }
 }
@@ -153,6 +155,7 @@ public class UpdateHousekeepingTaskStatusDto
 {
     [Required] public Guid TaskId { get; set; }
     public HousekeepingTaskStatus Status { get; set; }
+    public Guid? AssignedToStaffId { get; set; }
     public string Remarks { get; set; }
 }
 
@@ -184,6 +187,8 @@ public class HousekeepingLogDto : EntityDto<Guid>
     public HousekeepingStatus OldStatus { get; set; }
     public HousekeepingStatus NewStatus { get; set; }
     public Guid? StaffId { get; set; }
+    public Guid? HousekeepingTaskId { get; set; }
+    public Guid? CheckOutRecordId { get; set; }
     public string StaffName { get; set; }
     public string Remarks { get; set; }
     public DateTime LoggedAt { get; set; }

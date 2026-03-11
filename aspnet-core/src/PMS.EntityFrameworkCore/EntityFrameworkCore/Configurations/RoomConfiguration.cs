@@ -74,5 +74,10 @@ internal class HousekeepingTaskConfiguration : IEntityTypeConfiguration<Housekee
             .WithMany(r => r.HousekeepingTasks)
             .HasForeignKey(e => e.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.AssignedToStaff)
+            .WithMany()
+            .HasForeignKey(e => e.AssignedToStaffId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

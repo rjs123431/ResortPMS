@@ -29,6 +29,7 @@ public class ResortSetupDataCreator
         EnsureChargeTypes();
         EnsureExtraBedTypes();
         EnsurePaymentMethods();
+        EnsureStaff();
         EnsureGuests();
         EnsureDocumentSequences();
     }
@@ -40,6 +41,7 @@ public class ResortSetupDataCreator
                || _context.ChargeTypes.Any()
                || _context.ExtraBedTypes.Any()
                || _context.PaymentMethods.Any()
+               || _context.Staffs.Any()
                || _context.Guests.Any()
                || _context.DocumentSequences.Any(x => x.TenantId == _tenantId);
     }
@@ -187,6 +189,26 @@ public class ResortSetupDataCreator
 
         _context.ExtraBedTypes.AddRange(definitions);
 
+        _context.SaveChanges();
+    }
+
+    private void EnsureStaff()
+    {
+        if (_context.Staffs.Any())
+        {
+            return;
+        }
+
+        var definitions = new[]
+        {
+            new Staff { StaffCode = "HK-001", FullName = "Maria Santos", Department = "Housekeeping", Position = "Room Attendant", PhoneNumber = "09170000001", IsActive = true },
+            new Staff { StaffCode = "HK-002", FullName = "Ana Reyes", Department = "Housekeeping", Position = "Room Attendant", PhoneNumber = "09170000002", IsActive = true },
+            new Staff { StaffCode = "HK-003", FullName = "Lea Cruz", Department = "Housekeeping", Position = "Inspector", PhoneNumber = "09170000003", IsActive = true },
+            new Staff { StaffCode = "HK-004", FullName = "Paolo Garcia", Department = "Housekeeping", Position = "Supervisor", PhoneNumber = "09170000004", IsActive = true },
+            new Staff { StaffCode = "OPS-001", FullName = "Mark Dela Cruz", Department = "Operations", Position = "Duty Manager", PhoneNumber = "09170000005", IsActive = true },
+        };
+
+        _context.Staffs.AddRange(definitions);
         _context.SaveChanges();
     }
 

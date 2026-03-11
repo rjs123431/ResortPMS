@@ -121,6 +121,7 @@ public class HousekeepingAppService(
     {
         var query = housekeepingTaskRepository.GetAll()
             .Include(t => t.Room).ThenInclude(r => r.RoomType)
+            .Include(t => t.AssignedToStaff)
             .WhereIf(input.Status.HasValue, t => t.Status == input.Status)
             .WhereIf(input.TaskType.HasValue, t => t.TaskType == input.TaskType)
             .WhereIf(input.RoomId.HasValue, t => t.RoomId == input.RoomId)
@@ -137,7 +138,8 @@ public class HousekeepingAppService(
             RoomTypeName = t.Room?.RoomType?.Name ?? string.Empty,
             TaskType = t.TaskType,
             Status = t.Status,
-            AssignedToUserId = t.AssignedToUserId,
+            AssignedToStaffId = t.AssignedToStaffId,
+            AssignedToStaffName = t.AssignedToStaff != null ? t.AssignedToStaff.FullName : string.Empty,
             StartedAt = t.StartedAt,
             CompletedAt = t.CompletedAt,
             Remarks = t.Remarks,
@@ -166,6 +168,8 @@ public class HousekeepingAppService(
             OldStatus = x.OldStatus,
             NewStatus = x.NewStatus,
             StaffId = x.StaffId,
+            HousekeepingTaskId = x.HousekeepingTaskId,
+            CheckOutRecordId = x.CheckOutRecordId,
             StaffName = x.Staff?.FullName ?? "System",
             Remarks = x.Remarks ?? string.Empty,
             LoggedAt = x.CreationTime,
@@ -177,11 +181,19 @@ public class HousekeepingAppService(
         var room = await roomRepository.FirstOrDefaultAsync(input.RoomId);
         if (room == null) throw new UserFriendlyException(L("RoomNotFound"));
 
+        if (input.AssignedToStaffId.HasValue)
+        {
+            var assignedStaff = await staffRepository.FirstOrDefaultAsync(input.AssignedToStaffId.Value);
+            if (assignedStaff == null || !assignedStaff.IsActive)
+                throw new UserFriendlyException("Selected staff is invalid or inactive.");
+        }
+
         var task = new HousekeepingTask
         {
             RoomId = input.RoomId,
             TaskType = input.TaskType,
             Status = HousekeepingTaskStatus.Pending,
+            AssignedToStaffId = input.AssignedToStaffId,
             Remarks = input.Remarks ?? string.Empty,
             TaskDate = input.TaskDate?.Date ?? Clock.Now.Date,
         };
@@ -191,7 +203,21 @@ public class HousekeepingAppService(
 
     public async Task UpdateTaskStatusAsync(UpdateHousekeepingTaskStatusDto input)
     {
-        var task = await housekeepingTaskRepository.GetAsync(input.TaskId);
+        var task = await housekeepingTaskRepository.GetAll()
+            .Include(t => t.Room)
+            .FirstOrDefaultAsync(t => t.Id == input.TaskId);
+
+        if (task == null)
+            throw new UserFriendlyException("Task not found.");
+
+        if (input.AssignedToStaffId.HasValue)
+        {
+            var assignedStaff = await staffRepository.FirstOrDefaultAsync(input.AssignedToStaffId.Value);
+            if (assignedStaff == null || !assignedStaff.IsActive)
+                throw new UserFriendlyException("Selected staff is invalid or inactive.");
+
+            task.AssignedToStaffId = input.AssignedToStaffId;
+        }
 
         task.Status = input.Status;
         if (!string.IsNullOrWhiteSpace(input.Remarks))
@@ -201,7 +227,38 @@ public class HousekeepingAppService(
             task.StartedAt = Clock.Now;
 
         if (input.Status == HousekeepingTaskStatus.Completed)
+        {
             task.CompletedAt = Clock.Now;
+
+            if (task.Room != null)
+            {
+                var oldStatus = task.Room.HousekeepingStatus;
+                var newStatus = task.TaskType == HousekeepingTaskType.Inspection
+                    ? HousekeepingStatus.Inspected
+                    : HousekeepingStatus.Clean;
+
+                task.Room.HousekeepingStatus = newStatus;
+                await roomRepository.UpdateAsync(task.Room);
+
+                await roomStatusLogRepository.InsertAsync(new RoomStatusLog
+                {
+                    RoomId = task.RoomId,
+                    HousekeepingStatus = newStatus,
+                    Remarks = task.Remarks ?? string.Empty,
+                    ChangedAt = Clock.Now,
+                });
+
+                await housekeepingLogRepository.InsertAsync(new HousekeepingLog
+                {
+                    RoomId = task.RoomId,
+                    OldStatus = oldStatus,
+                    NewStatus = newStatus,
+                    StaffId = task.AssignedToStaffId,
+                    HousekeepingTaskId = task.Id,
+                    Remarks = task.Remarks,
+                });
+            }
+        }
 
         await housekeepingTaskRepository.UpdateAsync(task);
     }

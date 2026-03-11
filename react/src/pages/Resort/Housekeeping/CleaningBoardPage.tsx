@@ -30,6 +30,7 @@ const toDateInputValue = (value: Date) => {
 export const CleaningBoardPage = () => {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const selectedDateKey = toDateInputValue(selectedDate);
 
   const { data: boardData, isLoading } = useQuery({
@@ -37,22 +38,34 @@ export const CleaningBoardPage = () => {
     queryFn: () => resortService.getCleaningBoard(selectedDateKey),
   });
 
-  const markCleanMutation = useMutation({
-    mutationFn: ({ roomId }: { roomId: string }) =>
-      resortService.updateRoomHousekeepingStatus(roomId, HousekeepingStatus.Clean, 'Marked clean from cleaning board'),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['housekeeping-cleaning-board'] });
-    },
+  const { data: staffData } = useQuery({
+    queryKey: ['resort-staff'],
+    queryFn: () => resortService.getStaffs(),
   });
 
   const createTaskMutation = useMutation({
     mutationFn: resortService.createHousekeepingTask,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['housekeeping-cleaning-board'] });
+      void queryClient.invalidateQueries({ queryKey: ['housekeeping-tasks'] });
     },
   });
 
   const rooms = boardData ?? [];
+  const staff = staffData ?? [];
+
+  const toTaskType = (cleaningType: string) => {
+    switch (cleaningType) {
+      case 'Stayover Cleaning':
+        return 2;
+      case 'Pickup Cleaning':
+        return 3;
+      case 'Inspection':
+        return 4;
+      default:
+        return 1;
+    }
+  };
 
   return (
     <MainLayout>
@@ -63,6 +76,20 @@ export const CleaningBoardPage = () => {
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="mb-4">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Assign Request To (optional)</label>
+            <select
+              className="w-full max-w-sm rounded border p-2 dark:bg-gray-700"
+              value={selectedStaffId}
+              onChange={(e) => setSelectedStaffId(e.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>{`${s.fullName} (${s.staffCode})`}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
             <DatePicker
@@ -122,22 +149,16 @@ export const CleaningBoardPage = () => {
                               onClick={() =>
                                 createTaskMutation.mutate({
                                   roomId: room.roomId,
-                                  taskType: 1, // CheckoutCleaning default - could map from cleaningType
+                                  taskType: toTaskType(room.cleaningType),
+                                  assignedToStaffId: selectedStaffId || undefined,
+                                  remarks: 'Requested from Cleaning Board',
                                   taskDate: selectedDateKey,
                                 })
                               }
                             >
-                              Create Task
+                              Create Request
                             </button>
                           )}
-                          <button
-                            type="button"
-                            className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
-                            disabled={markCleanMutation.isPending}
-                            onClick={() => markCleanMutation.mutate({ roomId: room.roomId })}
-                          >
-                            Mark Clean
-                          </button>
                         </div>
                       </td>
                     </tr>

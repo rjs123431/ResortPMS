@@ -34,3 +34,18 @@ public enum HousekeepingTaskStatus
     Completed = 3,
     Cancelled = 4,
 }
+
+[System.Flags]
+public enum GuestRequestType
+{
+    None = 0,
+    PickupCleaning = 1,
+    StayoverCleaning = 2,
+    ExtraTowels = 4,
+    ExtraPillows = 8,
+    DrinkingWater = 16,
+    Toiletries = 32,
+    LateCheckoutAssistance = 64,
+    MaintenanceVisit = 128,
+    Other = 256,
+}

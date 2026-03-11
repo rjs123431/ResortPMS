@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using PMS.App.Stays.Dto;
 using PMS.Authorization;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace PMS.App.Stays;
 public interface IStayAppService : IApplicationService
 {
     Task<StayDto> GetAsync(Guid stayId);
+    Task<List<GuestRequestListDto>> GetGuestRequestsAsync(Guid stayId);
     Task<PagedResultDto<StayListDto>> GetInHouseAsync(GetStaysInput input);
     Task TransferRoomAsync(TransferRoomDto input);
     Task ExtendStayAsync(ExtendStayDto input);
@@ -46,7 +48,8 @@ public class StayAppService(
     IRepository<StayExtension, Guid> stayExtensionRepository,
     IRepository<GuestRequest, Guid> guestRequestRepository,
     IRepository<Incident, Guid> incidentRepository,
-    IRepository<ChargeType, Guid> chargeTypeRepository
+    IRepository<ChargeType, Guid> chargeTypeRepository,
+    IRepository<HousekeepingTask, Guid> housekeepingTaskRepository
 ) : PMSAppServiceBase, IStayAppService
 {
     public async Task<StayDto> GetAsync(Guid stayId)
@@ -75,6 +78,28 @@ public class StayAppService(
         var total = await query.CountAsync();
         var items = await query.OrderBy(input.Sorting ?? "CheckInDateTime desc").PageBy(input).ToListAsync();
         return new PagedResultDto<StayListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<StayListDto>>(items));
+    }
+
+    public async Task<List<GuestRequestListDto>> GetGuestRequestsAsync(Guid stayId)
+    {
+        var exists = await stayRepository.GetAll().AnyAsync(s => s.Id == stayId);
+        if (!exists) throw new UserFriendlyException(L("StayNotFound"));
+
+        var requests = await guestRequestRepository.GetAll()
+            .Where(gr => gr.StayId == stayId)
+            .OrderByDescending(gr => gr.RequestedAt)
+            .Select(gr => new GuestRequestListDto
+            {
+                Id = gr.Id,
+                RequestTypes = gr.RequestTypes,
+                Description = gr.Description,
+                Status = gr.Status,
+                RequestedAt = gr.RequestedAt,
+                CompletedAt = gr.CompletedAt,
+            })
+            .ToListAsync();
+
+        return requests;
     }
 
     [AbpAuthorize(PermissionNames.Pages_Stays_Transfer)]
@@ -340,15 +365,84 @@ public class StayAppService(
     public async Task<Guid> AddGuestRequestAsync(AddGuestRequestDto input)
     {
         var stay = await stayRepository.GetAsync(input.StayId);
-        if (stay.Status != StayStatus.InHouse) throw new UserFriendlyException(L("StayNotInHouse"));
+        if (stay.Status != StayStatus.InHouse && stay.Status != StayStatus.CheckedIn) throw new UserFriendlyException(L("StayNotInHouse"));
 
-        return await guestRequestRepository.InsertAndGetIdAsync(new GuestRequest
+        var selectedTypes = input.RequestTypes
+            .Where(t => t != GuestRequestType.None)
+            .Distinct()
+            .ToList();
+
+        if (selectedTypes.Count == 0)
+            throw new UserFriendlyException("At least one request type is required.");
+
+        var requestFlags = selectedTypes.Aggregate(GuestRequestType.None, (current, next) => current | next);
+
+        var requestId = await guestRequestRepository.InsertAndGetIdAsync(new GuestRequest
         {
             StayId = input.StayId,
-            RequestType = input.RequestType,
+            RequestTypes = requestFlags,
             Description = input.Description,
             RequestedAt = Clock.Now
         });
+
+        await CreateHousekeepingTasksForGuestRequestAsync(stay.Id, selectedTypes, input.Description);
+
+        return requestId;
+    }
+
+    private async Task CreateHousekeepingTasksForGuestRequestAsync(Guid stayId, List<GuestRequestType> selectedTypes, string? description)
+    {
+        var taskTypes = selectedTypes
+            .Select(MapGuestRequestTypeToHousekeepingTaskType)
+            .Where(taskType => taskType.HasValue)
+            .Select(taskType => taskType!.Value)
+            .Distinct()
+            .ToList();
+
+        if (taskTypes.Count == 0)
+            return;
+
+        var activeStayRoom = await stayRoomRepository.GetAll()
+            .Where(sr => sr.StayId == stayId && sr.ReleasedAt == null)
+            .OrderByDescending(sr => sr.AssignedAt)
+            .FirstOrDefaultAsync();
+
+        if (activeStayRoom == null)
+            throw new UserFriendlyException("Active room assignment not found for stay.");
+
+        var today = Clock.Now.Date;
+
+        var existingTypes = await housekeepingTaskRepository.GetAll()
+            .Where(t => t.RoomId == activeStayRoom.RoomId)
+            .Where(t => t.TaskDate.Date == today)
+            .Where(t => t.Status == HousekeepingTaskStatus.Pending || t.Status == HousekeepingTaskStatus.InProgress)
+            .Select(t => t.TaskType)
+            .ToListAsync();
+
+        foreach (var taskType in taskTypes)
+        {
+            if (existingTypes.Contains(taskType))
+                continue;
+
+            await housekeepingTaskRepository.InsertAsync(new HousekeepingTask
+            {
+                RoomId = activeStayRoom.RoomId,
+                TaskType = taskType,
+                Status = HousekeepingTaskStatus.Pending,
+                TaskDate = today,
+                Remarks = description ?? string.Empty,
+            });
+        }
+    }
+
+    private static HousekeepingTaskType? MapGuestRequestTypeToHousekeepingTaskType(GuestRequestType requestType)
+    {
+        return requestType switch
+        {
+            GuestRequestType.PickupCleaning => HousekeepingTaskType.PickupCleaning,
+            GuestRequestType.StayoverCleaning => HousekeepingTaskType.StayoverCleaning,
+            _ => null,
+        };
     }
 
     [UnitOfWork]

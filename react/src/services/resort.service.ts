@@ -44,6 +44,8 @@ import {
   HousekeepingTaskType,
   HousekeepingLogDto,
   UpdateHousekeepingStatusDto,
+  AddGuestRequestDto,
+  GuestRequestListDto,
 } from '@/types/resort.types';
 
 export const resortService = {
@@ -478,6 +480,18 @@ export const resortService = {
 
   postRefund: async (input: { stayId: string; amount: number; description?: string }) => {
     await api.post('/api/services/app/Stay/PostRefund', input);
+  },
+
+  addGuestRequest: async (input: AddGuestRequestDto) => {
+    const response = await api.post<ApiResponse<string>>('/api/services/app/Stay/AddGuestRequest', input);
+    return response.data.result;
+  },
+
+  getGuestRequests: async (stayId: string) => {
+    const response = await api.get<ApiResponse<GuestRequestListDto[]>>('/api/services/app/Stay/GetGuestRequests', {
+      params: { stayId },
+    });
+    return response.data.result;
   },
 
   getCheckoutStatement: async (stayId: string) => {

@@ -29,6 +29,7 @@ export const HousekeepingTasksPage = () => {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<HousekeepingTaskStatus | ''>('');
   const [taskDate, setTaskDate] = useState<string>(toDateInputValue(new Date()));
+  const [assignedByTaskId, setAssignedByTaskId] = useState<Record<string, string>>({});
 
   const { data: tasksData, isLoading } = useQuery({
     queryKey: ['housekeeping-tasks', statusFilter, taskDate],
@@ -40,6 +41,11 @@ export const HousekeepingTasksPage = () => {
       }),
   });
 
+  const { data: staffData } = useQuery({
+    queryKey: ['resort-staff'],
+    queryFn: () => resortService.getStaffs(),
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: resortService.updateHousekeepingTaskStatus,
     onSuccess: () => {
@@ -48,6 +54,7 @@ export const HousekeepingTasksPage = () => {
   });
 
   const tasks = tasksData?.items ?? [];
+  const staff = staffData ?? [];
 
   return (
     <MainLayout>
@@ -98,6 +105,7 @@ export const HousekeepingTasksPage = () => {
                     <th className="p-2">Room</th>
                     <th className="p-2">Type</th>
                     <th className="p-2">Task Type</th>
+                    <th className="p-2">Assigned Staff</th>
                     <th className="p-2">Status</th>
                     <th className="p-2">Date</th>
                     <th className="p-2">Remarks</th>
@@ -110,6 +118,19 @@ export const HousekeepingTasksPage = () => {
                       <td className="p-2 font-medium">{task.roomNumber}</td>
                       <td className="p-2 text-gray-600 dark:text-gray-300">{task.roomTypeName}</td>
                       <td className="p-2">{TASK_TYPE_LABELS[task.taskType]}</td>
+                      <td className="p-2">
+                        <select
+                          className="rounded border p-1 text-xs dark:bg-gray-700"
+                          value={assignedByTaskId[task.id] ?? task.assignedToStaffId ?? ''}
+                          onChange={(e) => setAssignedByTaskId((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                        >
+                          <option value="">Unassigned</option>
+                          {staff.map((s) => (
+                            <option key={s.id} value={s.id}>{s.fullName}</option>
+                          ))}
+                        </select>
+                        <div className="text-xs text-gray-500 mt-1">{task.assignedToStaffName || '-'}</div>
+                      </td>
                       <td className="p-2">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TASK_STATUS_BADGE[task.status]}`}>
                           {HousekeepingTaskStatus[task.status]}
@@ -126,7 +147,7 @@ export const HousekeepingTasksPage = () => {
                               type="button"
                               className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
                               disabled={updateStatusMutation.isPending}
-                              onClick={() => updateStatusMutation.mutate({ taskId: task.id, status: HousekeepingTaskStatus.InProgress })}
+                              onClick={() => updateStatusMutation.mutate({ taskId: task.id, status: HousekeepingTaskStatus.InProgress, assignedToStaffId: assignedByTaskId[task.id] || task.assignedToStaffId })}
                             >
                               Start
                             </button>
@@ -136,7 +157,7 @@ export const HousekeepingTasksPage = () => {
                               type="button"
                               className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
                               disabled={updateStatusMutation.isPending}
-                              onClick={() => updateStatusMutation.mutate({ taskId: task.id, status: HousekeepingTaskStatus.Completed })}
+                              onClick={() => updateStatusMutation.mutate({ taskId: task.id, status: HousekeepingTaskStatus.Completed, assignedToStaffId: assignedByTaskId[task.id] || task.assignedToStaffId })}
                             >
                               Complete
                             </button>
@@ -146,7 +167,7 @@ export const HousekeepingTasksPage = () => {
                               type="button"
                               className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                               disabled={updateStatusMutation.isPending}
-                              onClick={() => updateStatusMutation.mutate({ taskId: task.id, status: HousekeepingTaskStatus.Cancelled })}
+                              onClick={() => updateStatusMutation.mutate({ taskId: task.id, status: HousekeepingTaskStatus.Cancelled, assignedToStaffId: assignedByTaskId[task.id] || task.assignedToStaffId })}
                             >
                               Cancel
                             </button>

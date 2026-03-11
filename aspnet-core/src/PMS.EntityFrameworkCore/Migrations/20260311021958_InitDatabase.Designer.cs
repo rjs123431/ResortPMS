@@ -12,8 +12,8 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260311012921_AddStaffAndHousekeepingLogDetails")]
-    partial class AddStaffAndHousekeepingLogDetails
+    [Migration("20260311021958_InitDatabase")]
+    partial class InitDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1987,11 +1987,8 @@ namespace PMS.Migrations
                     b.Property<long?>("LastModifierUserId")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("RequestType")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(64)");
+                    b.Property<int>("RequestTypes")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("RequestedAt")
                         .HasColumnType("datetime2");
@@ -2017,11 +2014,17 @@ namespace PMS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("CheckOutRecordId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2");
 
                     b.Property<long?>("CreatorUserId")
                         .HasColumnType("bigint");
+
+                    b.Property<Guid?>("HousekeepingTaskId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("NewStatus")
                         .HasColumnType("int");
@@ -2041,6 +2044,10 @@ namespace PMS.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CheckOutRecordId");
+
+                    b.HasIndex("HousekeepingTaskId");
+
                     b.HasIndex("StaffId");
 
                     b.HasIndex("RoomId", "CreationTime");
@@ -2054,7 +2061,7 @@ namespace PMS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("AssignedToUserId")
+                    b.Property<Guid?>("AssignedToStaffId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("CompletedAt")
@@ -2086,6 +2093,8 @@ namespace PMS.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedToStaffId");
 
                     b.HasIndex("Status");
 
@@ -3699,6 +3708,16 @@ namespace PMS.Migrations
 
             modelBuilder.Entity("PMS.App.HousekeepingLog", b =>
                 {
+                    b.HasOne("PMS.App.CheckOutRecord", "CheckOutRecord")
+                        .WithMany()
+                        .HasForeignKey("CheckOutRecordId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PMS.App.HousekeepingTask", "HousekeepingTask")
+                        .WithMany()
+                        .HasForeignKey("HousekeepingTaskId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("PMS.App.Room", "Room")
                         .WithMany()
                         .HasForeignKey("RoomId")
@@ -3710,6 +3729,10 @@ namespace PMS.Migrations
                         .HasForeignKey("StaffId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.Navigation("CheckOutRecord");
+
+                    b.Navigation("HousekeepingTask");
+
                     b.Navigation("Room");
 
                     b.Navigation("Staff");
@@ -3717,11 +3740,18 @@ namespace PMS.Migrations
 
             modelBuilder.Entity("PMS.App.HousekeepingTask", b =>
                 {
+                    b.HasOne("PMS.App.Staff", "AssignedToStaff")
+                        .WithMany()
+                        .HasForeignKey("AssignedToStaffId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("PMS.App.Room", "Room")
                         .WithMany("HousekeepingTasks")
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AssignedToStaff");
 
                     b.Navigation("Room");
                 });

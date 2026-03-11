@@ -36,6 +36,19 @@ export enum HousekeepingTaskStatus {
   Cancelled = 4,
 }
 
+export enum GuestRequestType {
+  None = 0,
+  PickupCleaning = 1,
+  StayoverCleaning = 2,
+  ExtraTowels = 4,
+  ExtraPillows = 8,
+  DrinkingWater = 16,
+  Toiletries = 32,
+  LateCheckoutAssistance = 64,
+  MaintenanceVisit = 128,
+  Other = 256,
+}
+
 export enum ReservationStatus {
   Draft = 0,
   Pending = 1,
@@ -134,7 +147,8 @@ export interface HousekeepingTaskDto {
   roomTypeName: string;
   taskType: HousekeepingTaskType;
   status: HousekeepingTaskStatus;
-  assignedToUserId?: string;
+  assignedToStaffId?: string;
+  assignedToStaffName?: string;
   startedAt?: string;
   completedAt?: string;
   remarks?: string;
@@ -144,6 +158,7 @@ export interface HousekeepingTaskDto {
 export interface CreateHousekeepingTaskDto {
   roomId: string;
   taskType: HousekeepingTaskType;
+  assignedToStaffId?: string;
   remarks?: string;
   taskDate?: string;
 }
@@ -151,6 +166,7 @@ export interface CreateHousekeepingTaskDto {
 export interface UpdateHousekeepingTaskStatusDto {
   taskId: string;
   status: HousekeepingTaskStatus;
+  assignedToStaffId?: string;
   remarks?: string;
 }
 
@@ -311,6 +327,21 @@ export interface StayListDto {
   expectedCheckOutDateTime: string;
   status: StayStatus;
   roomNumber: string;
+}
+
+export interface AddGuestRequestDto {
+  stayId: string;
+  requestTypes: GuestRequestType[];
+  description?: string;
+}
+
+export interface GuestRequestListDto {
+  id: string;
+  requestTypes: GuestRequestType;
+  description?: string;
+  status: string;
+  requestedAt: string;
+  completedAt?: string;
 }
 
 export interface FolioSummaryDto {

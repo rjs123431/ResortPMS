@@ -24,6 +24,12 @@ case "$1" in
                 cd "$PROJECT_DIR"
                 dotnet ef migrations add "$3" --startup-project "../PMS.Web.Host"
                 ;;
+            reset)
+                echo "Removing migrations folder..."
+                rm -rf "$PROJECT_DIR/Migrations"
+                echo "Creating InitDatabase migration..."
+                ./app migration add "InitDatabase"
+                ;;
             remove)
                 cd "$PROJECT_DIR"
                 dotnet ef migrations remove --startup-project "../PMS.Web.Host" --force
@@ -35,6 +41,7 @@ case "$1" in
             *)
                 echo "Usage:"
                 echo "  ./app migration add \"MigrationName\""
+                echo "  ./app migration reset"
                 echo "  ./app migration remove"
                 echo "  ./app migration list"
                 exit 1
@@ -124,6 +131,7 @@ case "$1" in
         echo ""
         echo "Usage:"
         echo "  ./app migration add \"MigrationName\"  - Add a new migration"
+        echo "  ./app migration reset                 - Remove migrations folder and add InitDatabase"
         echo "  ./app migration remove                - Remove last migration"
         echo "  ./app migration list                  - List all migrations"
         echo "  ./app db update                       - Update database"

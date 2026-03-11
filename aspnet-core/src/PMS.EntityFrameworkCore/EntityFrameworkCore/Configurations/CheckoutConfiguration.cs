@@ -69,7 +69,7 @@ internal class GuestRequestConfiguration : IEntityTypeConfiguration<GuestRequest
     {
         entity.ToTable("GuestRequest");
 
-        entity.Property(e => e.RequestType).HasMaxLength(64).IsUnicode(false).IsRequired();
+        entity.Property(e => e.RequestTypes).HasConversion<int>();
         entity.Property(e => e.Description).HasMaxLength(1024);
         entity.Property(e => e.Status).HasMaxLength(32).IsUnicode(false);
 
@@ -107,6 +107,8 @@ internal class HousekeepingLogConfiguration : IEntityTypeConfiguration<Housekeep
         entity.Property(e => e.Remarks).HasMaxLength(512);
 
         entity.HasIndex(e => new { e.RoomId, e.CreationTime });
+        entity.HasIndex(e => e.HousekeepingTaskId);
+        entity.HasIndex(e => e.CheckOutRecordId);
 
         entity.HasOne(e => e.Room)
             .WithMany()
@@ -116,6 +118,16 @@ internal class HousekeepingLogConfiguration : IEntityTypeConfiguration<Housekeep
         entity.HasOne(e => e.Staff)
             .WithMany()
             .HasForeignKey(e => e.StaffId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.HousekeepingTask)
+            .WithMany()
+            .HasForeignKey(e => e.HousekeepingTaskId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.CheckOutRecord)
+            .WithMany()
+            .HasForeignKey(e => e.CheckOutRecordId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

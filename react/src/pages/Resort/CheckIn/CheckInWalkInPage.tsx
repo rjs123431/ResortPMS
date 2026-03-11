@@ -695,11 +695,19 @@ export const CheckInWalkInPage = () => {
     },
     onSuccess: (result) => {
       setConfirmError('');
-      setSuccessMessage(`Check-in completed. Stay ${result.stayNo} and Folio ${result.folioNo} were created.`);
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-stays'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
+      navigate('/check-in/confirmation', {
+        replace: true,
+        state: {
+          stayId: result.stayId,
+          stayNo: result.stayNo,
+          folioId: result.folioId,
+          folioNo: result.folioNo,
+        },
+      });
     },
     onError: (error) => {
       setSuccessMessage('');

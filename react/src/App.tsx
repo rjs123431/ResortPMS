@@ -37,7 +37,9 @@ const ReservationPage = lazy(() => import('@pages/Resort/Reservations/Reservatio
 const CheckInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInPage').then((m) => ({ default: m.CheckInPage })));
 const CheckInWalkInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInWalkInPage').then((m) => ({ default: m.CheckInWalkInPage })));
 const CheckInReservationPage = lazy(() => import('./pages/Resort/CheckIn/CheckInReservationPage').then((m) => ({ default: m.CheckInReservationPage })));
+const CheckInConfirmationPage = lazy(() => import('@pages/Resort/CheckIn/CheckInConfirmationPage').then((m) => ({ default: m.CheckInConfirmationPage })));
 const StaysPage = lazy(() => import('@pages/Resort/Stays/StaysPage').then((m) => ({ default: m.StaysPage })));
+const StayDetailPage = lazy(() => import('@pages/Resort/Stays/StayDetailPage').then((m) => ({ default: m.StayDetailPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
 const RoomRackPage = lazy(() => import('@pages/Resort/RoomRack/RoomRackPage').then((m) => ({ default: m.RoomRackPage })));
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
@@ -315,11 +317,31 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
+                      path="/check-in/confirmation"
+                      element={
+                        <PageTitle title="Check-In Confirmation">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                            <CheckInConfirmationPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
                       path="/stays"
                       element={
                         <PageTitle title="In-House Stays">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Stays]}>
                             <StaysPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/stays/:stayId"
+                      element={
+                        <PageTitle title="Stay Detail">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Stays]}>
+                            <StayDetailPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

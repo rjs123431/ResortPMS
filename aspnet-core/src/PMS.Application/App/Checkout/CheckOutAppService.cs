@@ -182,7 +182,7 @@ public class CheckOutAppService(
         await folioRepository.UpdateAsync(folio);
 
         // Create checkout record
-        await checkOutRecordRepository.InsertAsync(new CheckOutRecord
+        var checkOutRecordId = await checkOutRecordRepository.InsertAndGetIdAsync(new CheckOutRecord
         {
             StayId = input.StayId,
             CheckOutDateTime = Clock.Now,
@@ -238,6 +238,7 @@ public class CheckOutAppService(
                     OldStatus = oldStatus,
                     NewStatus = HousekeepingStatus.Dirty,
                     StaffId = null,
+                    CheckOutRecordId = checkOutRecordId,
                     Remarks = "System (Checkout)",
                 });
             }
