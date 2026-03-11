@@ -440,6 +440,12 @@ public class StayAppService(
         if (string.Equals(request.Status, "Completed", StringComparison.OrdinalIgnoreCase))
             throw new UserFriendlyException("Guest request is already completed.");
 
+        var hasIncompleteRelatedTasks = await housekeepingTaskRepository.GetAll()
+            .AnyAsync(t => t.GuestRequestId == input.GuestRequestId && t.Status != HousekeepingTaskStatus.Completed);
+
+        if (hasIncompleteRelatedTasks)
+            throw new UserFriendlyException("Cannot complete guest request while related housekeeping tasks are not completed.");
+
         request.Status = "Completed";
         request.CompletedAt = Clock.Now;
 

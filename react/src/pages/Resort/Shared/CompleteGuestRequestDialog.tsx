@@ -89,7 +89,7 @@ export const CompleteGuestRequestDialog = ({
 
               {hasOpenTasks ? (
                 <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-200">
-                  Some related housekeeping tasks are not yet completed. You may still complete this guest request manually.
+                  Some related housekeeping tasks are not yet completed. Complete those tasks first before completing this guest request.
                 </p>
               ) : null}
 
@@ -117,7 +117,7 @@ export const CompleteGuestRequestDialog = ({
             <button
               type="button"
               onClick={() => onComplete(remarks || undefined)}
-              disabled={isLoading || !context || isSaving || context.status.toLowerCase() === 'completed'}
+              disabled={isLoading || !context || isSaving || context.status.toLowerCase() === 'completed' || hasOpenTasks}
               className="rounded bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               {isSaving ? 'Completing...' : 'Complete Request'}
