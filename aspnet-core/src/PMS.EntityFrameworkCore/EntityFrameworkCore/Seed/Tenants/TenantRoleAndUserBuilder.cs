@@ -72,7 +72,7 @@ public class TenantRoleAndUserBuilder
         var adminUser = _context.Users.IgnoreQueryFilters().FirstOrDefault(u => u.TenantId == _tenantId && u.UserName == AbpUserBase.AdminUserName);
         if (adminUser == null)
         {
-            adminUser = User.CreateTenantAdminUser(_tenantId, "admin@defaulttenant.com");
+            adminUser = User.CreateTenantAdminUser(_tenantId, "rsuajr@gmail.com");
             adminUser.Password = new PasswordHasher<User>(new OptionsWrapper<PasswordHasherOptions>(new PasswordHasherOptions())).HashPassword(adminUser, User.DefaultPassword);
             adminUser.IsEmailConfirmed = true;
             adminUser.IsActive = true;

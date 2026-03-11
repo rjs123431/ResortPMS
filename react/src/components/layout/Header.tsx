@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@contexts/AuthContext';
 import { authService } from '@services/auth.service';
 import { useSignalR } from '@contexts/SignalRContext';
@@ -13,7 +13,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) => {
   const { user, logout } = useAuth();
   const { isConnected } = useSignalR();
-  const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isBackToAdminLoading, setIsBackToAdminLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -23,14 +22,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
     window.location.assign('/login');
   };
 
-  const isAdmin = (user?.userName || '').trim().toLowerCase() === 'admin';
   const impersonatorUserId = authService.getImpersonatorUserId();
   const isImpersonated = Boolean(impersonatorUserId);
-
-  const handleImpersonatePage = () => {
-    setIsDropdownOpen(false);
-    navigate('/impersonate');
-  };
 
   const handleBackToAdmin = async () => {
     if (isBackToAdminLoading) {
