@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus, RoomOperationalStatus } from '@/types/resort.types';
+import { ReservationStatus } from '@/types/resort.types';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
@@ -144,24 +144,6 @@ export const CheckInReservationPage = () => {
     [reservationDetail, assignDialogReservationRoomId],
   );
 
-  const assignDialogAvailableRooms = useMemo(() => {
-    if (!assignDialogRoomLine) return [];
-
-    const assignedRoomIds = new Set(
-      roomEdits
-        .filter((row) => row.reservationRoomId !== assignDialogRoomLine.id)
-        .map((row) => row.roomId)
-        .filter((id) => Boolean(id)),
-    );
-
-    return (availableRooms ?? []).filter(
-      (room) =>
-        room.roomTypeId === assignDialogRoomLine.roomTypeId &&
-        room.operationalStatus === RoomOperationalStatus.Vacant &&
-        !assignedRoomIds.has(room.id),
-    );
-  }, [assignDialogRoomLine, roomEdits, availableRooms]);
-
   const isChangeRoomDialog = useMemo(() => {
     if (!assignDialogReservationRoomId) return false;
     const mapped = roomEdits.find((row) => row.reservationRoomId === assignDialogReservationRoomId);
@@ -277,20 +259,6 @@ export const CheckInReservationPage = () => {
   const closeAssignRoomDialog = () => {
     setAssignDialogReservationRoomId('');
     setAssignDialogSelectedRoomId('');
-  };
-
-  const confirmAssignRoom = () => {
-    if (!assignDialogReservationRoomId || !assignDialogSelectedRoomId) return;
-
-    setRoomEdits((prev) =>
-      prev.map((row) =>
-        row.reservationRoomId === assignDialogReservationRoomId
-          ? { ...row, roomId: assignDialogSelectedRoomId }
-          : row,
-      ),
-    );
-    setSelectedReservationRoomId(assignDialogReservationRoomId);
-    closeAssignRoomDialog();
   };
 
   const checkInMutation = useMutation({
@@ -642,11 +610,24 @@ export const CheckInReservationPage = () => {
         open={Boolean(assignDialogReservationRoomId)}
         isChangeRoom={isChangeRoomDialog}
         roomTypeName={assignDialogRoomLine?.roomTypeName}
-        rooms={assignDialogAvailableRooms}
+        roomTypeId={assignDialogRoomLine?.roomTypeId}
         selectedRoomId={assignDialogSelectedRoomId}
-        onSelectRoom={setAssignDialogSelectedRoomId}
+        excludeRoomIds={roomEdits
+          .filter((row) => row.reservationRoomId !== assignDialogReservationRoomId && Boolean(row.roomId))
+          .map((row) => row.roomId)}
+        onSelectRoom={(roomId) => {
+          setAssignDialogSelectedRoomId(roomId);
+          setRoomEdits((prev) =>
+            prev.map((row) =>
+              row.reservationRoomId === assignDialogReservationRoomId
+                ? { ...row, roomId }
+                : row,
+            ),
+          );
+          setSelectedReservationRoomId(assignDialogReservationRoomId);
+          closeAssignRoomDialog();
+        }}
         onClose={closeAssignRoomDialog}
-        onConfirm={confirmAssignRoom}
       />
     </MainLayout>
   );

@@ -5,7 +5,6 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { RoomOperationalStatus } from '@/types/resort.types';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
@@ -485,22 +484,6 @@ export const CheckInWalkInPage = () => {
     }
   };
 
-  const getAssignableRoomsForLine = (lineId: string, roomTypeId: string) => {
-    const currentlyAssigned = assignedRoomByLine[lineId] ?? '';
-    const takenRoomIds = new Set(
-      Object.entries(assignedRoomByLine)
-        .filter(([otherLineId, roomId]) => otherLineId !== lineId && Boolean(roomId))
-        .map(([, roomId]) => roomId)
-    );
-
-    return (searchMutation.data ?? []).filter(
-      (room) =>
-        room.roomTypeId === roomTypeId &&
-        room.operationalStatus === RoomOperationalStatus.Vacant &&
-        (!takenRoomIds.has(room.id) || room.id === currentlyAssigned)
-    );
-  };
-
   const handleAssignRoom = (lineId: string, roomId: string) => {
     setAssignedRoomByLine((prev) => ({
       ...prev,
@@ -512,11 +495,6 @@ export const CheckInWalkInPage = () => {
     () => reservationDetailLines.find((line) => line.lineId === assignDialogLineId),
     [reservationDetailLines, assignDialogLineId]
   );
-
-  const assignDialogAvailableRooms = useMemo(() => {
-    if (!assignDialogLine) return [];
-    return getAssignableRoomsForLine(assignDialogLine.lineId, assignDialogLine.roomTypeId);
-  }, [assignDialogLine, assignedRoomByLine, searchMutation.data]);
 
   const isChangeRoomDialog = useMemo(
     () => Boolean(assignDialogLineId && assignedRoomByLine[assignDialogLineId]),
@@ -533,9 +511,9 @@ export const CheckInWalkInPage = () => {
     setAssignDialogSelectedRoomId('');
   };
 
-  const confirmAssignRoom = () => {
-    if (!assignDialogLineId || !assignDialogSelectedRoomId) return;
-    handleAssignRoom(assignDialogLineId, assignDialogSelectedRoomId);
+  const confirmAssignRoom = (roomId: string) => {
+    if (!assignDialogLineId || !roomId) return;
+    handleAssignRoom(assignDialogLineId, roomId);
     closeAssignRoomDialog();
   };
 
@@ -740,101 +718,101 @@ export const CheckInWalkInPage = () => {
         </div>
 
         {!showReservationDetails ? (
-        <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Dates</label>
-              <DatePicker
-                selectsRange
-                startDate={startDate}
-                endDate={endDate}
-                onChange={(update) => setStayRange(update as [Date | null, Date | null])}
-                dateFormat="MMM d, yyyy"
-                placeholderText="Select stay date range"
-                wrapperClassName="w-full"
-                className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Adults</label>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={adults}
-                onChange={(e) => setAdults(Number(e.target.value || 1))}
-                className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Children</label>
-              <input
-                type="number"
-                min={0}
-                max={10}
-                value={children}
-                onChange={(e) => setChildren(Number(e.target.value || 0))}
-                className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Number of Rooms</label>
-              <input
-                type="number"
-                min={1}
-                max={5}
-                value={roomCount}
-                onChange={(e) => setRoomCount(Number(e.target.value || 1))}
-                className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 rounded border p-3 dark:border-gray-700">
-            <div className="mb-2 flex items-center justify-start gap-4">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by room type: </p>
-              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={isAllRoomTypesSelected}
-                  disabled={allRoomTypeIds.length === 0}
-                  onChange={toggleAllRoomTypes}
+          <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Dates</label>
+                <DatePicker
+                  selectsRange
+                  startDate={startDate}
+                  endDate={endDate}
+                  onChange={(update) => setStayRange(update as [Date | null, Date | null])}
+                  dateFormat="MMM d, yyyy"
+                  placeholderText="Select stay date range"
+                  wrapperClassName="w-full"
+                  className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                 />
-                <span>Select all</span>
-              </label>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Adults</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={adults}
+                  onChange={(e) => setAdults(Number(e.target.value || 1))}
+                  className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Children</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={children}
+                  onChange={(e) => setChildren(Number(e.target.value || 0))}
+                  className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Number of Rooms</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={roomCount}
+                  onChange={(e) => setRoomCount(Number(e.target.value || 1))}
+                  className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
-              {(roomTypes ?? []).map((rt) => (
-                <label key={rt.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+
+            <div className="mt-4 rounded border p-3 dark:border-gray-700">
+              <div className="mb-2 flex items-center justify-start gap-4">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by room type: </p>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <input
                     type="checkbox"
-                    checked={selectedRoomTypeIds.includes(rt.id)}
-                    onChange={() => toggleRoomType(rt.id)}
+                    checked={isAllRoomTypesSelected}
+                    disabled={allRoomTypeIds.length === 0}
+                    onChange={toggleAllRoomTypes}
                   />
-                  <span>{rt.name}</span>
+                  <span>Select all</span>
                 </label>
-              ))}
+              </div>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+                {(roomTypes ?? []).map((rt) => (
+                  <label key={rt.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={selectedRoomTypeIds.includes(rt.id)}
+                      onChange={() => toggleRoomType(rt.id)}
+                    />
+                    <span>{rt.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleSearch}
-              disabled={searchMutation.isPending}
-              className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
-            >
-              {searchMutation.isPending ? 'Searching...' : searchCriteria ? 'Change Search' : 'Search'}
-            </button>
-            {searchCriteria ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Check-In {searchCriteria.arrivalDate} to Check-Out {searchCriteria.departureDate}
-              </p>
-            ) : null}
-          </div>
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleSearch}
+                disabled={searchMutation.isPending}
+                className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
+              >
+                {searchMutation.isPending ? 'Searching...' : searchCriteria ? 'Change Search' : 'Search'}
+              </button>
+              {searchCriteria ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Check-In {searchCriteria.arrivalDate} to Check-Out {searchCriteria.departureDate}
+                </p>
+              ) : null}
+            </div>
 
-          {searchError ? <p className="mt-2 text-sm text-rose-600">{searchError}</p> : null}
-        </section>
+            {searchError ? <p className="mt-2 text-sm text-rose-600">{searchError}</p> : null}
+          </section>
         ) : null}
 
         {searchCriteria && !showReservationDetails ? (
@@ -1056,13 +1034,13 @@ export const CheckInWalkInPage = () => {
                   </tbody>
                 </table>
               </div>
-
-              <p className="mt-3 text-right text-base font-semibold text-gray-900 dark:text-white">
-                Room Total: {formatMoney(reservationDetailTotal)}
-              </p>
-              {hasUnassignedRooms ? (
-                <p className="mt-2 text-sm text-rose-600">Assign a room for each selected line to continue.</p>
-              ) : null}
+              <div className="flex justify-between mt-3 text-right">
+                {hasUnassignedRooms ? (
+                  <p className="mt-2 text-sm text-rose-600">Assign a room for each selected line to continue.</p>
+                ) : null}
+                <p className="mt-3 text-right text-base font-semibold text-gray-900 dark:text-white">
+                  Room Total: {formatMoney(reservationDetailTotal)}
+                </p></div>
             </div>
 
             <div className="mt-4 rounded border border-gray-200 p-3 dark:border-gray-700">
@@ -1432,7 +1410,7 @@ export const CheckInWalkInPage = () => {
                   <div className="mt-2 flex items-center justify-between gap-3  pt-2 font-semibold text-gray-900 dark:text-white">
                     <p>Total Payments</p>
                     <p className="text-right tabular-nums">{formatMoney(initialDepositTotal)}</p>
-                 </div>
+                  </div>
                   <div className="flex items-center justify-between gap-3 border-t border-gray-300 pt-2 font-semibold text-gray-900 dark:border-gray-600 dark:text-white">
                     <p>BALANCE</p>
                     <p className="text-right tabular-nums">{formatMoney(balanceDue)}</p>
@@ -1539,11 +1517,16 @@ export const CheckInWalkInPage = () => {
           open={Boolean(assignDialogLineId)}
           isChangeRoom={isChangeRoomDialog}
           roomTypeName={assignDialogLine?.roomTypeName}
-          rooms={assignDialogAvailableRooms}
+          roomTypeId={assignDialogLine?.roomTypeId}
           selectedRoomId={assignDialogSelectedRoomId}
-          onSelectRoom={setAssignDialogSelectedRoomId}
+          excludeRoomIds={Object.entries(assignedRoomByLine)
+            .filter(([lineId, roomId]) => lineId !== assignDialogLineId && Boolean(roomId))
+            .map(([, roomId]) => roomId)}
+          onSelectRoom={(roomId) => {
+            setAssignDialogSelectedRoomId(roomId);
+            confirmAssignRoom(roomId);
+          }}
           onClose={closeAssignRoomDialog}
-          onConfirm={confirmAssignRoom}
         />
       </div>
     </MainLayout>

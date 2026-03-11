@@ -371,7 +371,11 @@ public class RoomAppService(
     public async Task UpdateAsync(RoomDto input)
     {
         var entity = await roomRepository.GetAsync(input.Id);
+        var originalOperationalStatus = entity.OperationalStatus;
+        var originalHousekeepingStatus = entity.HousekeepingStatus;
         ObjectMapper.Map(input, entity);
+        entity.OperationalStatus = originalOperationalStatus;
+        entity.HousekeepingStatus = originalHousekeepingStatus;
         await roomRepository.UpdateAsync(entity);
     }
 

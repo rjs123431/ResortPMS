@@ -60,19 +60,6 @@ export const HousekeepingRoomStatusPage = () => {
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Performed By (optional)</label>
-            <select
-              className="w-full max-w-sm rounded border p-2 dark:bg-gray-700"
-              value={selectedStaffId}
-              onChange={(e) => setSelectedStaffId(e.target.value)}
-            >
-              <option value="">System / Not specified</option>
-              {staff.map((s) => (
-                <option key={s.id} value={s.id}>{`${s.fullName} (${s.staffCode})`}</option>
-              ))}
-            </select>
-          </div>
 
           {isLoading ? <p className="text-sm text-gray-500">Loading rooms...</p> : null}
 

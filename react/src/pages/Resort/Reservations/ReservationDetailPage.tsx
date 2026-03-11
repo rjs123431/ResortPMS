@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus, RoomOperationalStatus } from '@/types/resort.types';
+import { ReservationStatus } from '@/types/resort.types';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 
 const formatDateLocal = (value: Date) => {
@@ -79,15 +79,6 @@ export const ReservationDetailPage = () => {
       const result = await resortService.getRooms('', 0, 500);
       return result.items;
     },
-  });
-
-  const arrivalDate = reservationDetail ? formatDateLocal(new Date(reservationDetail.arrivalDate)) : '';
-  const departureDate = reservationDetail ? formatDateLocal(new Date(reservationDetail.departureDate)) : '';
-
-  const { data: availableRooms } = useQuery({
-    queryKey: ['resort-reservation-detail-available-rooms', id, arrivalDate, departureDate],
-    queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, id, false, true),
-    enabled: Boolean(id && arrivalDate && departureDate),
   });
 
   const { data: guestLookup, isLoading: isGuestLookupLoading } = useQuery({
@@ -235,24 +226,6 @@ export const ReservationDetailPage = () => {
     [reservationDetail, assignDialogReservationRoomId],
   );
 
-  const assignDialogAvailableRooms = useMemo(() => {
-    if (!assignDialogRoomLine) return [];
-
-    const assignedRoomIds = new Set(
-      (reservationDetail?.rooms ?? [])
-        .filter((room) => room.id !== assignDialogRoomLine.id)
-        .map((room) => room.roomId)
-        .filter((roomId): roomId is string => Boolean(roomId)),
-    );
-
-    return (availableRooms ?? []).filter(
-      (room) =>
-        room.roomTypeId === assignDialogRoomLine.roomTypeId &&
-        room.operationalStatus === RoomOperationalStatus.Vacant &&
-        !assignedRoomIds.has(room.id),
-    );
-  }, [assignDialogRoomLine, availableRooms, reservationDetail?.rooms]);
-
   const isChangeRoomDialog = useMemo(() => {
     if (!assignDialogReservationRoomId) return false;
     const roomLine = (reservationDetail?.rooms ?? []).find((row) => row.id === assignDialogReservationRoomId);
@@ -277,15 +250,6 @@ export const ReservationDetailPage = () => {
   const closeAssignRoomDialog = () => {
     setAssignDialogReservationRoomId('');
     setAssignDialogSelectedRoomId('');
-  };
-
-  const confirmAssignRoom = () => {
-    if (!id || !assignDialogReservationRoomId || !assignDialogSelectedRoomId) return;
-    assignRoomMutation.mutate({
-      reservationId: id,
-      reservationRoomId: assignDialogReservationRoomId,
-      roomId: assignDialogSelectedRoomId,
-    });
   };
 
   useEffect(() => {
@@ -872,11 +836,22 @@ export const ReservationDetailPage = () => {
           open={Boolean(assignDialogReservationRoomId)}
           isChangeRoom={isChangeRoomDialog}
           roomTypeName={assignDialogRoomLine?.roomTypeName}
-          rooms={assignDialogAvailableRooms}
+          roomTypeId={assignDialogRoomLine?.roomTypeId}
           selectedRoomId={assignDialogSelectedRoomId}
-          onSelectRoom={setAssignDialogSelectedRoomId}
+          excludeRoomIds={(reservationDetail?.rooms ?? [])
+            .filter((room) => room.id !== assignDialogReservationRoomId && Boolean(room.roomId))
+            .map((room) => room.roomId as string)}
+          onSelectRoom={(roomId) => {
+            setAssignDialogSelectedRoomId(roomId);
+            if (id && assignDialogReservationRoomId) {
+              assignRoomMutation.mutate({
+                reservationId: id,
+                reservationRoomId: assignDialogReservationRoomId,
+                roomId,
+              });
+            }
+          }}
           onClose={closeAssignRoomDialog}
-          onConfirm={confirmAssignRoom}
         />
       </div>
     </MainLayout>
