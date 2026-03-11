@@ -574,6 +574,8 @@ export const resortService = {
     status?: HousekeepingTaskStatus;
     taskType?: HousekeepingTaskType;
     roomId?: string;
+    assignedToStaffId?: string;
+    isUnassigned?: boolean;
     taskDate?: string;
     skipCount?: number;
     maxResultCount?: number;
@@ -582,6 +584,8 @@ export const resortService = {
     if (params?.status !== undefined) query.Status = String(params.status);
     if (params?.taskType !== undefined) query.TaskType = String(params.taskType);
     if (params?.roomId) query.RoomId = params.roomId;
+    if (params?.assignedToStaffId) query.AssignedToStaffId = params.assignedToStaffId;
+    if (params?.isUnassigned) query.IsUnassigned = 'true';
     if (params?.taskDate) query.TaskDate = params.taskDate;
     if (params?.skipCount !== undefined) query.SkipCount = String(params.skipCount);
     if (params?.maxResultCount !== undefined) query.MaxResultCount = String(params.maxResultCount);

@@ -4,7 +4,15 @@ import { authService } from './auth.service';
 
 /** AbpCommonHub endpoint; auth is via query string ss_enc_auth_token (encrypted token), not Bearer */
 function getSignalRHubUrl(): string {
-  const base = getBaseUrl('/signalr');
+  return getSignalRUrl('/signalr');
+}
+
+function getPhysicalCountHubUrl(): string {
+  return getSignalRUrl('/signalr-physicalcount');
+}
+
+function getSignalRUrl(path: string): string {
+  const base = getBaseUrl(path);
   const encryptedToken = authService.getEncryptedToken();
   if (!encryptedToken) {
     return base;
@@ -15,11 +23,13 @@ function getSignalRHubUrl(): string {
 
 export class SignalRService {
   private connection: signalR.HubConnection | null = null;
+  private dedicatedConnection: signalR.HubConnection | null = null;
   private isConnecting = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 5000; // 5 seconds
   private notificationCallback: ((notification: any) => void) | null = null;
+  private housekeepingTaskStatusChangedCallback: ((payload: any) => void) | null = null;
   private connectionStateCallback: ((connected: boolean) => void) | null = null;
 
   async startConnection(): Promise<void> {
@@ -35,6 +45,7 @@ export class SignalRService {
 
     this.isConnecting = true;
     const hubUrl = getSignalRHubUrl();
+    const physicalCountHubUrl = getPhysicalCountHubUrl();
 
     try {
       this.connection = new signalR.HubConnectionBuilder()
@@ -50,6 +61,15 @@ export class SignalRService {
             return this.reconnectDelay;
           },
         })
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+      this.dedicatedConnection = new signalR.HubConnectionBuilder()
+        .withUrl(physicalCountHubUrl, {
+          skipNegotiation: false,
+          transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.ServerSentEvents | signalR.HttpTransportType.LongPolling,
+        })
+        .withAutomaticReconnect()
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
@@ -82,6 +102,7 @@ export class SignalRService {
       });
 
       await this.connection.start();
+      await this.dedicatedConnection.start();
       console.log('SignalR: Connected successfully');
       this.reconnectAttempts = 0;
       this.connectionStateCallback?.(true);
@@ -114,11 +135,15 @@ export class SignalRService {
     if (this.connection) {
       try {
         await this.connection.stop();
+        if (this.dedicatedConnection) {
+          await this.dedicatedConnection.stop();
+        }
         console.log('SignalR: Connection stopped');
       } catch (error) {
         console.error('SignalR: Error stopping connection', error);
       }
       this.connection = null;
+      this.dedicatedConnection = null;
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       this.connectionStateCallback?.(false);
@@ -132,12 +157,19 @@ export class SignalRService {
 
     // Remove existing handlers to avoid duplicates
     this.connection.off('getNotification');
+    this.dedicatedConnection?.off('housekeepingTaskStatusChanged');
 
     // Register notification handler if callback is set
     if (this.notificationCallback) {
       this.connection.on('getNotification', (notification) => {
         console.log('SignalR: Notification received', notification);
         this.notificationCallback?.(notification);
+      });
+    }
+
+    if (this.dedicatedConnection && this.housekeepingTaskStatusChangedCallback) {
+      this.dedicatedConnection.on('housekeepingTaskStatusChanged', (payload) => {
+        this.housekeepingTaskStatusChangedCallback?.(payload);
       });
     }
   }
@@ -159,6 +191,20 @@ export class SignalRService {
     // Remove the handler from connection
     if (this.connection) {
       this.connection.off('getNotification');
+    }
+  }
+
+  onHousekeepingTaskStatusChanged(callback: (payload: any) => void): void {
+    this.housekeepingTaskStatusChangedCallback = callback;
+    if (this.dedicatedConnection) {
+      this.registerEventHandlers();
+    }
+  }
+
+  offHousekeepingTaskStatusChanged(): void {
+    this.housekeepingTaskStatusChangedCallback = null;
+    if (this.dedicatedConnection) {
+      this.dedicatedConnection.off('housekeepingTaskStatusChanged');
     }
   }
 

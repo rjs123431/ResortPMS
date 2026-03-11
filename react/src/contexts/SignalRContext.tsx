@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { signalRService } from '@/services/signalr.service';
 import { useAuth } from './AuthContext';
 import { UserNotification } from '@/types/notification.types';
@@ -14,6 +15,7 @@ const SignalRContext = createContext<SignalRContextType | undefined>(undefined);
 
 export const SignalRProvider = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
 
@@ -33,6 +35,12 @@ export const SignalRProvider = ({ children }: { children: ReactNode }) => {
         }
       });
 
+      signalRService.onHousekeepingTaskStatusChanged(() => {
+        void queryClient.invalidateQueries({ queryKey: ['housekeeping-tasks'] });
+        void queryClient.invalidateQueries({ queryKey: ['resort-guest-requests'] });
+        void queryClient.invalidateQueries({ queryKey: ['resort-guest-request-completion-context'] });
+      });
+
       signalRService.startConnection().catch((error) => {
         console.error('Failed to start SignalR connection:', error);
         setIsConnected(false);
@@ -46,9 +54,10 @@ export const SignalRProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       signalRService.offNotificationReceived();
+      signalRService.offHousekeepingTaskStatusChanged();
       signalRService.offConnectionStateChange();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, queryClient]);
 
   const addNotification = (notification: UserNotification) => {
     setNotifications((prev) => [notification, ...prev]);

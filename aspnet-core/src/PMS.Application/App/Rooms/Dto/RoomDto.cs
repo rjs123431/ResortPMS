@@ -164,6 +164,8 @@ public class GetHousekeepingTasksInput : PagedResultFilterRequestDto, IShouldNor
     public HousekeepingTaskStatus? Status { get; set; }
     public HousekeepingTaskType? TaskType { get; set; }
     public Guid? RoomId { get; set; }
+    public Guid? AssignedToStaffId { get; set; }
+    public bool? IsUnassigned { get; set; }
     public DateTime? TaskDate { get; set; }
     public void Normalize() { Sorting ??= "TaskDate"; }
 }

@@ -481,18 +481,8 @@ public class StayAppService(
 
         var today = Clock.Now.Date;
 
-        var existingTypes = await housekeepingTaskRepository.GetAll()
-            .Where(t => t.RoomId == activeStayRoom.RoomId)
-            .Where(t => t.TaskDate.Date == today)
-            .Where(t => t.Status == HousekeepingTaskStatus.Pending || t.Status == HousekeepingTaskStatus.InProgress)
-            .Select(t => t.TaskType)
-            .ToListAsync();
-
         foreach (var taskType in taskTypes)
         {
-            if (existingTypes.Contains(taskType))
-                continue;
-
             await housekeepingTaskRepository.InsertAsync(new HousekeepingTask
             {
                 RoomId = activeStayRoom.RoomId,

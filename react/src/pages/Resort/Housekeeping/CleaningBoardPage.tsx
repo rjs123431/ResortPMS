@@ -30,17 +30,11 @@ const toDateInputValue = (value: Date) => {
 export const CleaningBoardPage = () => {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const selectedDateKey = toDateInputValue(selectedDate);
 
   const { data: boardData, isLoading } = useQuery({
     queryKey: ['housekeeping-cleaning-board', selectedDateKey],
     queryFn: () => resortService.getCleaningBoard(selectedDateKey),
-  });
-
-  const { data: staffData } = useQuery({
-    queryKey: ['resort-staff'],
-    queryFn: () => resortService.getStaffs(),
   });
 
   const createTaskMutation = useMutation({
@@ -52,7 +46,6 @@ export const CleaningBoardPage = () => {
   });
 
   const rooms = boardData ?? [];
-  const staff = staffData ?? [];
 
   const toTaskType = (cleaningType: string) => {
     switch (cleaningType) {
@@ -76,20 +69,6 @@ export const CleaningBoardPage = () => {
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Assign Request To (optional)</label>
-            <select
-              className="w-full max-w-sm rounded border p-2 dark:bg-gray-700"
-              value={selectedStaffId}
-              onChange={(e) => setSelectedStaffId(e.target.value)}
-            >
-              <option value="">Unassigned</option>
-              {staff.map((s) => (
-                <option key={s.id} value={s.id}>{`${s.fullName} (${s.staffCode})`}</option>
-              ))}
-            </select>
-          </div>
-
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
             <DatePicker
@@ -150,13 +129,12 @@ export const CleaningBoardPage = () => {
                                 createTaskMutation.mutate({
                                   roomId: room.roomId,
                                   taskType: toTaskType(room.cleaningType),
-                                  assignedToStaffId: selectedStaffId || undefined,
                                   remarks: 'Requested from Cleaning Board',
                                   taskDate: selectedDateKey,
                                 })
                               }
                             >
-                              Create Request
+                              Create Task
                             </button>
                           )}
                         </div>

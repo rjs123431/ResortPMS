@@ -5,7 +5,9 @@ using Abp.Domain.Repositories;
 using Abp.Linq.Extensions;
 using Abp.Timing;
 using Abp.UI;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PMS.Application.Hubs;
 using PMS.App.Rooms.Dto;
 using PMS.Authorization;
 using System;
@@ -33,10 +35,12 @@ public class HousekeepingAppService(
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IRepository<HousekeepingTask, Guid> housekeepingTaskRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
-    IRepository<ReservationRoom, Guid> reservationRoomRepository,
-    IRepository<Staff, Guid> staffRepository
+    IRepository<Staff, Guid> staffRepository,
+    IHubContext<PhysicalCountHub> physicalCountHubContext
 ) : PMSAppServiceBase, IHousekeepingAppService
 {
+    private const string HousekeepingTaskStatusChangedEvent = "housekeepingTaskStatusChanged";
+
     /// <summary>
     /// Returns all rooms that need attention today based on operational and housekeeping status.
     /// Includes: Vacant+Dirty, Occupied (stayover), rooms with pending/in-progress tasks.
@@ -82,7 +86,7 @@ public class HousekeepingAppService(
         {
             pendingTaskByRoom.TryGetValue(room.Id, out var task);
 
-            string? cleaningType = null;
+            string cleaningType = null;
 
             if (room.OperationalStatus == RoomOperationalStatus.Vacant && room.HousekeepingStatus == HousekeepingStatus.Dirty)
                 cleaningType = task?.TaskType == HousekeepingTaskType.CheckoutCleaning
@@ -125,6 +129,8 @@ public class HousekeepingAppService(
             .WhereIf(input.Status.HasValue, t => t.Status == input.Status)
             .WhereIf(input.TaskType.HasValue, t => t.TaskType == input.TaskType)
             .WhereIf(input.RoomId.HasValue, t => t.RoomId == input.RoomId)
+            .WhereIf(input.AssignedToStaffId.HasValue, t => t.AssignedToStaffId == input.AssignedToStaffId)
+            .WhereIf(input.IsUnassigned == true, t => t.AssignedToStaffId == null)
             .WhereIf(input.TaskDate.HasValue, t => t.TaskDate.Date == input.TaskDate!.Value.Date);
 
         var total = await query.CountAsync();
@@ -261,6 +267,14 @@ public class HousekeepingAppService(
         }
 
         await housekeepingTaskRepository.UpdateAsync(task);
+
+        await physicalCountHubContext.Clients.All.SendAsync(HousekeepingTaskStatusChangedEvent, new
+        {
+            taskId = task.Id,
+            roomId = task.RoomId,
+            guestRequestId = task.GuestRequestId,
+            status = (int)task.Status,
+        });
     }
 
     public async Task UpdateHousekeepingStatusAsync(UpdateHousekeepingStatusDto input)
