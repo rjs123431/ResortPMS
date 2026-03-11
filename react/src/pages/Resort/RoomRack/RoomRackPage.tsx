@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -69,6 +69,7 @@ const toDateKey = (value: Date | string) => {
 export const RoomRackPage = () => {
   const [activeStatuses, setActiveStatuses] = useState<StatusKey[]>(STATUS_FILTERS.map((s) => s.key));
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [activeRoomTypes, setActiveRoomTypes] = useState<string[]>([]); // will set default after room types load
 
   const selectedDateKey = useMemo(() => toDateInputValue(selectedDate), [selectedDate]);
 
@@ -104,6 +105,20 @@ export const RoomRackPage = () => {
     queryFn: async () => Promise.all(arrivalTodayReservationIds.map((id) => resortService.getReservation(id))),
   });
 
+  // Compute all room types from roomsData
+  const allRoomTypes = useMemo(() => {
+    const rooms = roomsData?.items ?? [];
+    const types = Array.from(new Set(rooms.map((r) => r.roomTypeName || 'Unknown')));
+    return types.sort((a, b) => collator.compare(a, b));
+  }, [roomsData]);
+
+  // Set default activeRoomTypes after room types load
+  useEffect(() => {
+    if (allRoomTypes.length > 0 && activeRoomTypes.length === 0) {
+      setActiveRoomTypes(allRoomTypes);
+    }
+  }, [allRoomTypes]);
+
   const rowsByRoomType = useMemo(() => {
     const rooms = roomsData?.items ?? [];
     const inHouseByRoom = new Map((inHouseData?.items ?? []).map((stay) => [stay.roomNumber, stay.guestName]));
@@ -137,6 +152,7 @@ export const RoomRackPage = () => {
         return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'vacantClean', label: 'Vacant Clean', statusSortOrder: 3 };
       })
       .filter((row) => activeStatuses.includes(row.statusKey))
+      .filter((row) => activeRoomTypes.includes(row.roomTypeName))
       .sort((a, b) => {
         if (a.statusSortOrder !== b.statusSortOrder) return a.statusSortOrder - b.statusSortOrder;
         return collator.compare(a.roomNumber, b.roomNumber);
@@ -149,7 +165,7 @@ export const RoomRackPage = () => {
       grouped.set(row.roomTypeName, current);
     });
     return grouped;
-  }, [activeStatuses, inHouseData, reservationDetails, roomsData]);
+  }, [activeStatuses, activeRoomTypes, inHouseData, reservationDetails, roomsData]);
 
   const roomTypeGroups = useMemo(
     () => Array.from(rowsByRoomType.entries()).sort((a, b) => collator.compare(a[0], b[0])),
@@ -192,6 +208,26 @@ export const RoomRackPage = () => {
                     }}
                   />
                   <span className="text-gray-700 dark:text-gray-300">{status.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Filter By Room Type</p>
+            <div className="flex flex-wrap gap-3">
+              {allRoomTypes.map((roomType) => (
+                <label key={roomType} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={activeRoomTypes.includes(roomType)}
+                    onChange={(e) => {
+                      setActiveRoomTypes((prev) =>
+                        e.target.checked ? Array.from(new Set([...prev, roomType])) : prev.filter((item) => item !== roomType)
+                      );
+                    }}
+                  />
+                  <span className="text-gray-700 dark:text-gray-300">{roomType}</span>
                 </label>
               ))}
             </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { confirmAction } from '@/utils/alerts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
 import type { StaffListDto } from '@/types/resort.types';
@@ -117,7 +118,7 @@ export const HousekeepingTasksPage = () => {
                                 value={assignedStaffFilter}
                                 onChange={(e) => setAssignedStaffFilter(e.target.value)}
                             >
-                                <option value="">All Staff</option>
+                                <option value="">All tasks</option>
                                 <option value="unassigned">Unassigned</option>
                                 {staff.map((member) => (
                                     <option key={member.id} value={member.id}>{member.fullName}</option>
@@ -172,7 +173,15 @@ export const HousekeepingTasksPage = () => {
                                                             type="button"
                                                             className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
                                                             disabled={updateStatusMutation.isPending}
-                                                            onClick={() => updateTaskStatus(task.id, HousekeepingTaskStatus.Completed, task.assignedToStaffId || undefined)}
+                                                            onClick={async () => {
+                                                                const result = await confirmAction(
+                                                                    `Mark cleaning task for room ${task.roomNumber} as completed?`,
+                                                                    { confirmButtonText: 'Complete' }
+                                                                );
+                                                                if (result.isConfirmed) {
+                                                                    updateTaskStatus(task.id, HousekeepingTaskStatus.Completed, task.assignedToStaffId || undefined);
+                                                                }
+                                                            }}
                                                         >
                                                             Complete
                                                         </button>
@@ -196,7 +205,15 @@ export const HousekeepingTasksPage = () => {
                                                             className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                                                             disabled={updateStatusMutation.isPending || !task.assignedToStaffId}
                                                             title={!task.assignedToStaffId ? 'Assign a staff member before starting' : undefined}
-                                                            onClick={() => updateTaskStatus(task.id, HousekeepingTaskStatus.InProgress, task.assignedToStaffId || undefined)}
+                                                            onClick={async () => {
+                                                                const result = await confirmAction(
+                                                                    `Start cleaning task for room ${task.roomNumber}?`,
+                                                                    { confirmButtonText: 'Start' }
+                                                                );
+                                                                if (result.isConfirmed) {
+                                                                    updateTaskStatus(task.id, HousekeepingTaskStatus.InProgress, task.assignedToStaffId || undefined);
+                                                                }
+                                                            }}
                                                         >
                                                             Start
                                                         </button>
@@ -206,7 +223,15 @@ export const HousekeepingTasksPage = () => {
                                                             type="button"
                                                             className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                                                             disabled={updateStatusMutation.isPending}
-                                                            onClick={() => updateTaskStatus(task.id, HousekeepingTaskStatus.Cancelled, task.assignedToStaffId || undefined)}
+                                                            onClick={async () => {
+                                                                const result = await confirmAction(
+                                                                    `Cancel cleaning task for room ${task.roomNumber}? This cannot be undone.`,
+                                                                    { confirmButtonText: 'Cancel Task' }
+                                                                );
+                                                                if (result.isConfirmed) {
+                                                                    updateTaskStatus(task.id, HousekeepingTaskStatus.Cancelled, task.assignedToStaffId || undefined);
+                                                                }
+                                                            }}
                                                         >
                                                             Cancel
                                                         </button>
