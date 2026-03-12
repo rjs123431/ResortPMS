@@ -23,6 +23,7 @@ public interface ICheckOutAppService : IApplicationService
     Task<ReceiptDto> GetReceiptAsync(Guid receiptId);
     Task<ReceiptDto> GetLatestReceiptByStayAsync(Guid stayId);
     Task<CheckOutRecordDto> GetCheckOutRecordAsync(Guid id);
+    Task<StayRoomRecordDto> ClearStayRoomAsync(ClearStayRoomDto input);
 }
 
 [AbpAuthorize(PermissionNames.Pages_CheckOut)]
@@ -37,6 +38,7 @@ public class CheckOutAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
+    IRepository<Staff, Guid> staffRepository,
     IDocumentNumberService documentNumberService
 ) : PMSAppServiceBase, ICheckOutAppService
 {
@@ -66,6 +68,7 @@ public class CheckOutAppService(
 
         var stayRooms = await stayRoomRepository.GetAll()
             .Include(sr => sr.Room)
+            .Include(sr => sr.ClearedByStaff)
             .Where(sr => sr.StayId == stayId)
             .OrderBy(sr => sr.AssignedAt)
             .ToListAsync();
@@ -103,7 +106,11 @@ public class CheckOutAppService(
                 RoomId = sr.RoomId,
                 RoomNumber = sr.Room != null ? sr.Room.RoomNumber : string.Empty,
                 AssignedAt = sr.AssignedAt,
-                ReleasedAt = sr.ReleasedAt
+                ReleasedAt = sr.ReleasedAt,
+                IsCleared = sr.IsCleared,
+                ClearedAt = sr.ClearedAt,
+                ClearedByStaffId = sr.ClearedByStaffId,
+                ClearedByStaffName = sr.ClearedByStaff?.FullName
             }).ToList(),
             Transactions = activeTransactions.Select(t => new StatementLineDto
             {
@@ -138,6 +145,13 @@ public class CheckOutAppService(
 
         if (stay.Status != StayStatus.InHouse && stay.Status != StayStatus.CheckedIn)
             throw new UserFriendlyException(L("StayNotInHouse"));
+
+        var unclearedRooms = await stayRoomRepository.GetAll()
+            .Where(sr => sr.StayId == input.StayId && sr.ReleasedAt == null && !sr.IsCleared)
+            .CountAsync();
+
+        if (unclearedRooms > 0)
+            throw new UserFriendlyException(L("AllRoomsMustBeClearedBeforeCheckout"));
 
         var folio = await folioRepository.GetAll()
             .Include(f => f.Transactions)
@@ -386,6 +400,50 @@ public class CheckOutAppService(
                     Amount = p.Amount
                 }).ToList()
             } : null
+        };
+    }
+
+    [UnitOfWork]
+    public async Task<StayRoomRecordDto> ClearStayRoomAsync(ClearStayRoomDto input)
+    {
+        var stayRoom = await stayRoomRepository.GetAll()
+            .Include(sr => sr.Room)
+            .Include(sr => sr.Stay)
+            .FirstOrDefaultAsync(sr => sr.Id == input.StayRoomId);
+
+        if (stayRoom == null)
+            throw new UserFriendlyException(L("StayRoomNotFound"));
+
+        if (stayRoom.Stay?.Status == StayStatus.CheckedOut)
+            throw new UserFriendlyException(L("CannotClearRoomForCheckedOutStay"));
+
+        if (stayRoom.IsCleared)
+            throw new UserFriendlyException(L("RoomAlreadyCleared"));
+
+        stayRoom.IsCleared = true;
+        stayRoom.ClearedAt = Clock.Now;
+        stayRoom.ClearedByStaffId = input.StaffId;
+
+        await stayRoomRepository.UpdateAsync(stayRoom);
+
+        string clearedByStaffName = null;
+        if (input.StaffId.HasValue)
+        {
+            var staff = await staffRepository.FirstOrDefaultAsync(s => s.Id == input.StaffId.Value);
+            clearedByStaffName = staff?.FullName;
+        }
+
+        return new StayRoomRecordDto
+        {
+            StayRoomId = stayRoom.Id,
+            RoomId = stayRoom.RoomId,
+            RoomNumber = stayRoom.Room?.RoomNumber ?? string.Empty,
+            AssignedAt = stayRoom.AssignedAt,
+            ReleasedAt = stayRoom.ReleasedAt,
+            IsCleared = stayRoom.IsCleared,
+            ClearedAt = stayRoom.ClearedAt,
+            ClearedByStaffId = stayRoom.ClearedByStaffId,
+            ClearedByStaffName = clearedByStaffName
         };
     }
 }

@@ -16,6 +16,7 @@ type PaymentFormValues = {
 type AddPaymentDialogProps = {
   open: boolean;
   paymentMethods: PaymentMethodOption[];
+  defaultAmount?: number;
   onClose: () => void;
   onSave: (values: PaymentFormValues) => void;
 };
@@ -25,21 +26,21 @@ const formatDateLocal = (value: Date) => {
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
 };
 
-const defaultForm = (): PaymentFormValues => ({
-  amount: 0,
+const createDefaultForm = (amount: number = 0): PaymentFormValues => ({
+  amount,
   paymentMethodId: '',
   paidDate: formatDateLocal(new Date()),
   referenceNo: '',
 });
 
-export const AddPaymentDialog = ({ open, paymentMethods, onClose, onSave }: AddPaymentDialogProps) => {
-  const [form, setForm] = useState<PaymentFormValues>(defaultForm());
+export const AddPaymentDialog = ({ open, paymentMethods, defaultAmount, onClose, onSave }: AddPaymentDialogProps) => {
+  const [form, setForm] = useState<PaymentFormValues>(createDefaultForm(defaultAmount));
 
   useEffect(() => {
     if (open) {
-      setForm(defaultForm());
+      setForm(createDefaultForm(defaultAmount));
     }
-  }, [open]);
+  }, [open, defaultAmount]);
 
   return (
     <Dialog open={open} onClose={onClose} className="fixed inset-0 z-50 overflow-y-auto">

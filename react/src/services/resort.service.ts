@@ -59,6 +59,8 @@ import {
   CreatePreCheckInDto,
   UpdatePreCheckInDto,
   PreCheckInStatus,
+  ClearStayRoomDto,
+  StayRoomRecordDto,
 } from '@/types/resort.types';
 
 export const resortService = {
@@ -495,6 +497,10 @@ export const resortService = {
     await api.post('/api/services/app/Stay/PostRefund', input);
   },
 
+  settleFolio: async (stayId: string) => {
+    await api.post('/api/services/app/Stay/SettleFolio', { stayId });
+  },
+
   addGuestRequest: async (input: AddGuestRequestDto) => {
     const response = await api.post<ApiResponse<string>>('/api/services/app/Stay/AddGuestRequest', input);
     return response.data.result;
@@ -569,6 +575,11 @@ export const resortService = {
     const response = await api.get<ApiResponse<CheckOutRecordDto>>('/api/services/app/CheckOut/GetCheckOutRecord', {
       params: { id },
     });
+    return response.data.result;
+  },
+
+  clearStayRoom: async (input: ClearStayRoomDto) => {
+    const response = await api.post<ApiResponse<StayRoomRecordDto>>('/api/services/app/CheckOut/ClearStayRoom', input);
     return response.data.result;
   },
 

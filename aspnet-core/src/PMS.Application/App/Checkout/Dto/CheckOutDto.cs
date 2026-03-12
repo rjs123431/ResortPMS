@@ -32,6 +32,16 @@ public class StayRoomRecordDto
     public string RoomNumber { get; set; }
     public DateTime AssignedAt { get; set; }
     public DateTime? ReleasedAt { get; set; }
+    public bool IsCleared { get; set; }
+    public DateTime? ClearedAt { get; set; }
+    public Guid? ClearedByStaffId { get; set; }
+    public string ClearedByStaffName { get; set; }
+}
+
+public class ClearStayRoomDto
+{
+    [Required] public Guid StayRoomId { get; set; }
+    public Guid? StaffId { get; set; }
 }
 
 public class StatementLineDto

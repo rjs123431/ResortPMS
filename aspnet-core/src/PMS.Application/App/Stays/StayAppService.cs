@@ -36,6 +36,7 @@ public interface IStayAppService : IApplicationService
     Task<Guid> PostRefundAsync(PostRefundDto input);
     Task VoidTransactionAsync(VoidTransactionDto input);
     Task<FolioSummaryDto> GetFolioSummaryAsync(Guid stayId);
+    Task SettleFolioAsync(Guid stayId);
 }
 
 [AbpAuthorize(PermissionNames.Pages_Stays)]
@@ -516,6 +517,27 @@ public class StayAppService(
         });
     }
 
+    [UnitOfWork]
+    public async Task SettleFolioAsync(Guid stayId)
+    {
+        var folio = await folioRepository.GetAll()
+            .FirstOrDefaultAsync(f => f.StayId == stayId);
+
+        if (folio == null) throw new UserFriendlyException(L("FolioNotFound"));
+
+        if (folio.Status == FolioStatus.Settled)
+            throw new UserFriendlyException(L("FolioAlreadySettled"));
+
+        if (folio.Status == FolioStatus.Voided || folio.Status == FolioStatus.WrittenOff)
+            throw new UserFriendlyException(L("FolioIsAlreadyClosed"));
+
+        if (Math.Abs(folio.Balance) > 0.005m)
+            throw new UserFriendlyException(L("FolioBalanceMustBeZeroToSettle"));
+
+        folio.Status = FolioStatus.Settled;
+        await folioRepository.UpdateAsync(folio);
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private async Task<Folio> GetOpenFolioOrThrowAsync(Guid stayId)
@@ -533,11 +555,10 @@ public class StayAppService(
 
     private static void UpdateFolioStatus(Folio folio)
     {
-        if (folio.Status == FolioStatus.Voided || folio.Status == FolioStatus.WrittenOff) return;
+        if (folio.Status == FolioStatus.Voided || folio.Status == FolioStatus.WrittenOff || folio.Status == FolioStatus.Settled) return;
 
-        if (folio.Balance <= 0)
-            folio.Status = FolioStatus.Settled;
-        else if (folio.Balance < folio.Transactions.Where(t => !t.IsDeleted && !t.IsVoided).Sum(t => t.NetAmount))
+        var totalCharges = folio.Transactions.Where(t => !t.IsDeleted && !t.IsVoided).Sum(t => t.NetAmount);
+        if (folio.Balance < totalCharges)
             folio.Status = FolioStatus.PartiallyPaid;
         else
             folio.Status = FolioStatus.Open;

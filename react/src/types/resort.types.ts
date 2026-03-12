@@ -402,7 +402,11 @@ export interface CheckOutStatementDto {
   stayNo: string;
   guestName: string;
   roomNumber: string;
+  checkInDateTime: string;
+  expectedCheckOutDateTime: string;
+  folioId: string;
   folioNo: string;
+  folioStatus: number;
   totalCharges: number;
   totalDiscounts: number;
   totalPayments: number;
@@ -419,6 +423,15 @@ export interface StayRoomRecordDto {
   roomNumber: string;
   assignedAt: string;
   releasedAt?: string;
+  isCleared: boolean;
+  clearedAt?: string;
+  clearedByStaffId?: string;
+  clearedByStaffName?: string;
+}
+
+export interface ClearStayRoomDto {
+  stayRoomId: string;
+  staffId?: string;
 }
 
 export interface StatementLineDto {

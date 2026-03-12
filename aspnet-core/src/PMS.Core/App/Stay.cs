@@ -48,8 +48,13 @@ public class StayRoom : CreationAuditedEntity<Guid>
     public DateTime AssignedAt { get; set; } = Clock.Now;
     public DateTime? ReleasedAt { get; set; }
 
+    public bool IsCleared { get; set; } = false;
+    public DateTime? ClearedAt { get; set; }
+    public Guid? ClearedByStaffId { get; set; }
+
     public virtual Stay Stay { get; set; }
     public virtual Room Room { get; set; }
+    public virtual Staff ClearedByStaff { get; set; }
 }
 
 public class RoomTransfer : FullAuditedEntity<Guid>

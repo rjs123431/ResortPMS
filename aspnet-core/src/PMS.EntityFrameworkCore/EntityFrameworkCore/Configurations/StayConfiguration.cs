@@ -68,6 +68,11 @@ internal class StayRoomConfiguration : IEntityTypeConfiguration<StayRoom>
             .WithMany()
             .HasForeignKey(e => e.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.ClearedByStaff)
+            .WithMany()
+            .HasForeignKey(e => e.ClearedByStaffId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
