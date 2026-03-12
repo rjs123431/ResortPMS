@@ -652,6 +652,48 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Quotation",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuotationNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    QuotationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ArrivalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DepartureDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Nights = table.Column<int>(type: "int", nullable: false),
+                    Adults = table.Column<int>(type: "int", nullable: false),
+                    Children = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    SpecialRequests = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    GuestName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    FirstName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Phone = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Quotation", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Quotation_Guest_GuestId",
+                        column: x => x.GuestId,
+                        principalTable: "Guest",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Reservation",
                 columns: table => new
                 {
@@ -1043,6 +1085,87 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "QuotationExtraBed",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExtraBedTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Quantity = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    RatePerNight = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NumberOfNights = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ExtraBedTypeName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuotationExtraBed", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_QuotationExtraBed_ExtraBedType_ExtraBedTypeId",
+                        column: x => x.ExtraBedTypeId,
+                        principalTable: "ExtraBedType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_QuotationExtraBed_Quotation_QuotationId",
+                        column: x => x.QuotationId,
+                        principalTable: "Quotation",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PreCheckIn",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PreCheckInNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    ReservationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PreCheckInDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ArrivalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DepartureDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Nights = table.Column<int>(type: "int", nullable: false),
+                    Adults = table.Column<int>(type: "int", nullable: false),
+                    Children = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    SpecialRequests = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    GuestName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    FirstName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Phone = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PreCheckIn", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PreCheckIn_Guest_GuestId",
+                        column: x => x.GuestId,
+                        principalTable: "Guest",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PreCheckIn_Reservation_ReservationId",
+                        column: x => x.ReservationId,
+                        principalTable: "Reservation",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ReservationDeposit",
                 columns: table => new
                 {
@@ -1146,34 +1269,43 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "HousekeepingTask",
+                name: "QuotationRoom",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TaskType = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    AssignedToStaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Remarks = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
-                    TaskDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RatePerNight = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NumberOfNights = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    SeniorCitizenCount = table.Column<int>(type: "int", nullable: false),
+                    SeniorCitizenDiscountAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NetAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    RoomTypeName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    RoomNumber = table.Column<string>(type: "varchar(16)", unicode: false, maxLength: 16, nullable: true),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_HousekeepingTask", x => x.Id);
+                    table.PrimaryKey("PK_QuotationRoom", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_HousekeepingTask_Room_RoomId",
-                        column: x => x.RoomId,
-                        principalTable: "Room",
+                        name: "FK_QuotationRoom_Quotation_QuotationId",
+                        column: x => x.QuotationId,
+                        principalTable: "Quotation",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_QuotationRoom_RoomType_RoomTypeId",
+                        column: x => x.RoomTypeId,
+                        principalTable: "RoomType",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_HousekeepingTask_Staff_AssignedToStaffId",
-                        column: x => x.AssignedToStaffId,
-                        principalTable: "Staff",
+                        name: "FK_QuotationRoom_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -1397,6 +1529,87 @@ namespace PMS.Migrations
                         principalTable: "ZzzRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PreCheckInExtraBed",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PreCheckInId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExtraBedTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Quantity = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    RatePerNight = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NumberOfNights = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ExtraBedTypeName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PreCheckInExtraBed", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PreCheckInExtraBed_ExtraBedType_ExtraBedTypeId",
+                        column: x => x.ExtraBedTypeId,
+                        principalTable: "ExtraBedType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PreCheckInExtraBed_PreCheckIn_PreCheckInId",
+                        column: x => x.PreCheckInId,
+                        principalTable: "PreCheckIn",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PreCheckInRoom",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PreCheckInId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReservationRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RatePerNight = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NumberOfNights = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    SeniorCitizenCount = table.Column<int>(type: "int", nullable: false),
+                    SeniorCitizenDiscountAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NetAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    RoomTypeName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    RoomNumber = table.Column<string>(type: "varchar(16)", unicode: false, maxLength: 16, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PreCheckInRoom", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PreCheckInRoom_PreCheckIn_PreCheckInId",
+                        column: x => x.PreCheckInId,
+                        principalTable: "PreCheckIn",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PreCheckInRoom_ReservationRoom_ReservationRoomId",
+                        column: x => x.ReservationRoomId,
+                        principalTable: "ReservationRoom",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PreCheckInRoom_RoomType_RoomTypeId",
+                        column: x => x.RoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PreCheckInRoom_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1696,50 +1909,6 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "HousekeepingLog",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OldStatus = table.Column<int>(type: "int", nullable: false),
-                    NewStatus = table.Column<int>(type: "int", nullable: false),
-                    StaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    HousekeepingTaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    CheckOutRecordId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Remarks = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
-                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_HousekeepingLog", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_HousekeepingLog_CheckOutRecord_CheckOutRecordId",
-                        column: x => x.CheckOutRecordId,
-                        principalTable: "CheckOutRecord",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_HousekeepingLog_HousekeepingTask_HousekeepingTaskId",
-                        column: x => x.HousekeepingTaskId,
-                        principalTable: "HousekeepingTask",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_HousekeepingLog_Room_RoomId",
-                        column: x => x.RoomId,
-                        principalTable: "Room",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_HousekeepingLog_Staff_StaffId",
-                        column: x => x.StaffId,
-                        principalTable: "Staff",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "FolioAdjustment",
                 columns: table => new
                 {
@@ -1849,6 +2018,46 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "HousekeepingTask",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    GuestRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    TaskType = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AssignedToStaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    TaskDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HousekeepingTask", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingTask_GuestRequest_GuestRequestId",
+                        column: x => x.GuestRequestId,
+                        principalTable: "GuestRequest",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingTask_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingTask_Staff_AssignedToStaffId",
+                        column: x => x.AssignedToStaffId,
+                        principalTable: "Staff",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ReceiptPayment",
                 columns: table => new
                 {
@@ -1872,6 +2081,50 @@ namespace PMS.Migrations
                         name: "FK_ReceiptPayment_Receipt_ReceiptId",
                         column: x => x.ReceiptId,
                         principalTable: "Receipt",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "HousekeepingLog",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OldStatus = table.Column<int>(type: "int", nullable: false),
+                    NewStatus = table.Column<int>(type: "int", nullable: false),
+                    StaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    HousekeepingTaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CheckOutRecordId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HousekeepingLog", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingLog_CheckOutRecord_CheckOutRecordId",
+                        column: x => x.CheckOutRecordId,
+                        principalTable: "CheckOutRecord",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingLog_HousekeepingTask_HousekeepingTaskId",
+                        column: x => x.HousekeepingTaskId,
+                        principalTable: "HousekeepingTask",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingLog_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_HousekeepingLog_Staff_StaffId",
+                        column: x => x.StaffId,
+                        principalTable: "Staff",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -1979,6 +2232,11 @@ namespace PMS.Migrations
                 column: "AssignedToStaffId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_HousekeepingTask_GuestRequestId",
+                table: "HousekeepingTask",
+                column: "GuestRequestId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_HousekeepingTask_RoomId_TaskDate",
                 table: "HousekeepingTask",
                 columns: new[] { "RoomId", "TaskDate" });
@@ -1998,6 +2256,108 @@ namespace PMS.Migrations
                 table: "PaymentMethod",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckIn_ExpiresAt",
+                table: "PreCheckIn",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckIn_GuestId",
+                table: "PreCheckIn",
+                column: "GuestId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckIn_PreCheckInNo",
+                table: "PreCheckIn",
+                column: "PreCheckInNo",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckIn_ReservationId",
+                table: "PreCheckIn",
+                column: "ReservationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckIn_Status",
+                table: "PreCheckIn",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckInExtraBed_ExtraBedTypeId",
+                table: "PreCheckInExtraBed",
+                column: "ExtraBedTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckInExtraBed_PreCheckInId",
+                table: "PreCheckInExtraBed",
+                column: "PreCheckInId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckInRoom_PreCheckInId",
+                table: "PreCheckInRoom",
+                column: "PreCheckInId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckInRoom_ReservationRoomId",
+                table: "PreCheckInRoom",
+                column: "ReservationRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckInRoom_RoomId",
+                table: "PreCheckInRoom",
+                column: "RoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PreCheckInRoom_RoomTypeId",
+                table: "PreCheckInRoom",
+                column: "RoomTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotation_ExpiresAt",
+                table: "Quotation",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotation_GuestId",
+                table: "Quotation",
+                column: "GuestId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotation_QuotationNo",
+                table: "Quotation",
+                column: "QuotationNo",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotation_Status",
+                table: "Quotation",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationExtraBed_ExtraBedTypeId",
+                table: "QuotationExtraBed",
+                column: "ExtraBedTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationExtraBed_QuotationId",
+                table: "QuotationExtraBed",
+                column: "QuotationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationRoom_QuotationId",
+                table: "QuotationRoom",
+                column: "QuotationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationRoom_RoomId",
+                table: "QuotationRoom",
+                column: "RoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationRoom_RoomTypeId",
+                table: "QuotationRoom",
+                column: "RoomTypeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Receipt_ReceiptNo",
@@ -2562,13 +2922,22 @@ namespace PMS.Migrations
                 name: "GuestIdentification");
 
             migrationBuilder.DropTable(
-                name: "GuestRequest");
-
-            migrationBuilder.DropTable(
                 name: "HousekeepingLog");
 
             migrationBuilder.DropTable(
                 name: "Incident");
+
+            migrationBuilder.DropTable(
+                name: "PreCheckInExtraBed");
+
+            migrationBuilder.DropTable(
+                name: "PreCheckInRoom");
+
+            migrationBuilder.DropTable(
+                name: "QuotationExtraBed");
+
+            migrationBuilder.DropTable(
+                name: "QuotationRoom");
 
             migrationBuilder.DropTable(
                 name: "ReceiptPayment");
@@ -2700,6 +3069,12 @@ namespace PMS.Migrations
                 name: "HousekeepingTask");
 
             migrationBuilder.DropTable(
+                name: "PreCheckIn");
+
+            migrationBuilder.DropTable(
+                name: "Quotation");
+
+            migrationBuilder.DropTable(
                 name: "Receipt");
 
             migrationBuilder.DropTable(
@@ -2727,10 +3102,10 @@ namespace PMS.Migrations
                 name: "ZzzWebhookEvents");
 
             migrationBuilder.DropTable(
-                name: "Staff");
+                name: "GuestRequest");
 
             migrationBuilder.DropTable(
-                name: "Stay");
+                name: "Staff");
 
             migrationBuilder.DropTable(
                 name: "ZzzDynamicProperties");
@@ -2740,6 +3115,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ZzzUsers");
+
+            migrationBuilder.DropTable(
+                name: "Stay");
 
             migrationBuilder.DropTable(
                 name: "Reservation");

@@ -28,11 +28,17 @@ export const RoomListPage = () => {
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ['resort-rooms', filter],
     queryFn: () => resortService.getRooms(filter),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: roomTypes } = useQuery({
     queryKey: ['resort-room-types'],
     queryFn: () => resortService.getRoomTypes(),
+    staleTime: 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const createMutation = useMutation({

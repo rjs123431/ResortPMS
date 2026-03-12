@@ -41,6 +41,16 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<ReservationDailyRate> ReservationDailyRates { get; set; }
     public DbSet<ReservationDeposit> ReservationDeposits { get; set; }
 
+    // Quotation
+    public DbSet<Quotation> Quotations { get; set; }
+    public DbSet<QuotationRoom> QuotationRooms { get; set; }
+    public DbSet<QuotationExtraBed> QuotationExtraBeds { get; set; }
+
+    // PreCheckIn
+    public DbSet<PreCheckIn> PreCheckIns { get; set; }
+    public DbSet<PreCheckInRoom> PreCheckInRooms { get; set; }
+    public DbSet<PreCheckInExtraBed> PreCheckInExtraBeds { get; set; }
+
     // Stay
     public DbSet<Stay> Stays { get; set; }
     public DbSet<StayGuest> StayGuests { get; set; }
@@ -99,6 +109,16 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new ReservationGuestConfiguration());
         modelBuilder.ApplyConfiguration(new ReservationDailyRateConfiguration());
         modelBuilder.ApplyConfiguration(new ReservationDepositConfiguration());
+
+        // Quotation
+        modelBuilder.ApplyConfiguration(new QuotationConfiguration());
+        modelBuilder.ApplyConfiguration(new QuotationRoomConfiguration());
+        modelBuilder.ApplyConfiguration(new QuotationExtraBedConfiguration());
+
+        // PreCheckIn
+        modelBuilder.ApplyConfiguration(new PreCheckInConfiguration());
+        modelBuilder.ApplyConfiguration(new PreCheckInRoomConfiguration());
+        modelBuilder.ApplyConfiguration(new PreCheckInExtraBedConfiguration());
 
         // Stay
         modelBuilder.ApplyConfiguration(new StayConfiguration());

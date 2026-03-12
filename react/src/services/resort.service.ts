@@ -48,6 +48,16 @@ import {
   CompleteGuestRequestDto,
   GuestRequestCompletionContextDto,
   GuestRequestListDto,
+  QuotationDto,
+  QuotationListDto,
+  CreateQuotationDto,
+  UpdateQuotationDto,
+  QuotationStatus,
+  PreCheckInDto,
+  PreCheckInListDto,
+  CreatePreCheckInDto,
+  UpdatePreCheckInDto,
+  PreCheckInStatus,
 } from '@/types/resort.types';
 
 export const resortService = {
@@ -642,5 +652,90 @@ export const resortService = {
 
   updateStaff: async (input: StaffDto) => {
     await api.put('/api/services/app/Staff/Update', input);
+  },
+
+  getQuotations: async (params?: { filter?: string; status?: QuotationStatus; includeExpired?: boolean; skipCount?: number; maxResultCount?: number }) => {
+    const query: Record<string, string> = {};
+    if (params?.filter) query.Filter = params.filter;
+    if (params?.status !== undefined) query.Status = String(params.status);
+    if (params?.includeExpired !== undefined) query.IncludeExpired = String(params.includeExpired);
+    if (params?.skipCount !== undefined) query.SkipCount = String(params.skipCount);
+    if (params?.maxResultCount !== undefined) query.MaxResultCount = String(params.maxResultCount);
+    const response = await api.get<ApiResponse<PagedResultDto<QuotationListDto>>>('/api/services/app/Quotation/GetAll', { params: query });
+    return response.data.result;
+  },
+
+  getQuotation: async (id: string) => {
+    const response = await api.get<ApiResponse<QuotationDto>>('/api/services/app/Quotation/Get', { params: { id } });
+    return response.data.result;
+  },
+
+  createQuotation: async (input: CreateQuotationDto) => {
+    const response = await api.post<ApiResponse<string>>('/api/services/app/Quotation/Create', input);
+    return response.data.result;
+  },
+
+  updateQuotation: async (input: UpdateQuotationDto) => {
+    const response = await api.put<ApiResponse<string>>('/api/services/app/Quotation/Update', input);
+    return response.data.result;
+  },
+
+  cancelQuotation: async (id: string) => {
+    await api.post('/api/services/app/Quotation/Cancel', null, { params: { id } });
+  },
+
+  getPreCheckIns: async (params?: {
+    filter?: string;
+    status?: PreCheckInStatus;
+    includeExpired?: boolean;
+    walkInOnly?: boolean;
+    reservationOnly?: boolean;
+    reservationId?: string;
+    skipCount?: number;
+    maxResultCount?: number;
+  }) => {
+    const query: Record<string, string> = {};
+    if (params?.filter) query.Filter = params.filter;
+    if (params?.status !== undefined) query.Status = String(params.status);
+    if (params?.includeExpired !== undefined) query.IncludeExpired = String(params.includeExpired);
+    if (params?.walkInOnly !== undefined) query.WalkInOnly = String(params.walkInOnly);
+    if (params?.reservationOnly !== undefined) query.ReservationOnly = String(params.reservationOnly);
+    if (params?.reservationId) query.ReservationId = params.reservationId;
+    if (params?.skipCount !== undefined) query.SkipCount = String(params.skipCount);
+    if (params?.maxResultCount !== undefined) query.MaxResultCount = String(params.maxResultCount);
+    const response = await api.get<ApiResponse<PagedResultDto<PreCheckInListDto>>>('/api/services/app/PreCheckIn/GetAll', { params: query });
+    return response.data.result;
+  },
+
+  getPreCheckIn: async (id: string) => {
+    const response = await api.get<ApiResponse<PreCheckInDto>>('/api/services/app/PreCheckIn/Get', { params: { id } });
+    return response.data.result;
+  },
+
+  getPreCheckInByReservationId: async (reservationId: string) => {
+    const response = await api.get<ApiResponse<PreCheckInDto | null>>('/api/services/app/PreCheckIn/GetByReservationId', { params: { reservationId } });
+    return response.data.result;
+  },
+
+  createPreCheckIn: async (input: CreatePreCheckInDto) => {
+    const response = await api.post<ApiResponse<string>>('/api/services/app/PreCheckIn/Create', input);
+    return response.data.result;
+  },
+
+  updatePreCheckIn: async (input: UpdatePreCheckInDto) => {
+    const response = await api.put<ApiResponse<string>>('/api/services/app/PreCheckIn/Update', input);
+    return response.data.result;
+  },
+
+  cancelPreCheckIn: async (id: string) => {
+    await api.post('/api/services/app/PreCheckIn/Cancel', null, { params: { id } });
+  },
+
+  markPreCheckInReady: async (id: string) => {
+    await api.post('/api/services/app/PreCheckIn/MarkReady', null, { params: { id } });
+  },
+
+  markPreCheckInCheckedIn: async (id: string) => {
+    await api.post('/api/services/app/PreCheckIn/MarkCheckedIn', null, { params: { id } });
   },
 };

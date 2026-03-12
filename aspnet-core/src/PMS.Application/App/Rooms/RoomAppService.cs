@@ -92,7 +92,8 @@ public class RoomAppService(
     IRepository<RoomStatusLog, Guid> roomStatusLogRepository,
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
-    IRepository<StayRoom, Guid> stayRoomRepository
+    IRepository<StayRoom, Guid> stayRoomRepository,
+    IRepository<PreCheckInRoom, Guid> preCheckInRoomRepository
 ) : PMSAppServiceBase, IRoomAppService
 {
     [AbpAuthorize(PermissionNames.Pages_Rooms_Create)]
@@ -198,6 +199,18 @@ public class RoomAppService(
 
             if (blockedByStay.Count > 0)
                 query = query.Where(r => !blockedByStay.Contains(r.Id));
+
+            var blockedByPreCheckIn = await preCheckInRoomRepository.GetAll()
+                .AsNoTracking()
+                .Where(pcr => pcr.RoomId.HasValue)
+                .Where(pcr => pcr.PreCheckIn.Status == PreCheckInStatus.Pending)
+                .Where(pcr => pcr.PreCheckIn.ArrivalDate < departureDate && pcr.PreCheckIn.DepartureDate > arrivalDate)
+                .Select(pcr => pcr.RoomId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            if (blockedByPreCheckIn.Count > 0)
+                query = query.Where(r => !blockedByPreCheckIn.Contains(r.Id));
         }
 
         var items = await query.OrderBy(r => r.RoomNumber).ToListAsync();

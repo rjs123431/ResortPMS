@@ -10,6 +10,7 @@ type AssignRoomDialogProps = {
   roomTypeId?: string;
   selectedRoomId: string;
   excludeRoomIds?: string[];
+  allowDirtySelection?: boolean;
   onSelectRoom: (roomId: string) => void;
   onClose: () => void;
   onConfirm?: () => void;
@@ -49,6 +50,7 @@ export const AssignRoomDialog = ({
   roomTypeId,
   selectedRoomId,
   excludeRoomIds = [],
+  allowDirtySelection = false,
   onSelectRoom,
   onClose,
 }: AssignRoomDialogProps) => {
@@ -113,13 +115,17 @@ export const AssignRoomDialog = ({
                 <tbody>
                   {filteredRooms.map((room) => {
                     const isCurrentlySelected = room.id === selectedRoomId;
+                    const isDirty = room.housekeepingStatus === HousekeepingStatus.Dirty;
+                    const isDisabled = isCurrentlySelected || (isDirty && !allowDirtySelection);
                     return (
                       <tr
                         key={room.id}
                         className={`border-b dark:border-gray-700 ${
                           isCurrentlySelected
                             ? 'bg-primary-50 dark:bg-primary-900/20'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            : isDirty
+                              ? 'bg-yellow-50/50 dark:bg-yellow-900/10'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
                         }`}
                       >
                         <td className="p-2">
@@ -140,16 +146,18 @@ export const AssignRoomDialog = ({
                           <button
                             type="button"
                             className={`rounded px-3 py-1.5 text-xs text-white ${
-                              isCurrentlySelected
-                                ? 'bg-gray-400 cursor-default'
-                                : 'bg-primary-600 hover:bg-primary-700'
+                              isDisabled
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : isDirty && allowDirtySelection
+                                  ? 'bg-amber-600 hover:bg-amber-700'
+                                  : 'bg-primary-600 hover:bg-primary-700'
                             }`}
-                            disabled={isCurrentlySelected}
+                            disabled={isDisabled}
                             onClick={() => {
                               onSelectRoom(room.id);
                             }}
                           >
-                            {isCurrentlySelected ? 'Selected' : 'Select'}
+                            {isCurrentlySelected ? 'Selected' : isDirty && !allowDirtySelection ? 'Dirty' : 'Select'}
                           </button>
                         </td>
                       </tr>

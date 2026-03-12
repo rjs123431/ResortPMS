@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
+import { LoadPreCheckInDialog } from '../Shared/LoadPreCheckInDialog';
 
 const formatDateOnly = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -18,6 +19,7 @@ const toDateOnly = (value: string) => {
 export const CheckInPage = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [showPreCheckInDialog, setShowPreCheckInDialog] = useState(false);
   const serverFilter = search.trim();
 
   const { data: reservationsData, isLoading } = useQuery({
@@ -43,12 +45,21 @@ export const CheckInPage = () => {
         <div className="space-y-1">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Check-In</h1>
-            <Link
-              to="/check-in/walk-in"
-              className="self-start rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-            >
-              Walk-In
-            </Link>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPreCheckInDialog(true)}
+                className="rounded border border-amber-600 bg-white px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 dark:border-amber-500 dark:bg-gray-800 dark:text-amber-500 dark:hover:bg-amber-900/20"
+              >
+                Pre-Check-In
+              </button>
+              <Link
+                to="/check-in/walk-in"
+                className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+              >
+                Walk-In
+              </Link>
+            </div>
           </div>
           <p className="hidden text-sm text-gray-500 dark:text-gray-400 sm:block">
             Confirmed reservations arriving today.
@@ -123,6 +134,15 @@ export const CheckInPage = () => {
             </table>
           </div>
         </section>
+
+        <LoadPreCheckInDialog
+          open={showPreCheckInDialog}
+          onSelect={(preCheckInId) => {
+            setShowPreCheckInDialog(false);
+            navigate(`/check-in/walk-in/${preCheckInId}`);
+          }}
+          onClose={() => setShowPreCheckInDialog(false)}
+        />
       </div>
     </MainLayout>
   );

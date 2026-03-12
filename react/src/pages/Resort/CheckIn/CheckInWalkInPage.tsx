@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
+import { HousekeepingStatus } from '@/types/resort.types';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
+import { LoadPreCheckInDialog } from '../Shared/LoadPreCheckInDialog';
 
 const formatDateLocal = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -110,6 +112,7 @@ const splitFullName = (fullName: string) => {
 
 export const CheckInWalkInPage = () => {
   const navigate = useNavigate();
+  const { preCheckInId: urlPreCheckInId } = useParams<{ preCheckInId?: string }>();
   const queryClient = useQueryClient();
   const [stayRange, setStayRange] = useState<[Date | null, Date | null]>(() => {
     const today = new Date();
@@ -156,6 +159,9 @@ export const CheckInWalkInPage = () => {
   const [refundableDepositAmount, setRefundableDepositAmount] = useState('');
   const [refundableDepositPaymentMethodId, setRefundableDepositPaymentMethodId] = useState('');
   const [refundableDepositReference, setRefundableDepositReference] = useState('');
+  const [showPreCheckInListDialog, setShowPreCheckInListDialog] = useState(false);
+  const [loadedPreCheckInId, setLoadedPreCheckInId] = useState<string | null>(null);
+  const [preCheckInSaveMessage, setPreCheckInSaveMessage] = useState('');
 
   const [startDate, endDate] = stayRange;
 
@@ -174,6 +180,7 @@ export const CheckInWalkInPage = () => {
     queryFn: () => resortService.getPaymentMethods(),
     enabled: showReservationDetails && showGuestInfoStep,
   });
+
 
   useEffect(() => {
     if (!selectedGuest) return;
@@ -198,6 +205,22 @@ export const CheckInWalkInPage = () => {
       );
       return responseList.flat();
     },
+  });
+
+  const assignedRoomIds = useMemo(() => Object.values(assignedRoomByLine).filter(Boolean), [assignedRoomByLine]);
+
+  const { data: freshRoomStatuses } = useQuery({
+    queryKey: ['walkin-assigned-room-statuses', assignedRoomIds],
+    queryFn: async () => {
+      if (assignedRoomIds.length === 0) return [];
+      const result = await resortService.getRooms('', 0, 500);
+      return result.items.filter((r) => assignedRoomIds.includes(r.id));
+    },
+    enabled: assignedRoomIds.length > 0,
+    staleTime: 10 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 30 * 1000,
   });
 
   const availabilityRows = useMemo<AvailabilityRow[]>(() => {
@@ -327,6 +350,16 @@ export const CheckInWalkInPage = () => {
     () => reservationDetailLines.some((line) => !(assignedRoomByLine[line.lineId] ?? '').trim()),
     [reservationDetailLines, assignedRoomByLine]
   );
+
+  const hasDirtyRoomsAssigned = useMemo(() => {
+    if (assignedRoomIds.length === 0) return false;
+    return assignedRoomIds.some((roomId) => {
+      const freshRoom = (freshRoomStatuses ?? []).find((r) => r.id === roomId);
+      if (freshRoom) return freshRoom.housekeepingStatus === HousekeepingStatus.Dirty;
+      const searchRoom = (searchMutation.data ?? []).find((r) => r.id === roomId);
+      return searchRoom?.housekeepingStatus === HousekeepingStatus.Dirty;
+    });
+  }, [assignedRoomIds, freshRoomStatuses, searchMutation.data]);
 
   const stayNights = useMemo(() => {
     if (!searchCriteria) return 0;
@@ -589,6 +622,176 @@ export const CheckInWalkInPage = () => {
 
   const refundableDeposit = Number(refundableDepositAmount || 0);
 
+  const savePreCheckInMutation = useMutation({
+    mutationFn: async () => {
+      if (!searchCriteria) {
+        throw new Error('Please search for rooms first.');
+      }
+      if (reservationDetailLines.length === 0) {
+        throw new Error('No room selections found.');
+      }
+
+      const preCheckInRooms = reservationDetailLines.map((line) => ({
+        roomTypeId: line.roomTypeId,
+        roomId: assignedRoomByLine[line.lineId] || undefined,
+        roomTypeName: line.roomTypeName,
+        roomNumber: (searchMutation.data ?? []).find((r) => r.id === assignedRoomByLine[line.lineId])?.roomNumber || '',
+        ratePerNight: round2(line.ratePerNight),
+        numberOfNights: line.nights,
+        amount: round2(line.grossAmount),
+        seniorCitizenCount: line.seniorCount,
+        seniorCitizenDiscountAmount: round2(line.seniorDiscountAmount),
+        netAmount: round2(line.netAmount),
+      }));
+
+      const preCheckInExtraBeds = extraBedRows.map((row) => ({
+        extraBedTypeId: row.extraBedTypeId || undefined,
+        extraBedTypeName: row.extraBedTypeName,
+        quantity: row.quantity,
+        ratePerNight: round2(row.ratePerNight),
+        numberOfNights: row.nights,
+        amount: round2(row.quantity * row.ratePerNight * row.nights),
+      }));
+
+      const input = {
+        guestId: selectedGuest?.id || undefined,
+        arrivalDate: searchCriteria.arrivalDate,
+        departureDate: searchCriteria.departureDate,
+        adults: searchCriteria.adults,
+        children: searchCriteria.children,
+        totalAmount: round2(selectionGrandTotal),
+        notes: transactionNotes || undefined,
+        specialRequests: specialRequests || undefined,
+        guestName: selectedGuest ? `${guestInfoForm.firstName} ${guestInfoForm.lastName}`.trim() : undefined,
+        firstName: guestInfoForm.firstName || undefined,
+        lastName: guestInfoForm.lastName || undefined,
+        phone: guestInfoForm.phone || undefined,
+        email: guestInfoForm.email || undefined,
+        rooms: preCheckInRooms,
+        extraBeds: preCheckInExtraBeds.length > 0 ? preCheckInExtraBeds : undefined,
+      };
+
+      if (loadedPreCheckInId) {
+        return resortService.updatePreCheckIn({ ...input, id: loadedPreCheckInId });
+      }
+      return resortService.createPreCheckIn(input);
+    },
+    onSuccess: (preCheckInId) => {
+      if (!loadedPreCheckInId) {
+        navigate(`/check-in/walk-in/${preCheckInId}`, { replace: true });
+      }
+      setLoadedPreCheckInId(preCheckInId);
+      setPreCheckInSaveMessage('Pre-check-in saved successfully!');
+      void queryClient.invalidateQueries({ queryKey: ['resort-precheckins-pending'] });
+      setTimeout(() => setPreCheckInSaveMessage(''), 3000);
+    },
+    onError: (error) => {
+      setPreCheckInSaveMessage(getErrorMessage(error));
+      setTimeout(() => setPreCheckInSaveMessage(''), 5000);
+    },
+  });
+
+  const loadPreCheckIn = async (preCheckInId: string) => {
+    try {
+      const preCheckIn = await resortService.getPreCheckIn(preCheckInId);
+
+      const arrival = parseDateOnly(preCheckIn.arrivalDate.split('T')[0]);
+      const departure = parseDateOnly(preCheckIn.departureDate.split('T')[0]);
+      setStayRange([arrival, departure]);
+
+      const roomTypeIdsFromPreCheckIn = [...new Set(preCheckIn.rooms.map((r) => r.roomTypeId))];
+      setSelectedRoomTypeIds(roomTypeIdsFromPreCheckIn);
+      setAdults(preCheckIn.adults);
+      setChildren(preCheckIn.children);
+
+      const criteria: SearchCriteria = {
+        roomTypeIds: roomTypeIdsFromPreCheckIn,
+        arrivalDate: preCheckIn.arrivalDate.split('T')[0],
+        departureDate: preCheckIn.departureDate.split('T')[0],
+        adults: preCheckIn.adults,
+        children: preCheckIn.children,
+        rooms: preCheckIn.rooms.length,
+      };
+      setSearchCriteria(criteria);
+
+      const searchResults = await Promise.all(
+        roomTypeIdsFromPreCheckIn.map((roomTypeId) =>
+          resortService.getAvailableRooms(roomTypeId, criteria.arrivalDate, criteria.departureDate, undefined, false, true)
+        )
+      );
+      const allRooms = searchResults.flat();
+      searchMutation.mutate(criteria);
+
+      const amounts: Record<string, number> = {};
+      preCheckIn.rooms.forEach((room) => {
+        amounts[room.roomTypeId] = (amounts[room.roomTypeId] || 0) + 1;
+      });
+      setSelectedAmounts(amounts);
+
+      const seniors: Record<string, number> = {};
+      const assigned: Record<string, string> = {};
+      preCheckIn.rooms.forEach((room, idx) => {
+        const lineId = `${room.roomTypeId}-${idx + 1}`;
+        seniors[lineId] = room.seniorCitizenCount;
+        if (room.roomId) {
+          const foundRoom = allRooms.find((r) => r.id === room.roomId);
+          if (foundRoom) {
+            assigned[lineId] = room.roomId;
+          }
+        }
+      });
+      setSeniorCountsByRoom(seniors);
+      setAssignedRoomByLine(assigned);
+
+      const beds: ExtraBedSelectionRow[] = preCheckIn.extraBeds.map((bed, idx) => ({
+        id: `extra-bed-loaded-${idx}`,
+        extraBedTypeId: bed.extraBedTypeId || '',
+        extraBedTypeName: bed.extraBedTypeName || '',
+        quantity: bed.quantity,
+        nights: bed.numberOfNights,
+        ratePerNight: bed.ratePerNight,
+      }));
+      setExtraBedRows(beds);
+
+      if (preCheckIn.guestId) {
+        setSelectedGuest({
+          id: preCheckIn.guestId,
+          guestCode: '',
+          fullName: preCheckIn.guestName || '',
+          email: preCheckIn.email,
+          phone: preCheckIn.phone,
+          nationality: '',
+        });
+        setGuestInfoForm({
+          guestCode: '',
+          firstName: preCheckIn.firstName || '',
+          middleName: '',
+          lastName: preCheckIn.lastName || '',
+          email: preCheckIn.email || '',
+          phone: preCheckIn.phone || '',
+          nationality: '',
+        });
+      }
+
+      setTransactionNotes(preCheckIn.notes || '');
+      setSpecialRequests(preCheckIn.specialRequests || '');
+      setLoadedPreCheckInId(preCheckIn.id);
+      setShowReservationDetails(true);
+      setShowPreCheckInListDialog(false);
+
+      navigate(`/check-in/walk-in/${preCheckIn.id}`, { replace: true });
+    } catch (error) {
+      setConfirmError(getErrorMessage(error));
+    }
+  };
+
+  useEffect(() => {
+    if (urlPreCheckInId && !loadedPreCheckInId) {
+      void loadPreCheckIn(urlPreCheckInId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlPreCheckInId]);
+
   const completeCheckInMutation = useMutation({
     mutationFn: async () => {
       if (!searchCriteria) {
@@ -671,13 +874,23 @@ export const CheckInWalkInPage = () => {
 
       return checkInResult;
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       setConfirmError('');
+
+      if (loadedPreCheckInId) {
+        try {
+          await resortService.markPreCheckInCheckedIn(loadedPreCheckInId);
+        } catch {
+          // Pre-check-in status update is non-critical, continue with navigation
+        }
+      }
+
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin-today'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-stays'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-precheckins-pending'] });
       navigate('/check-in/confirmation', {
         replace: true,
         state: {
@@ -699,6 +912,41 @@ export const CheckInWalkInPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Walk-In Check-In</h1>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              onClick={() => setShowPreCheckInListDialog(true)}
+            >
+              Load Pre-Check-In
+            </button>
+            {showReservationDetails && reservationDetailLines.length > 0 && (
+              <button
+                type="button"
+                className="rounded bg-amber-600 px-3 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-50"
+                disabled={savePreCheckInMutation.isPending}
+                onClick={() => savePreCheckInMutation.mutate()}
+              >
+                {savePreCheckInMutation.isPending ? 'Saving...' : loadedPreCheckInId ? 'Update Pre-Check-In' : 'Save as Pre-Check-In'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {preCheckInSaveMessage && (
+          <div className={`rounded px-3 py-2 text-sm ${preCheckInSaveMessage.includes('success') ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'}`}>
+            {preCheckInSaveMessage}
+          </div>
+        )}
+
+        {loadedPreCheckInId && (
+          <div className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+            Loaded from pre-check-in. Changes will update the existing record when saved.
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="w-full rounded-lg border border-gray-200 bg-white/90 p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
             <div className="grid grid-cols-3 gap-2 md:gap-3">
@@ -982,7 +1230,23 @@ export const CheckInWalkInPage = () => {
                           </div>
                         </td>
                         <td className="border border-gray-200 p-2 dark:border-gray-700">
-                          {(searchMutation.data ?? []).find((room) => room.id === assignedRoomByLine[line.lineId])?.roomNumber ?? 'Unassigned'}
+                          {(() => {
+                            const roomId = assignedRoomByLine[line.lineId];
+                            const assignedRoom = (searchMutation.data ?? []).find((room) => room.id === roomId);
+                            if (!assignedRoom) return 'Unassigned';
+                            const freshRoom = (freshRoomStatuses ?? []).find((r) => r.id === roomId);
+                            const isDirty = (freshRoom ?? assignedRoom).housekeepingStatus === HousekeepingStatus.Dirty;
+                            return (
+                              <span className="inline-flex items-center gap-1">
+                                {assignedRoom.roomNumber}
+                                {isDirty && (
+                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                    Dirty
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="border border-gray-200 p-2 text-center dark:border-gray-700">
                           <button
@@ -1489,6 +1753,7 @@ export const CheckInWalkInPage = () => {
                   !selectedGuest?.id ||
                   reservationDetailLines.length === 0 ||
                   hasUnassignedRooms ||
+                  hasDirtyRoomsAssigned ||
                   (refundableDeposit > 0 && !refundableDepositPaymentMethodId)
                 }
                 className="ml-auto inline-flex items-center gap-1 rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
@@ -1497,6 +1762,11 @@ export const CheckInWalkInPage = () => {
                 <span aria-hidden="true">&rarr;</span>
               </button>
             </div>
+            {hasDirtyRoomsAssigned && (
+              <p className="mt-2 text-sm text-amber-600">
+                Cannot complete check-in: one or more assigned rooms are dirty. Please clean the rooms first or assign different rooms.
+              </p>
+            )}
             {confirmError ? <p className="mt-2 text-sm text-rose-600">{confirmError}</p> : null}
           </section>
         ) : null}
@@ -1523,11 +1793,19 @@ export const CheckInWalkInPage = () => {
           excludeRoomIds={Object.entries(assignedRoomByLine)
             .filter(([lineId, roomId]) => lineId !== assignDialogLineId && Boolean(roomId))
             .map(([, roomId]) => roomId)}
+          allowDirtySelection={Boolean(loadedPreCheckInId)}
           onSelectRoom={(roomId) => {
             setAssignDialogSelectedRoomId(roomId);
             confirmAssignRoom(roomId);
           }}
           onClose={closeAssignRoomDialog}
+        />
+
+        <LoadPreCheckInDialog
+          open={showPreCheckInListDialog}
+          walkInOnly
+          onSelect={(id) => void loadPreCheckIn(id)}
+          onClose={() => setShowPreCheckInListDialog(false)}
         />
       </div>
     </MainLayout>

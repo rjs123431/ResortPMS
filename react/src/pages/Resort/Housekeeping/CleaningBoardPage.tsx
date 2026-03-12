@@ -35,6 +35,9 @@ export const CleaningBoardPage = () => {
   const { data: boardData, isLoading } = useQuery({
     queryKey: ['housekeeping-cleaning-board', selectedDateKey],
     queryFn: () => resortService.getCleaningBoard(selectedDateKey),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const createTaskMutation = useMutation({

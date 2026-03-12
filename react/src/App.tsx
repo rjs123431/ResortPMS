@@ -307,7 +307,7 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
-                      path="/check-in/walk-in"
+                      path="/check-in/walk-in/:preCheckInId?"
                       element={
                         <PageTitle title="Walk-In Check-In">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>

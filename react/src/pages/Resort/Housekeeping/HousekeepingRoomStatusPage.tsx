@@ -26,16 +26,25 @@ export const HousekeepingRoomStatusPage = () => {
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ['housekeeping-room-status-rooms'],
     queryFn: () => resortService.getRooms('', 0, 500),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: staffData } = useQuery({
     queryKey: ['resort-staff'],
     queryFn: () => resortService.getStaffs(),
+    staleTime: 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: logsData, isLoading: isLoadingLogs } = useQuery({
     queryKey: ['housekeeping-logs'],
     queryFn: () => resortService.getHousekeepingLogs({ maxResultCount: 30 }),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const markStatusMutation = useMutation({

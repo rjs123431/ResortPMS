@@ -76,16 +76,25 @@ export const RoomRackPage = () => {
   const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
     queryKey: ['room-rack-rooms'],
     queryFn: () => resortService.getRooms('', 0, 500),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: inHouseData, isLoading: isLoadingInHouse } = useQuery({
     queryKey: ['room-rack-in-house'],
     queryFn: () => resortService.getInHouseStays('', 0, 500),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: reservationsData, isLoading: isLoadingReservations } = useQuery({
     queryKey: ['room-rack-reservations', selectedDateKey],
     queryFn: () => resortService.getReservations('', 0, 200),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const arrivalTodayReservationIds = useMemo(() => {
@@ -103,6 +112,9 @@ export const RoomRackPage = () => {
     queryKey: ['room-rack-reservation-details', selectedDateKey, arrivalTodayReservationIds],
     enabled: arrivalTodayReservationIds.length > 0,
     queryFn: async () => Promise.all(arrivalTodayReservationIds.map((id) => resortService.getReservation(id))),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Compute all room types from roomsData
