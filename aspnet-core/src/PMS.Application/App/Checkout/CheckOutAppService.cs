@@ -22,6 +22,7 @@ public interface ICheckOutAppService : IApplicationService
     Task WriteOffBalanceAsync(WriteOffBalanceDto input);
     Task<ReceiptDto> GetReceiptAsync(Guid receiptId);
     Task<ReceiptDto> GetLatestReceiptByStayAsync(Guid stayId);
+    Task<CheckOutRecordDto> GetCheckOutRecordAsync(Guid id);
 }
 
 [AbpAuthorize(PermissionNames.Pages_CheckOut)]
@@ -253,6 +254,7 @@ public class CheckOutAppService(
 
         return new CheckOutResultDto
         {
+            CheckOutRecordId = checkOutRecordId,
             StayId = stay.Id,
             StayNo = stay.StayNo,
             ReceiptId = receiptId,
@@ -337,5 +339,53 @@ public class CheckOutAppService(
 
         if (receipt == null) throw new UserFriendlyException(L("ReceiptNotFound"));
         return await GetReceiptAsync(receipt.Id);
+    }
+
+    public async Task<CheckOutRecordDto> GetCheckOutRecordAsync(Guid id)
+    {
+        var record = await checkOutRecordRepository.GetAll()
+            .Include(r => r.Stay)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (record == null) throw new UserFriendlyException(L("CheckOutRecordNotFound"));
+
+        var receipt = await receiptRepository.GetAll()
+            .Include(r => r.Payments)
+            .ThenInclude(p => p.PaymentMethod)
+            .Where(r => r.StayId == record.StayId)
+            .OrderByDescending(r => r.IssuedDate)
+            .FirstOrDefaultAsync();
+
+        return new CheckOutRecordDto
+        {
+            Id = record.Id,
+            StayId = record.StayId,
+            StayNo = record.Stay?.StayNo ?? string.Empty,
+            GuestName = record.Stay?.GuestName ?? string.Empty,
+            RoomNumber = record.Stay?.RoomNumber ?? string.Empty,
+            CheckOutDateTime = record.CheckOutDateTime,
+            TotalCharges = record.TotalCharges,
+            TotalPayments = record.TotalPayments,
+            TotalDiscounts = record.TotalDiscounts,
+            BalanceDue = record.BalanceDue,
+            SettledAmount = record.SettledAmount,
+            Receipt = receipt != null ? new ReceiptDto
+            {
+                Id = receipt.Id,
+                ReceiptNo = receipt.ReceiptNo,
+                StayId = receipt.StayId,
+                StayNo = record.Stay?.StayNo,
+                GuestName = record.Stay?.GuestName,
+                RoomNumber = record.Stay?.RoomNumber,
+                IssuedDate = receipt.IssuedDate,
+                Amount = receipt.Amount,
+                Payments = receipt.Payments.Select(p => new ReceiptPaymentDto
+                {
+                    PaymentMethodId = p.PaymentMethodId,
+                    PaymentMethodName = p.PaymentMethod?.Name ?? string.Empty,
+                    Amount = p.Amount
+                }).ToList()
+            } : null
+        };
     }
 }

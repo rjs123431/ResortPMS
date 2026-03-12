@@ -72,6 +72,7 @@ public class WriteOffBalanceDto
 
 public class CheckOutResultDto
 {
+    public Guid CheckOutRecordId { get; set; }
     public Guid StayId { get; set; }
     public string StayNo { get; set; }
     public Guid ReceiptId { get; set; }
@@ -79,6 +80,22 @@ public class CheckOutResultDto
     public decimal TotalCharged { get; set; }
     public decimal TotalPaid { get; set; }
     public decimal BalanceDue { get; set; }
+}
+
+public class CheckOutRecordDto
+{
+    public Guid Id { get; set; }
+    public Guid StayId { get; set; }
+    public string StayNo { get; set; }
+    public string GuestName { get; set; }
+    public string RoomNumber { get; set; }
+    public DateTime CheckOutDateTime { get; set; }
+    public decimal TotalCharges { get; set; }
+    public decimal TotalPayments { get; set; }
+    public decimal TotalDiscounts { get; set; }
+    public decimal BalanceDue { get; set; }
+    public decimal SettledAmount { get; set; }
+    public ReceiptDto Receipt { get; set; }
 }
 
 public class ReceiptDto

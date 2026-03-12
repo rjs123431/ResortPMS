@@ -310,6 +310,7 @@ export interface CheckInResultDto {
 }
 
 export interface CheckOutResultDto {
+  checkOutRecordId: string;
   stayId: string;
   stayNo: string;
   receiptId: string;
@@ -317,6 +318,21 @@ export interface CheckOutResultDto {
   totalCharged: number;
   totalPaid: number;
   balanceDue: number;
+}
+
+export interface CheckOutRecordDto {
+  id: string;
+  stayId: string;
+  stayNo: string;
+  guestName: string;
+  roomNumber: string;
+  checkOutDateTime: string;
+  totalCharges: number;
+  totalPayments: number;
+  totalDiscounts: number;
+  balanceDue: number;
+  settledAmount: number;
+  receipt: ReceiptDto | null;
 }
 
 export interface StayListDto {

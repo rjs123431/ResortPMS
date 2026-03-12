@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
@@ -47,6 +48,7 @@ const parseRooms = (roomValue?: string) => {
 };
 
 export const CheckOutPage = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedStay, setSelectedStay] = useState<StayListDto | null>(null);
   const [showStaySearch, setShowStaySearch] = useState(false);
@@ -153,11 +155,9 @@ export const CheckOutPage = () => {
 
   const checkoutMutation = useMutation({
     mutationFn: () => resortService.processCheckout({ stayId, payments: [] }),
-    onSuccess: () => {
-      void refetch();
-      void refetchFolio();
+    onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ['resort-stays-checkout-search'] });
-      setShowReceipt(true);
+      navigate(`/check-out/confirmation/${data.checkOutRecordId}`, { replace: true });
     },
   });
 

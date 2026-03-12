@@ -6,6 +6,7 @@ import {
   CheckInResultDto,
   CreateChargeTypeDto,
   CreateLookupDto,
+  CheckOutRecordDto,
   CheckOutResultDto,
   CheckOutStatementDto,
   CreateGuestDto,
@@ -560,6 +561,13 @@ export const resortService = {
   getLatestReceiptByStay: async (stayId: string) => {
     const response = await api.get<ApiResponse<ReceiptDto>>('/api/services/app/CheckOut/GetLatestReceiptByStay', {
       params: { stayId },
+    });
+    return response.data.result;
+  },
+
+  getCheckOutRecord: async (id: string) => {
+    const response = await api.get<ApiResponse<CheckOutRecordDto>>('/api/services/app/CheckOut/GetCheckOutRecord', {
+      params: { id },
     });
     return response.data.result;
   },
