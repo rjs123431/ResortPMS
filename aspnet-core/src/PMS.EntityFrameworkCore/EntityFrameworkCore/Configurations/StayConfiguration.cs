@@ -64,14 +64,64 @@ internal class StayRoomConfiguration : IEntityTypeConfiguration<StayRoom>
             .HasForeignKey(e => e.StayId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        entity.HasOne(e => e.RoomType)
+            .WithMany()
+            .HasForeignKey(e => e.RoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         entity.HasOne(e => e.Room)
             .WithMany()
             .HasForeignKey(e => e.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        entity.HasOne(e => e.OriginalRoomType)
+            .WithMany()
+            .HasForeignKey(e => e.OriginalRoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.OriginalRoom)
+            .WithMany()
+            .HasForeignKey(e => e.OriginalRoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         entity.HasOne(e => e.ClearedByStaff)
             .WithMany()
             .HasForeignKey(e => e.ClearedByStaffId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class StayRoomTransferConfiguration : IEntityTypeConfiguration<StayRoomTransfer>
+{
+    public void Configure(EntityTypeBuilder<StayRoomTransfer> entity)
+    {
+        entity.ToTable("StayRoomTransfer");
+
+        entity.Property(e => e.Reason).HasMaxLength(512);
+
+        entity.HasOne(e => e.StayRoom)
+            .WithMany(sr => sr.Transfers)
+            .HasForeignKey(e => e.StayRoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.FromRoomType)
+            .WithMany()
+            .HasForeignKey(e => e.FromRoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.FromRoom)
+            .WithMany()
+            .HasForeignKey(e => e.FromRoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.ToRoomType)
+            .WithMany()
+            .HasForeignKey(e => e.ToRoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.ToRoom)
+            .WithMany()
+            .HasForeignKey(e => e.ToRoomId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -113,6 +163,58 @@ internal class StayExtensionConfiguration : IEntityTypeConfiguration<StayExtensi
         entity.HasOne(e => e.Stay)
             .WithMany(s => s.Extensions)
             .HasForeignKey(e => e.StayId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class RoomChangeRequestConfiguration : IEntityTypeConfiguration<RoomChangeRequest>
+{
+    public void Configure(EntityTypeBuilder<RoomChangeRequest> entity)
+    {
+        entity.ToTable("RoomChangeRequest");
+
+        entity.Property(e => e.ReasonDetails).HasMaxLength(1024);
+        entity.Property(e => e.RequestedBy).HasMaxLength(128);
+        entity.Property(e => e.ApprovedBy).HasMaxLength(128);
+        entity.Property(e => e.CompletedBy).HasMaxLength(128);
+        entity.Property(e => e.CancellationReason).HasMaxLength(512);
+
+        entity.HasIndex(e => e.Status);
+        entity.HasIndex(e => e.RequestedAt);
+
+        entity.HasOne(e => e.Stay)
+            .WithMany(s => s.RoomChangeRequests)
+            .HasForeignKey(e => e.StayId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.StayRoom)
+            .WithMany()
+            .HasForeignKey(e => e.StayRoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.FromRoomType)
+            .WithMany()
+            .HasForeignKey(e => e.FromRoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.FromRoom)
+            .WithMany()
+            .HasForeignKey(e => e.FromRoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.PreferredRoomType)
+            .WithMany()
+            .HasForeignKey(e => e.PreferredRoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.ToRoomType)
+            .WithMany()
+            .HasForeignKey(e => e.ToRoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.ToRoom)
+            .WithMany()
+            .HasForeignKey(e => e.ToRoomId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

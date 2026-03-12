@@ -473,7 +473,15 @@ public class CheckInAppService(
         // Record all requested room assignments for this stay.
         foreach (var room in effectiveRooms)
         {
-            await stayRoomRepository.InsertAsync(new StayRoom { StayId = stayId, RoomId = room.Id, AssignedAt = Clock.Now });
+            await stayRoomRepository.InsertAsync(new StayRoom
+            {
+                StayId = stayId,
+                RoomTypeId = room.RoomTypeId,
+                RoomId = room.Id,
+                AssignedAt = Clock.Now,
+                OriginalRoomTypeId = room.RoomTypeId,
+                OriginalRoomId = room.Id
+            });
         }
 
         // Mark assigned rooms as occupied.

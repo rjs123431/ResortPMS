@@ -1885,9 +1885,15 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ReleasedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsCleared = table.Column<bool>(type: "bit", nullable: false),
+                    ClearedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ClearedByStaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    OriginalRoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OriginalRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
                 },
@@ -1895,9 +1901,33 @@ namespace PMS.Migrations
                 {
                     table.PrimaryKey("PK_StayRoom", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_StayRoom_RoomType_OriginalRoomTypeId",
+                        column: x => x.OriginalRoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StayRoom_RoomType_RoomTypeId",
+                        column: x => x.RoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StayRoom_Room_OriginalRoomId",
+                        column: x => x.OriginalRoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_StayRoom_Room_RoomId",
                         column: x => x.RoomId,
                         principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StayRoom_Staff_ClearedByStaffId",
+                        column: x => x.ClearedByStaffId,
+                        principalTable: "Staff",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -2081,6 +2111,134 @@ namespace PMS.Migrations
                         name: "FK_ReceiptPayment_Receipt_ReceiptId",
                         column: x => x.ReceiptId,
                         principalTable: "Receipt",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomChangeRequest",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StayRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Source = table.Column<int>(type: "int", nullable: false),
+                    Reason = table.Column<int>(type: "int", nullable: false),
+                    ReasonDetails = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    FromRoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FromRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PreferredRoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ToRoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ToRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    RequestedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RequestedBy = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    ApprovedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ApprovedBy = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedBy = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    CancellationReason = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomChangeRequest", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomChangeRequest_RoomType_FromRoomTypeId",
+                        column: x => x.FromRoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomChangeRequest_RoomType_PreferredRoomTypeId",
+                        column: x => x.PreferredRoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomChangeRequest_RoomType_ToRoomTypeId",
+                        column: x => x.ToRoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomChangeRequest_Room_FromRoomId",
+                        column: x => x.FromRoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomChangeRequest_Room_ToRoomId",
+                        column: x => x.ToRoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomChangeRequest_StayRoom_StayRoomId",
+                        column: x => x.StayRoomId,
+                        principalTable: "StayRoom",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomChangeRequest_Stay_StayId",
+                        column: x => x.StayId,
+                        principalTable: "Stay",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StayRoomTransfer",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StayRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FromRoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FromRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ToRoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ToRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TransferredAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Reason = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StayRoomTransfer", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StayRoomTransfer_RoomType_FromRoomTypeId",
+                        column: x => x.FromRoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StayRoomTransfer_RoomType_ToRoomTypeId",
+                        column: x => x.ToRoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StayRoomTransfer_Room_FromRoomId",
+                        column: x => x.FromRoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StayRoomTransfer_Room_ToRoomId",
+                        column: x => x.ToRoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StayRoomTransfer_StayRoom_StayRoomId",
+                        column: x => x.StayRoomId,
+                        principalTable: "StayRoom",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -2458,6 +2616,51 @@ namespace PMS.Migrations
                 column: "RoomTypeId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_FromRoomId",
+                table: "RoomChangeRequest",
+                column: "FromRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_FromRoomTypeId",
+                table: "RoomChangeRequest",
+                column: "FromRoomTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_PreferredRoomTypeId",
+                table: "RoomChangeRequest",
+                column: "PreferredRoomTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_RequestedAt",
+                table: "RoomChangeRequest",
+                column: "RequestedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_Status",
+                table: "RoomChangeRequest",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_StayId",
+                table: "RoomChangeRequest",
+                column: "StayId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_StayRoomId",
+                table: "RoomChangeRequest",
+                column: "StayRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_ToRoomId",
+                table: "RoomChangeRequest",
+                column: "ToRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomChangeRequest_ToRoomTypeId",
+                table: "RoomChangeRequest",
+                column: "ToRoomTypeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoomStatusLog_RoomId_ChangedAt",
                 table: "RoomStatusLog",
                 columns: new[] { "RoomId", "ChangedAt" });
@@ -2536,14 +2739,59 @@ namespace PMS.Migrations
                 column: "StayId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_StayRoom_ClearedByStaffId",
+                table: "StayRoom",
+                column: "ClearedByStaffId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StayRoom_OriginalRoomId",
+                table: "StayRoom",
+                column: "OriginalRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StayRoom_OriginalRoomTypeId",
+                table: "StayRoom",
+                column: "OriginalRoomTypeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_StayRoom_RoomId",
                 table: "StayRoom",
                 column: "RoomId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_StayRoom_RoomTypeId",
+                table: "StayRoom",
+                column: "RoomTypeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_StayRoom_StayId",
                 table: "StayRoom",
                 column: "StayId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StayRoomTransfer_FromRoomId",
+                table: "StayRoomTransfer",
+                column: "FromRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StayRoomTransfer_FromRoomTypeId",
+                table: "StayRoomTransfer",
+                column: "FromRoomTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StayRoomTransfer_StayRoomId",
+                table: "StayRoomTransfer",
+                column: "StayRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StayRoomTransfer_ToRoomId",
+                table: "StayRoomTransfer",
+                column: "ToRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StayRoomTransfer_ToRoomTypeId",
+                table: "StayRoomTransfer",
+                column: "ToRoomTypeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ZzzAuditLogs_TenantId_ExecutionDuration",
@@ -2955,6 +3203,9 @@ namespace PMS.Migrations
                 name: "ReservationGuest");
 
             migrationBuilder.DropTable(
+                name: "RoomChangeRequest");
+
+            migrationBuilder.DropTable(
                 name: "RoomStatusLog");
 
             migrationBuilder.DropTable(
@@ -2967,7 +3218,7 @@ namespace PMS.Migrations
                 name: "StayGuest");
 
             migrationBuilder.DropTable(
-                name: "StayRoom");
+                name: "StayRoomTransfer");
 
             migrationBuilder.DropTable(
                 name: "ZzzAuditLogs");
@@ -3085,6 +3336,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ExtraBedType");
+
+            migrationBuilder.DropTable(
+                name: "StayRoom");
 
             migrationBuilder.DropTable(
                 name: "ZzzDynamicEntityProperties");

@@ -55,8 +55,10 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<Stay> Stays { get; set; }
     public DbSet<StayGuest> StayGuests { get; set; }
     public DbSet<StayRoom> StayRooms { get; set; }
+    public DbSet<StayRoomTransfer> StayRoomTransfers { get; set; }
     public DbSet<RoomTransfer> RoomTransfers { get; set; }
     public DbSet<StayExtension> StayExtensions { get; set; }
+    public DbSet<RoomChangeRequest> RoomChangeRequests { get; set; }
 
     // Billing
     public DbSet<Folio> Folios { get; set; }
@@ -124,8 +126,10 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new StayConfiguration());
         modelBuilder.ApplyConfiguration(new StayGuestConfiguration());
         modelBuilder.ApplyConfiguration(new StayRoomConfiguration());
+        modelBuilder.ApplyConfiguration(new StayRoomTransferConfiguration());
         modelBuilder.ApplyConfiguration(new RoomTransferConfiguration());
         modelBuilder.ApplyConfiguration(new StayExtensionConfiguration());
+        modelBuilder.ApplyConfiguration(new RoomChangeRequestConfiguration());
 
         // Billing
         modelBuilder.ApplyConfiguration(new FolioConfiguration());

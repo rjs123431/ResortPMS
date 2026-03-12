@@ -378,8 +378,8 @@ export const CheckOutPage = () => {
 
           {folio ? (
             <div className="space-y-4 text-sm">
-              <p><span className="font-medium">Folio No:</span> {folio.folioNo}</p>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <p><span className="font-medium">Folio No:</span> {folio.folioNo}</p>
                 <p><span className="font-medium">Current Balance:</span> {formatMoney(folio.balance)}</p>
                 {canSettleFolio && (
                   <button
@@ -549,8 +549,8 @@ export const CheckOutPage = () => {
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
           <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Process Checkout</h2>
           <div className="flex flex-col gap-2 text-sm">
-            <p><span className="font-medium">Rooms Cleared:</span> {allRoomsCleared ? 'Yes' : 'No'}</p>
-            <p><span className="font-medium">Zero Balance:</span> {zeroBalance ? 'Yes' : 'No'}</p>
+            <p><span className="font-medium">Cleared:</span> {allRoomsCleared ? 'Yes' : 'No'}</p>
+            <p><span className="font-medium">Settled:</span> {isFolioSettled ? 'Yes' : 'No'}</p>
           </div>
           <button
             type="button"

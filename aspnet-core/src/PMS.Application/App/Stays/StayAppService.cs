@@ -36,7 +36,7 @@ public interface IStayAppService : IApplicationService
     Task<Guid> PostRefundAsync(PostRefundDto input);
     Task VoidTransactionAsync(VoidTransactionDto input);
     Task<FolioSummaryDto> GetFolioSummaryAsync(Guid stayId);
-    Task SettleFolioAsync(Guid stayId);
+    Task SettleFolioAsync(SettleFolioDto input);
 }
 
 [AbpAuthorize(PermissionNames.Pages_Stays)]
@@ -47,12 +47,15 @@ public class StayAppService(
     IRepository<FolioPayment, Guid> folioPaymentRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
+    IRepository<StayRoomTransfer, Guid> stayRoomTransferRepository,
     IRepository<RoomTransfer, Guid> roomTransferRepository,
+    IRepository<RoomChangeRequest, Guid> roomChangeRequestRepository,
     IRepository<StayExtension, Guid> stayExtensionRepository,
     IRepository<GuestRequest, Guid> guestRequestRepository,
     IRepository<Incident, Guid> incidentRepository,
     IRepository<ChargeType, Guid> chargeTypeRepository,
-    IRepository<HousekeepingTask, Guid> housekeepingTaskRepository
+    IRepository<HousekeepingTask, Guid> housekeepingTaskRepository,
+    IRepository<ReservationRoom, Guid> reservationRoomRepository
 ) : PMSAppServiceBase, IStayAppService
 {
     public async Task<StayDto> GetAsync(Guid stayId)
@@ -143,6 +146,10 @@ public class StayAppService(
         };
     }
 
+    /// <summary>
+    /// Quick room transfer (backward compatible). 
+    /// For the full workflow with request tracking, use IRoomChangeService.
+    /// </summary>
     [AbpAuthorize(PermissionNames.Pages_Stays_Transfer)]
     [UnitOfWork]
     public async Task TransferRoomAsync(TransferRoomDto input)
@@ -155,47 +162,127 @@ public class StayAppService(
         var activeStayRoom = await stayRoomRepository.GetAll()
             .Where(sr => sr.StayId == input.StayId && sr.ReleasedAt == null)
             .OrderByDescending(sr => sr.AssignedAt)
-            .FirstOrDefaultAsync();
-
-        if (activeStayRoom == null)
-            throw new UserFriendlyException("Active room assignment not found for stay.");
+            .FirstOrDefaultAsync()
+            ?? throw new UserFriendlyException(L("ActiveRoomAssignmentNotFound"));
 
         if (activeStayRoom.RoomId == input.ToRoomId)
             throw new UserFriendlyException(L("CannotTransferToSameRoom"));
 
-        var newRoom = await roomRepository.GetAsync(input.ToRoomId);
-        if (newRoom.OperationalStatus == RoomOperationalStatus.Occupied)
-            throw new UserFriendlyException(L("TargetRoomIsOccupied"));
+        var toRoom = await roomRepository.GetAsync(input.ToRoomId);
 
-        // Release old room
+        // Validate target room availability
+        await ValidateTargetRoomForTransferAsync(stay, input.ToRoomId);
+
+        // Create RoomChangeRequest for audit trail
+        var request = new RoomChangeRequest
+        {
+            StayId = input.StayId,
+            StayRoomId = activeStayRoom.Id,
+            Source = RoomChangeSource.Internal,
+            Reason = RoomChangeReason.Other,
+            ReasonDetails = input.Reason ?? string.Empty,
+            FromRoomTypeId = activeStayRoom.RoomTypeId,
+            FromRoomId = activeStayRoom.RoomId,
+            ToRoomTypeId = toRoom.RoomTypeId,
+            ToRoomId = input.ToRoomId,
+            Status = RoomChangeRequestStatus.InProgress,
+            RequestedAt = Clock.Now,
+            RequestedBy = AbpSession.UserId?.ToString() ?? "System",
+            ApprovedAt = Clock.Now,
+            ApprovedBy = AbpSession.UserId?.ToString() ?? "System"
+        };
+        await roomChangeRequestRepository.InsertAsync(request);
+
+        // Execute room change
+        var fromRoom = await roomRepository.GetAsync(activeStayRoom.RoomId);
+
+        // Close old StayRoom
         activeStayRoom.ReleasedAt = Clock.Now;
         await stayRoomRepository.UpdateAsync(activeStayRoom);
 
-        // Update old room status
-        var oldRoom = await roomRepository.GetAsync(activeStayRoom.RoomId);
-        oldRoom.OperationalStatus = RoomOperationalStatus.Vacant;
-        oldRoom.HousekeepingStatus = HousekeepingStatus.Dirty;
-        await roomRepository.UpdateAsync(oldRoom);
-
-        // Assign new room
-        await stayRoomRepository.InsertAsync(new StayRoom { StayId = input.StayId, RoomId = input.ToRoomId, AssignedAt = Clock.Now });
-        newRoom.OperationalStatus = RoomOperationalStatus.Occupied;
-        await roomRepository.UpdateAsync(newRoom);
-
-        // Log transfer
-        await roomTransferRepository.InsertAsync(new RoomTransfer
+        // Create new StayRoom (preserve original assignment)
+        var newStayRoom = new StayRoom
         {
             StayId = input.StayId,
+            RoomTypeId = toRoom.RoomTypeId,
+            RoomId = input.ToRoomId,
+            AssignedAt = Clock.Now,
+            OriginalRoomTypeId = activeStayRoom.OriginalRoomTypeId,
+            OriginalRoomId = activeStayRoom.OriginalRoomId
+        };
+        var newStayRoomId = await stayRoomRepository.InsertAndGetIdAsync(newStayRoom);
+
+        // Update room statuses
+        fromRoom.OperationalStatus = RoomOperationalStatus.Vacant;
+        fromRoom.HousekeepingStatus = HousekeepingStatus.Dirty;
+        await roomRepository.UpdateAsync(fromRoom);
+
+        toRoom.OperationalStatus = RoomOperationalStatus.Occupied;
+        await roomRepository.UpdateAsync(toRoom);
+
+        // Log transfer
+        await stayRoomTransferRepository.InsertAsync(new StayRoomTransfer
+        {
+            StayRoomId = newStayRoomId,
+            FromRoomTypeId = activeStayRoom.RoomTypeId,
             FromRoomId = activeStayRoom.RoomId,
+            ToRoomTypeId = toRoom.RoomTypeId,
             ToRoomId = input.ToRoomId,
-            TransferDate = Clock.Now,
+            TransferredAt = Clock.Now,
             Reason = input.Reason ?? string.Empty
         });
 
-        stay.RoomNumber = newRoom.RoomNumber;
+        // Update stay snapshot
+        stay.RoomNumber = toRoom.RoomNumber;
         await stayRepository.UpdateAsync(stay);
 
-        Logger.Info($"Room transfer: Stay {stay.StayNo} from Room {oldRoom.RoomNumber} to {newRoom.RoomNumber}.");
+        // Mark request as completed
+        request.Status = RoomChangeRequestStatus.Completed;
+        request.CompletedAt = Clock.Now;
+        request.CompletedBy = AbpSession.UserId?.ToString() ?? "System";
+        await roomChangeRequestRepository.UpdateAsync(request);
+
+        Logger.Info($"Room transfer: Stay {stay.StayNo} from Room {fromRoom.RoomNumber} to {toRoom.RoomNumber}.");
+    }
+
+    private async Task ValidateTargetRoomForTransferAsync(Stay stay, Guid toRoomId)
+    {
+        var room = await roomRepository.GetAsync(toRoomId);
+
+        if (room.OperationalStatus == RoomOperationalStatus.Occupied)
+            throw new UserFriendlyException(L("TargetRoomIsOccupied"));
+
+        if (room.OperationalStatus == RoomOperationalStatus.OutOfOrder)
+            throw new UserFriendlyException(L("TargetRoomIsOutOfOrder"));
+
+        if (room.OperationalStatus == RoomOperationalStatus.OutOfService)
+            throw new UserFriendlyException(L("TargetRoomIsOutOfService"));
+
+        var hasActiveStay = await stayRoomRepository.GetAll()
+            .AnyAsync(sr => sr.RoomId == toRoomId &&
+                           sr.ReleasedAt == null &&
+                           (sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse));
+
+        if (hasActiveStay)
+            throw new UserFriendlyException(L("TargetRoomHasActiveStay"));
+
+        var today = Clock.Now.Date;
+        var departureDate = stay.ExpectedCheckOutDateTime.Date;
+
+        var blockingStatuses = new[]
+        {
+            ReservationStatus.Pending,
+            ReservationStatus.Confirmed,
+        };
+
+        var hasBlockingReservation = await reservationRoomRepository.GetAll()
+            .AnyAsync(rr => rr.RoomId == toRoomId &&
+                           rr.ArrivalDate < departureDate &&
+                           rr.DepartureDate > today &&
+                           blockingStatuses.Contains(rr.Reservation.Status));
+
+        if (hasBlockingReservation)
+            throw new UserFriendlyException(L("TargetRoomHasBlockingReservation"));
     }
 
     [AbpAuthorize(PermissionNames.Pages_Stays_Extend)]
@@ -518,10 +605,10 @@ public class StayAppService(
     }
 
     [UnitOfWork]
-    public async Task SettleFolioAsync(Guid stayId)
+    public async Task SettleFolioAsync(SettleFolioDto input)
     {
         var folio = await folioRepository.GetAll()
-            .FirstOrDefaultAsync(f => f.StayId == stayId);
+            .FirstOrDefaultAsync(f => f.StayId == input.StayId);
 
         if (folio == null) throw new UserFriendlyException(L("FolioNotFound"));
 

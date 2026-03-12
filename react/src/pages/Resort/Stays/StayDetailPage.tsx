@@ -124,6 +124,7 @@ export const StayDetailPage = () => {
         roomNumber,
         assignedAt: fallbackAssignedAt,
         releasedAt: undefined,
+        isCleared: false,
       }),
     );
   }, [statement?.stayRooms, statement?.roomNumber, statement?.transactions, stay?.checkInDateTime, stay?.roomNumber]);

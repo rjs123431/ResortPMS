@@ -53,6 +53,89 @@ public class TransferRoomDto
     [StringLength(512)] public string Reason { get; set; }
 }
 
+// ── Room Change Request DTOs ───────────────────────────────────────────────────
+public class CreateRoomChangeRequestDto
+{
+    [Required] public Guid StayId { get; set; }
+    public Guid? StayRoomId { get; set; }
+    [Required] public RoomChangeSource Source { get; set; }
+    [Required] public RoomChangeReason Reason { get; set; }
+    [StringLength(1024)] public string ReasonDetails { get; set; }
+    public Guid? PreferredRoomTypeId { get; set; }
+    public Guid? PreferredRoomId { get; set; }
+}
+
+public class ApproveRoomChangeRequestDto
+{
+    [Required] public Guid RequestId { get; set; }
+    [Required] public Guid ToRoomId { get; set; }
+}
+
+public class RejectRoomChangeRequestDto
+{
+    [Required] public Guid RequestId { get; set; }
+    [Required][StringLength(512)] public string RejectionReason { get; set; }
+}
+
+public class CancelRoomChangeRequestDto
+{
+    [Required] public Guid RequestId { get; set; }
+    [StringLength(512)] public string CancellationReason { get; set; }
+}
+
+public class ExecuteRoomChangeDto
+{
+    [Required] public Guid RequestId { get; set; }
+}
+
+public class RoomChangeRequestDto : EntityDto<Guid>
+{
+    public Guid StayId { get; set; }
+    public string StayNo { get; set; }
+    public string GuestName { get; set; }
+    public RoomChangeSource Source { get; set; }
+    public RoomChangeReason Reason { get; set; }
+    public string ReasonDetails { get; set; }
+    public string FromRoomNumber { get; set; }
+    public string FromRoomTypeName { get; set; }
+    public string ToRoomNumber { get; set; }
+    public string ToRoomTypeName { get; set; }
+    public string PreferredRoomTypeName { get; set; }
+    public RoomChangeRequestStatus Status { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public string RequestedBy { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public string ApprovedBy { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string CompletedBy { get; set; }
+}
+
+public class RoomChangeRequestListDto : EntityDto<Guid>
+{
+    public string StayNo { get; set; }
+    public string GuestName { get; set; }
+    public RoomChangeSource Source { get; set; }
+    public RoomChangeReason Reason { get; set; }
+    public string FromRoomNumber { get; set; }
+    public string ToRoomNumber { get; set; }
+    public RoomChangeRequestStatus Status { get; set; }
+    public DateTime RequestedAt { get; set; }
+}
+
+public class AvailableRoomForChangeDto
+{
+    public Guid RoomId { get; set; }
+    public string RoomNumber { get; set; }
+    public Guid RoomTypeId { get; set; }
+    public string RoomTypeName { get; set; }
+    public decimal BaseRate { get; set; }
+    public string Floor { get; set; }
+    public HousekeepingStatus HousekeepingStatus { get; set; }
+    public bool IsUpgrade { get; set; }
+    public bool IsDowngrade { get; set; }
+    public bool IsSameType { get; set; }
+}
+
 public class ExtendStayDto
 {
     [Required] public Guid StayId { get; set; }
@@ -194,4 +277,9 @@ public class VoidTransactionDto
     [Required] public Guid StayId { get; set; }
     [Required] public Guid TransactionId { get; set; }
     [Required][StringLength(512)] public string Reason { get; set; }
+}
+
+public class SettleFolioDto
+{
+    [Required] public Guid StayId { get; set; }
 }

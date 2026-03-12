@@ -3168,6 +3168,115 @@ namespace PMS.Migrations
                     b.ToTable("Room", (string)null);
                 });
 
+            modelBuilder.Entity("PMS.App.RoomChangeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CompletedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("DeleterUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FromRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FromRoomTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("PreferredRoomTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReasonDetails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StayId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StayRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ToRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ToRoomTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromRoomId");
+
+                    b.HasIndex("FromRoomTypeId");
+
+                    b.HasIndex("PreferredRoomTypeId");
+
+                    b.HasIndex("RequestedAt");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StayId");
+
+                    b.HasIndex("StayRoomId");
+
+                    b.HasIndex("ToRoomId");
+
+                    b.HasIndex("ToRoomTypeId");
+
+                    b.ToTable("RoomChangeRequest", (string)null);
+                });
+
             modelBuilder.Entity("PMS.App.RoomStatusLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3544,10 +3653,19 @@ namespace PMS.Migrations
                     b.Property<bool>("IsCleared")
                         .HasColumnType("bit");
 
+                    b.Property<Guid>("OriginalRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OriginalRoomTypeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("ReleasedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoomTypeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("StayId")
@@ -3557,11 +3675,66 @@ namespace PMS.Migrations
 
                     b.HasIndex("ClearedByStaffId");
 
+                    b.HasIndex("OriginalRoomId");
+
+                    b.HasIndex("OriginalRoomTypeId");
+
                     b.HasIndex("RoomId");
+
+                    b.HasIndex("RoomTypeId");
 
                     b.HasIndex("StayId");
 
                     b.ToTable("StayRoom", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.StayRoomTransfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("FromRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FromRoomTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid>("StayRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ToRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ToRoomTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("TransferredAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromRoomId");
+
+                    b.HasIndex("FromRoomTypeId");
+
+                    b.HasIndex("StayRoomId");
+
+                    b.HasIndex("ToRoomId");
+
+                    b.HasIndex("ToRoomTypeId");
+
+                    b.ToTable("StayRoomTransfer", (string)null);
                 });
 
             modelBuilder.Entity("PMS.Authorization.Roles.Role", b =>
@@ -4498,6 +4671,62 @@ namespace PMS.Migrations
                     b.Navigation("RoomType");
                 });
 
+            modelBuilder.Entity("PMS.App.RoomChangeRequest", b =>
+                {
+                    b.HasOne("PMS.App.Room", "FromRoom")
+                        .WithMany()
+                        .HasForeignKey("FromRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.RoomType", "FromRoomType")
+                        .WithMany()
+                        .HasForeignKey("FromRoomTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.RoomType", "PreferredRoomType")
+                        .WithMany()
+                        .HasForeignKey("PreferredRoomTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PMS.App.Stay", "Stay")
+                        .WithMany("RoomChangeRequests")
+                        .HasForeignKey("StayId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.StayRoom", "StayRoom")
+                        .WithMany()
+                        .HasForeignKey("StayRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.Room", "ToRoom")
+                        .WithMany()
+                        .HasForeignKey("ToRoomId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PMS.App.RoomType", "ToRoomType")
+                        .WithMany()
+                        .HasForeignKey("ToRoomTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FromRoom");
+
+                    b.Navigation("FromRoomType");
+
+                    b.Navigation("PreferredRoomType");
+
+                    b.Navigation("Stay");
+
+                    b.Navigation("StayRoom");
+
+                    b.Navigation("ToRoom");
+
+                    b.Navigation("ToRoomType");
+                });
+
             modelBuilder.Entity("PMS.App.RoomStatusLog", b =>
                 {
                     b.HasOne("PMS.App.Room", "Room")
@@ -4598,9 +4827,27 @@ namespace PMS.Migrations
                         .HasForeignKey("ClearedByStaffId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("PMS.App.Room", "OriginalRoom")
+                        .WithMany()
+                        .HasForeignKey("OriginalRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.RoomType", "OriginalRoomType")
+                        .WithMany()
+                        .HasForeignKey("OriginalRoomTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("PMS.App.Room", "Room")
                         .WithMany()
                         .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.RoomType", "RoomType")
+                        .WithMany()
+                        .HasForeignKey("RoomTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -4612,9 +4859,58 @@ namespace PMS.Migrations
 
                     b.Navigation("ClearedByStaff");
 
+                    b.Navigation("OriginalRoom");
+
+                    b.Navigation("OriginalRoomType");
+
                     b.Navigation("Room");
 
+                    b.Navigation("RoomType");
+
                     b.Navigation("Stay");
+                });
+
+            modelBuilder.Entity("PMS.App.StayRoomTransfer", b =>
+                {
+                    b.HasOne("PMS.App.Room", "FromRoom")
+                        .WithMany()
+                        .HasForeignKey("FromRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.RoomType", "FromRoomType")
+                        .WithMany()
+                        .HasForeignKey("FromRoomTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.StayRoom", "StayRoom")
+                        .WithMany("Transfers")
+                        .HasForeignKey("StayRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.Room", "ToRoom")
+                        .WithMany()
+                        .HasForeignKey("ToRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.RoomType", "ToRoomType")
+                        .WithMany()
+                        .HasForeignKey("ToRoomTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FromRoom");
+
+                    b.Navigation("FromRoomType");
+
+                    b.Navigation("StayRoom");
+
+                    b.Navigation("ToRoom");
+
+                    b.Navigation("ToRoomType");
                 });
 
             modelBuilder.Entity("PMS.Authorization.Roles.Role", b =>
@@ -4804,9 +5100,16 @@ namespace PMS.Migrations
 
                     b.Navigation("Incidents");
 
+                    b.Navigation("RoomChangeRequests");
+
                     b.Navigation("RoomTransfers");
 
                     b.Navigation("Rooms");
+                });
+
+            modelBuilder.Entity("PMS.App.StayRoom", b =>
+                {
+                    b.Navigation("Transfers");
                 });
 
             modelBuilder.Entity("PMS.Authorization.Roles.Role", b =>
