@@ -7,7 +7,14 @@ import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { CompleteGuestRequestDialog } from '../Shared/CompleteGuestRequestDialog';
 import { GuestRequestDialog, GUEST_REQUEST_TYPE_OPTIONS } from '../Shared/GuestRequestDialog';
 import { PostChargeDialog } from '../Shared/PostChargeDialog';
-import { GuestRequestType, type StayRoomRecordDto } from '@/types/resort.types';
+import { RoomChangeRequestDialog, ROOM_CHANGE_REASON_OPTIONS, ROOM_CHANGE_SOURCE_OPTIONS } from '../Shared/RoomChangeRequestDialog';
+import {
+  GuestRequestType,
+  RoomChangeSource,
+  RoomChangeReason,
+  RoomChangeRequestStatus,
+  type StayRoomRecordDto,
+} from '@/types/resort.types';
 
 const getRequestTypeLabels = (value: GuestRequestType) => {
   const labels = GUEST_REQUEST_TYPE_OPTIONS
@@ -69,7 +76,9 @@ export const StayDetailPage = () => {
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
   const [showGuestRequestDialog, setShowGuestRequestDialog] = useState(false);
   const [showCompleteGuestRequestDialog, setShowCompleteGuestRequestDialog] = useState(false);
+  const [showRoomChangeDialog, setShowRoomChangeDialog] = useState(false);
   const [selectedGuestRequestId, setSelectedGuestRequestId] = useState('');
+  const [selectedRoomForTransfer, setSelectedRoomForTransfer] = useState<{ stayRoomId: string; roomNumber: string } | null>(null);
 
   const { data: stayLookup, isFetching: isFetchingStayLookup } = useQuery({
     queryKey: ['resort-stays-all-for-detail'],
@@ -110,6 +119,12 @@ export const StayDetailPage = () => {
     queryKey: ['resort-guest-request-completion-context', selectedGuestRequestId],
     queryFn: () => resortService.getGuestRequestCompletionContext(selectedGuestRequestId),
     enabled: showCompleteGuestRequestDialog && !!selectedGuestRequestId,
+  });
+
+  const { data: roomChangeRequests, isFetching: isFetchingRoomChangeRequests } = useQuery({
+    queryKey: ['resort-room-change-requests', stayId],
+    queryFn: () => resortService.getRoomChangeRequestsByStay(stayId),
+    enabled: !!stayId,
   });
 
   const stayRooms = useMemo(() => {
@@ -182,6 +197,67 @@ export const StayDetailPage = () => {
     },
   });
 
+  const transferRoomMutation = useMutation({
+    mutationFn: (input: { source: RoomChangeSource; reason: RoomChangeReason; reasonDetails: string; toRoomId: string }) =>
+      resortService.transferRoom({
+        stayId,
+        toRoomId: input.toRoomId,
+        reason: `[${ROOM_CHANGE_SOURCE_OPTIONS.find((o) => o.value === input.source)?.label ?? 'Internal'}] ${
+          ROOM_CHANGE_REASON_OPTIONS.find((o) => o.value === input.reason)?.label ?? 'Other'
+        }${input.reasonDetails ? `: ${input.reasonDetails}` : ''}`,
+      }),
+    onSuccess: () => {
+      setShowRoomChangeDialog(false);
+      void queryClient.invalidateQueries({ queryKey: ['resort-statement', stayId] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-stays-all-for-detail'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-room-change-requests', stayId] });
+    },
+  });
+
+  const getSourceLabel = (source: RoomChangeSource) =>
+    ROOM_CHANGE_SOURCE_OPTIONS.find((o) => o.value === source)?.label ?? 'Unknown';
+
+  const getReasonLabel = (reason: RoomChangeReason) =>
+    ROOM_CHANGE_REASON_OPTIONS.find((o) => o.value === reason)?.label ?? 'Unknown';
+
+  const getStatusBadge = (status: RoomChangeRequestStatus) => {
+    switch (status) {
+      case RoomChangeRequestStatus.Pending:
+        return 'bg-yellow-100 text-yellow-800';
+      case RoomChangeRequestStatus.Approved:
+        return 'bg-blue-100 text-blue-800';
+      case RoomChangeRequestStatus.InProgress:
+        return 'bg-purple-100 text-purple-800';
+      case RoomChangeRequestStatus.Completed:
+        return 'bg-green-100 text-green-800';
+      case RoomChangeRequestStatus.Cancelled:
+        return 'bg-gray-100 text-gray-800';
+      case RoomChangeRequestStatus.Rejected:
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: RoomChangeRequestStatus) => {
+    switch (status) {
+      case RoomChangeRequestStatus.Pending:
+        return 'Pending';
+      case RoomChangeRequestStatus.Approved:
+        return 'Approved';
+      case RoomChangeRequestStatus.InProgress:
+        return 'In Progress';
+      case RoomChangeRequestStatus.Completed:
+        return 'Completed';
+      case RoomChangeRequestStatus.Cancelled:
+        return 'Cancelled';
+      case RoomChangeRequestStatus.Rejected:
+        return 'Rejected';
+      default:
+        return 'Unknown';
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -218,26 +294,53 @@ export const StayDetailPage = () => {
             </div>
           )}
 
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Room Assignments</h3>
+          </div>
+
+          <div className="mt-2 overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b text-left dark:border-gray-700">
                   <th className="p-2">Room</th>
                   <th className="p-2">Assigned</th>
                   <th className="p-2">Released</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {stayRooms.length === 0 ? (
                   <tr>
-                    <td className="p-2 text-gray-500" colSpan={3}>No room assignments found.</td>
+                    <td className="p-2 text-gray-500" colSpan={5}>No room assignments found.</td>
                   </tr>
                 ) : (
                   stayRooms.map((room) => (
                     <tr className="border-b dark:border-gray-700" key={room.stayRoomId}>
-                      <td className="p-2">{room.roomNumber || '-'}</td>
+                      <td className="p-2 font-medium">{room.roomNumber || '-'}</td>
                       <td className="p-2">{toDateTime(room.assignedAt)}</td>
-                      <td className="p-2">{room.releasedAt ? toDateTime(room.releasedAt) : 'Active'}</td>
+                      <td className="p-2">{room.releasedAt ? toDateTime(room.releasedAt) : '-'}</td>
+                      <td className="p-2">
+                        {room.releasedAt ? (
+                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">Released</span>
+                        ) : (
+                          <span className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {!room.releasedAt && (
+                          <button
+                            type="button"
+                            className="rounded bg-indigo-600 px-2 py-1 text-xs text-white hover:bg-indigo-700"
+                            onClick={() => {
+                              setSelectedRoomForTransfer({ stayRoomId: room.stayRoomId, roomNumber: room.roomNumber });
+                              setShowRoomChangeDialog(true);
+                            }}
+                          >
+                            Transfer
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -245,6 +348,46 @@ export const StayDetailPage = () => {
             </table>
           </div>
         </section>
+
+        {(roomChangeRequests ?? []).length > 0 && (
+          <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Room Change History</h2>
+            {isFetchingRoomChangeRequests ? (
+              <p className="mt-3 text-sm text-gray-500">Loading room change history...</p>
+            ) : (
+              <div className="mt-3 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left dark:border-gray-700">
+                      <th className="p-2">Requested</th>
+                      <th className="p-2">Source</th>
+                      <th className="p-2">Reason</th>
+                      <th className="p-2">From</th>
+                      <th className="p-2">To</th>
+                      <th className="p-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(roomChangeRequests ?? []).map((req) => (
+                      <tr className="border-b dark:border-gray-700" key={req.id}>
+                        <td className="p-2">{toDateTime(req.requestedAt)}</td>
+                        <td className="p-2">{getSourceLabel(req.source)}</td>
+                        <td className="p-2">{getReasonLabel(req.reason)}</td>
+                        <td className="p-2">{req.fromRoomNumber || '-'}</td>
+                        <td className="p-2">{req.toRoomNumber || '-'}</td>
+                        <td className="p-2">
+                          <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${getStatusBadge(req.status)}`}>
+                            {getStatusLabel(req.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -447,6 +590,19 @@ export const StayDetailPage = () => {
             remarks,
           });
         }}
+      />
+
+      <RoomChangeRequestDialog
+        open={showRoomChangeDialog}
+        stayId={stayId}
+        stayRoomId={selectedRoomForTransfer?.stayRoomId}
+        currentRoomNumber={selectedRoomForTransfer?.roomNumber}
+        isSaving={transferRoomMutation.isPending}
+        onClose={() => {
+          setShowRoomChangeDialog(false);
+          setSelectedRoomForTransfer(null);
+        }}
+        onSave={(values) => transferRoomMutation.mutate(values)}
       />
     </MainLayout>
   );

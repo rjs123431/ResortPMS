@@ -271,8 +271,12 @@ public class RoomChangeService(
             RoomTypeId = request.ToRoomTypeId.Value,
             RoomId = request.ToRoomId.Value,
             AssignedAt = Clock.Now,
-            OriginalRoomTypeId = activeStayRoom.OriginalRoomTypeId,
-            OriginalRoomId = activeStayRoom.OriginalRoomId
+            OriginalRoomTypeId = activeStayRoom.OriginalRoomTypeId != Guid.Empty
+                ? activeStayRoom.OriginalRoomTypeId
+                : activeStayRoom.RoomTypeId,
+            OriginalRoomId = activeStayRoom.OriginalRoomId != Guid.Empty
+                ? activeStayRoom.OriginalRoomId
+                : activeStayRoom.RoomId
         };
         var newStayRoomId = await stayRoomRepository.InsertAndGetIdAsync(newStayRoom);
 
@@ -387,6 +391,12 @@ public class RoomChangeService(
 
         if (room.OperationalStatus == RoomOperationalStatus.OutOfService)
             throw new UserFriendlyException(L("TargetRoomIsOutOfService"));
+
+        if (room.HousekeepingStatus == HousekeepingStatus.Dirty)
+            throw new UserFriendlyException(L("TargetRoomIsDirty"));
+
+        if (room.HousekeepingStatus == HousekeepingStatus.Pickup)
+            throw new UserFriendlyException(L("TargetRoomNeedsCleaning"));
 
         var hasActiveStay = await stayRoomRepository.GetAll()
             .AnyAsync(sr => sr.RoomId == toRoomId &&

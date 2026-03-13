@@ -233,16 +233,6 @@ export const CheckOutPage = () => {
     return <Navigate to="/check-out" replace />;
   }
 
-  if (isFetchingStatement) {
-    return (
-      <MainLayout>
-        <div className="flex min-h-[50vh] items-center justify-center">
-          <LogoSpinner spinnerClassName="border-b-2 border-blue-500" />
-        </div>
-      </MainLayout>
-    );
-  }
-
   if (isStatementError || !statement) {
     return (
       <MainLayout>

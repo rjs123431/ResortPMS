@@ -48,7 +48,6 @@ public class StayAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<StayRoomTransfer, Guid> stayRoomTransferRepository,
-    IRepository<RoomTransfer, Guid> roomTransferRepository,
     IRepository<RoomChangeRequest, Guid> roomChangeRequestRepository,
     IRepository<StayExtension, Guid> stayExtensionRepository,
     IRepository<GuestRequest, Guid> guestRequestRepository,
@@ -169,32 +168,10 @@ public class StayAppService(
             throw new UserFriendlyException(L("CannotTransferToSameRoom"));
 
         var toRoom = await roomRepository.GetAsync(input.ToRoomId);
+        var fromRoom = await roomRepository.GetAsync(activeStayRoom.RoomId);
 
         // Validate target room availability
         await ValidateTargetRoomForTransferAsync(stay, input.ToRoomId);
-
-        // Create RoomChangeRequest for audit trail
-        var request = new RoomChangeRequest
-        {
-            StayId = input.StayId,
-            StayRoomId = activeStayRoom.Id,
-            Source = RoomChangeSource.Internal,
-            Reason = RoomChangeReason.Other,
-            ReasonDetails = input.Reason ?? string.Empty,
-            FromRoomTypeId = activeStayRoom.RoomTypeId,
-            FromRoomId = activeStayRoom.RoomId,
-            ToRoomTypeId = toRoom.RoomTypeId,
-            ToRoomId = input.ToRoomId,
-            Status = RoomChangeRequestStatus.InProgress,
-            RequestedAt = Clock.Now,
-            RequestedBy = AbpSession.UserId?.ToString() ?? "System",
-            ApprovedAt = Clock.Now,
-            ApprovedBy = AbpSession.UserId?.ToString() ?? "System"
-        };
-        await roomChangeRequestRepository.InsertAsync(request);
-
-        // Execute room change
-        var fromRoom = await roomRepository.GetAsync(activeStayRoom.RoomId);
 
         // Close old StayRoom
         activeStayRoom.ReleasedAt = Clock.Now;
@@ -207,8 +184,12 @@ public class StayAppService(
             RoomTypeId = toRoom.RoomTypeId,
             RoomId = input.ToRoomId,
             AssignedAt = Clock.Now,
-            OriginalRoomTypeId = activeStayRoom.OriginalRoomTypeId,
-            OriginalRoomId = activeStayRoom.OriginalRoomId
+            OriginalRoomTypeId = activeStayRoom.OriginalRoomTypeId != Guid.Empty 
+                ? activeStayRoom.OriginalRoomTypeId 
+                : activeStayRoom.RoomTypeId,
+            OriginalRoomId = activeStayRoom.OriginalRoomId != Guid.Empty 
+                ? activeStayRoom.OriginalRoomId 
+                : activeStayRoom.RoomId
         };
         var newStayRoomId = await stayRoomRepository.InsertAndGetIdAsync(newStayRoom);
 
@@ -236,11 +217,28 @@ public class StayAppService(
         stay.RoomNumber = toRoom.RoomNumber;
         await stayRepository.UpdateAsync(stay);
 
-        // Mark request as completed
-        request.Status = RoomChangeRequestStatus.Completed;
-        request.CompletedAt = Clock.Now;
-        request.CompletedBy = AbpSession.UserId?.ToString() ?? "System";
-        await roomChangeRequestRepository.UpdateAsync(request);
+        // Create RoomChangeRequest for audit trail (with all fields set upfront)
+        var now = Clock.Now;
+        var userId = AbpSession.UserId?.ToString() ?? "System";
+        await roomChangeRequestRepository.InsertAsync(new RoomChangeRequest
+        {
+            StayId = input.StayId,
+            StayRoomId = newStayRoomId,
+            Source = RoomChangeSource.Internal,
+            Reason = RoomChangeReason.Other,
+            ReasonDetails = input.Reason ?? string.Empty,
+            FromRoomTypeId = activeStayRoom.RoomTypeId,
+            FromRoomId = activeStayRoom.RoomId,
+            ToRoomTypeId = toRoom.RoomTypeId,
+            ToRoomId = input.ToRoomId,
+            Status = RoomChangeRequestStatus.Completed,
+            RequestedAt = now,
+            RequestedBy = userId,
+            ApprovedAt = now,
+            ApprovedBy = userId,
+            CompletedAt = now,
+            CompletedBy = userId
+        });
 
         Logger.Info($"Room transfer: Stay {stay.StayNo} from Room {fromRoom.RoomNumber} to {toRoom.RoomNumber}.");
     }
@@ -257,6 +255,12 @@ public class StayAppService(
 
         if (room.OperationalStatus == RoomOperationalStatus.OutOfService)
             throw new UserFriendlyException(L("TargetRoomIsOutOfService"));
+
+        if (room.HousekeepingStatus == HousekeepingStatus.Dirty)
+            throw new UserFriendlyException(L("TargetRoomIsDirty"));
+
+        if (room.HousekeepingStatus == HousekeepingStatus.Pickup)
+            throw new UserFriendlyException(L("TargetRoomNeedsCleaning"));
 
         var hasActiveStay = await stayRoomRepository.GetAll()
             .AnyAsync(sr => sr.RoomId == toRoomId &&
