@@ -6,7 +6,8 @@ import {
   ClipboardDocumentListIcon,
   ChartBarIcon,
   Cog6ToothIcon,
-  ClockIcon,
+  BuildingStorefrontIcon,
+  RectangleStackIcon,
 } from '@heroicons/react/24/outline';
 
 const navItems = [
@@ -14,7 +15,9 @@ const navItems = [
   { to: '/pos/tables', label: 'Tables', title: 'Manage tables of an outlet', Icon: TableCellsIcon },
   { to: '/pos/orders', label: 'Orders', title: 'View list of orders, manage it', Icon: ClipboardDocumentListIcon },
   { to: '/pos/reports', label: 'Reports', title: 'Show reports', Icon: ChartBarIcon },
-  { to: '/pos/settings', label: 'Settings', title: 'Manage outlets, tables, menu items', Icon: Cog6ToothIcon },
+  { to: '/pos/outlets', label: 'Outlets', title: 'Manage outlets, terminals, tables', Icon: BuildingStorefrontIcon },
+  { to: '/pos/menu', label: 'Menu', title: 'Manage menu categories and items', Icon: RectangleStackIcon },
+  { to: '/pos/settings', label: 'Settings', title: 'POS settings', Icon: Cog6ToothIcon },
 ] as const;
 
 export const POSSidebar: React.FC = () => {

@@ -18,6 +18,18 @@ import type {
   VerifyStayForRoomChargeDto,
   PosSessionListDto,
   OpenPosSessionInput,
+  PosOutletDto,
+  CreatePosOutletDto,
+  UpdatePosOutletDto,
+  CreatePosTableDto,
+  UpdatePosTableDto,
+  PosTerminalListDto,
+  CreatePosTerminalDto,
+  UpdatePosTerminalDto,
+  CreateMenuCategoryDto,
+  UpdateMenuCategoryDto,
+  CreateMenuItemDto,
+  UpdateMenuItemDto,
 } from '@/types/pos.types';
 
 export const posService = {
@@ -158,5 +170,147 @@ export const posService = {
       input
     );
     return response.data.result;
+  },
+
+  // ── POS Settings (outlets, tables, menu CRUD) ─────────────────────────────
+
+  getSettingsOutlets: async (): Promise<PosOutletListDto[]> => {
+    const response = await api.get<ApiResponse<PosOutletListDto[]>>(
+      '/api/services/app/PosSettings/GetOutlets'
+    );
+    return response.data.result ?? [];
+  },
+
+  getSettingsOutlet: async (id: string): Promise<PosOutletDto> => {
+    const response = await api.get<ApiResponse<PosOutletDto>>(
+      '/api/services/app/PosSettings/GetOutlet',
+      { params: { id } }
+    );
+    return response.data.result;
+  },
+
+  createOutlet: async (input: CreatePosOutletDto): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosSettings/CreateOutlet',
+      input
+    );
+    return response.data.result;
+  },
+
+  updateOutlet: async (id: string, input: UpdatePosOutletDto): Promise<void> => {
+    await api.put('/api/services/app/PosSettings/UpdateOutlet', input, {
+      params: { id },
+    });
+  },
+
+  getSettingsTerminals: async (outletId: string): Promise<PosTerminalListDto[]> => {
+    const response = await api.get<ApiResponse<PosTerminalListDto[]>>(
+      '/api/services/app/PosSettings/GetTerminals',
+      { params: { outletId } }
+    );
+    return response.data.result ?? [];
+  },
+
+  createTerminal: async (input: CreatePosTerminalDto): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosSettings/CreateTerminal',
+      input
+    );
+    return response.data.result;
+  },
+
+  updateTerminal: async (id: string, input: UpdatePosTerminalDto): Promise<void> => {
+    await api.put('/api/services/app/PosSettings/UpdateTerminal', input, {
+      params: { id },
+    });
+  },
+
+  getSettingsTables: async (outletId: string): Promise<PosTableListDto[]> => {
+    const response = await api.get<ApiResponse<PosTableListDto[]>>(
+      '/api/services/app/PosSettings/GetTables',
+      { params: { outletId } }
+    );
+    return response.data.result ?? [];
+  },
+
+  createTable: async (input: CreatePosTableDto): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosSettings/CreateTable',
+      input
+    );
+    return response.data.result;
+  },
+
+  updateTable: async (id: string, input: UpdatePosTableDto): Promise<void> => {
+    await api.put('/api/services/app/PosSettings/UpdateTable', input, {
+      params: { id },
+    });
+  },
+
+  getSettingsMenuCategories: async (): Promise<MenuCategoryListDto[]> => {
+    const response = await api.get<ApiResponse<MenuCategoryListDto[]>>(
+      '/api/services/app/PosSettings/GetMenuCategories'
+    );
+    return response.data.result ?? [];
+  },
+
+  getSettingsMenuCategory: async (id: string): Promise<MenuCategoryListDto> => {
+    const response = await api.get<ApiResponse<MenuCategoryListDto>>(
+      '/api/services/app/PosSettings/GetMenuCategory',
+      { params: { id } }
+    );
+    return response.data.result;
+  },
+
+  createMenuCategory: async (input: CreateMenuCategoryDto): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosSettings/CreateMenuCategory',
+      input
+    );
+    return response.data.result;
+  },
+
+  updateMenuCategory: async (
+    id: string,
+    input: UpdateMenuCategoryDto
+  ): Promise<void> => {
+    await api.put('/api/services/app/PosSettings/UpdateMenuCategory', input, {
+      params: { id },
+    });
+  },
+
+  getSettingsMenuItems: async (
+    categoryId?: string | null
+  ): Promise<MenuItemListDto[]> => {
+    const response = await api.get<ApiResponse<MenuItemListDto[]>>(
+      '/api/services/app/PosSettings/GetMenuItems',
+      { params: categoryId ? { categoryId } : {} }
+    );
+    return response.data.result ?? [];
+  },
+
+  getSettingsMenuItem: async (id: string): Promise<MenuItemListDto> => {
+    const response = await api.get<ApiResponse<MenuItemListDto>>(
+      '/api/services/app/PosSettings/GetMenuItem',
+      { params: { id } }
+    );
+    return response.data.result;
+  },
+
+  createMenuItem: async (input: CreateMenuItemDto): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosSettings/CreateMenuItem',
+      input
+    );
+    return response.data.result;
+  },
+
+  updateMenuItem: async (
+    id: string,
+    input: UpdateMenuItemDto
+  ): Promise<void> => {
+    await api.put('/api/services/app/PosSettings/UpdateMenuItem', input, {
+      params: { id },
+    });
   },
 };

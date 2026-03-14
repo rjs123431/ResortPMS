@@ -55,6 +55,8 @@ const POSTablesPage = lazy(() => import('@pages/Resort/POS/POSTablesPage').then(
 const POSOrdersPage = lazy(() => import('@pages/Resort/POS/POSOrdersPage').then((m) => ({ default: m.POSOrdersPage })));
 const POSReportsPage = lazy(() => import('@pages/Resort/POS/POSReportsPage').then((m) => ({ default: m.POSReportsPage })));
 const POSSettingsPage = lazy(() => import('@pages/Resort/POS/POSSettingsPage').then((m) => ({ default: m.POSSettingsPage })));
+const PosOutletsPage = lazy(() => import('@pages/Resort/POS/PosOutletsPage').then((m) => ({ default: m.PosOutletsPage })));
+const PosMenuPage = lazy(() => import('@pages/Resort/POS/PosMenuPage').then((m) => ({ default: m.PosMenuPage })));
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 
@@ -489,6 +491,26 @@ const App: React.FC = () => {
                         <PageTitle title="POS Settings">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
                             <POSSettingsPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/outlets"
+                      element={
+                        <PageTitle title="POS Outlets">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <PosOutletsPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/menu"
+                      element={
+                        <PageTitle title="POS Menu">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <PosMenuPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

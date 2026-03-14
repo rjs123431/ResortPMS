@@ -234,3 +234,87 @@ export interface OpenPosSessionInput {
   terminalId: string;
   openingCash: number;
 }
+
+// ── POS Settings (CRUD) ─────────────────────────────────────────────────────
+
+export interface PosOutletDto {
+  id: string;
+  name: string;
+  location: string;
+  isActive: boolean;
+  hasKitchen: boolean;
+  chargeTypeId: string | null;
+}
+
+export interface CreatePosOutletDto {
+  name: string;
+  location: string;
+  isActive: boolean;
+  hasKitchen: boolean;
+  chargeTypeId: string | null;
+}
+
+export interface UpdatePosOutletDto {
+  name: string;
+  location: string;
+  isActive: boolean;
+  hasKitchen: boolean;
+  chargeTypeId: string | null;
+}
+
+export interface CreatePosTableDto {
+  outletId: string;
+  tableNumber: string;
+  capacity: number;
+}
+
+export interface UpdatePosTableDto {
+  tableNumber: string;
+  capacity: number;
+}
+
+export interface PosTerminalListDto {
+  id: string;
+  outletId: string;
+  outletName: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface CreatePosTerminalDto {
+  outletId: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface UpdatePosTerminalDto {
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface CreateMenuCategoryDto {
+  name: string;
+  displayOrder: number;
+}
+
+export interface UpdateMenuCategoryDto {
+  name: string;
+  displayOrder: number;
+}
+
+export interface CreateMenuItemDto {
+  categoryId: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+}
+
+export interface UpdateMenuItemDto {
+  categoryId: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+}

@@ -231,3 +231,97 @@ public class OpenPosSessionInput
     [Required] [StringLength(32)] public string TerminalId { get; set; } = string.Empty;
     [Range(0, double.MaxValue)] public decimal OpeningCash { get; set; }
 }
+
+// ── POS Settings (CRUD for outlets, tables, menu) ───────────────────────────
+
+public class PosOutletDto : EntityDto<Guid>
+{
+    public string Name { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+    public bool HasKitchen { get; set; }
+    public Guid? ChargeTypeId { get; set; }
+}
+
+public class CreatePosOutletDto
+{
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    [StringLength(256)] public string Location { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public bool HasKitchen { get; set; }
+    public Guid? ChargeTypeId { get; set; }
+}
+
+public class UpdatePosOutletDto
+{
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    [StringLength(256)] public string Location { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+    public bool HasKitchen { get; set; }
+    public Guid? ChargeTypeId { get; set; }
+}
+
+public class CreatePosTableDto
+{
+    [Required] public Guid OutletId { get; set; }
+    [Required] [StringLength(32)] public string TableNumber { get; set; } = string.Empty;
+    [Range(1, 99)] public int Capacity { get; set; } = 2;
+}
+
+public class UpdatePosTableDto
+{
+    [Required] [StringLength(32)] public string TableNumber { get; set; } = string.Empty;
+    [Range(1, 99)] public int Capacity { get; set; }
+}
+
+public class PosTerminalListDto : EntityDto<Guid>
+{
+    public Guid OutletId { get; set; }
+    public string OutletName { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+}
+
+public class CreatePosTerminalDto
+{
+    [Required] public Guid OutletId { get; set; }
+    [Required] [StringLength(32)] public string Code { get; set; } = string.Empty;
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+}
+
+public class UpdatePosTerminalDto
+{
+    [Required] [StringLength(32)] public string Code { get; set; } = string.Empty;
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+}
+
+public class CreateMenuCategoryDto
+{
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+}
+
+public class UpdateMenuCategoryDto
+{
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+}
+
+public class CreateMenuItemDto
+{
+    [Required] public Guid CategoryId { get; set; }
+    [Required] [StringLength(256)] public string Name { get; set; } = string.Empty;
+    [Range(0, double.MaxValue)] public decimal Price { get; set; }
+    public bool IsAvailable { get; set; } = true;
+}
+
+public class UpdateMenuItemDto
+{
+    [Required] public Guid CategoryId { get; set; }
+    [Required] [StringLength(256)] public string Name { get; set; } = string.Empty;
+    [Range(0, double.MaxValue)] public decimal Price { get; set; }
+    public bool IsAvailable { get; set; }
+}
