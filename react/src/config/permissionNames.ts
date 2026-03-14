@@ -1,6 +1,11 @@
 export const PermissionNames = {
   Pages_EPortal_Approval: 'Pages.EPortal.Approvals',
   Pages_Admin_Users: 'Pages.Admin.Users',
+  Pages_Admin_Users_Create: 'Pages.Admin.Users.Create',
+  Pages_Admin_Users_Edit: 'Pages.Admin.Users.Edit',
+  Pages_Admin_Roles: 'Pages.Admin.Roles',
+  Pages_Admin_Roles_Create: 'Pages.Admin.Roles.Create',
+  Pages_Admin_Roles_Edit: 'Pages.Admin.Roles.Edit',
   Pages_Guests: 'Pages.Guests',
   Pages_Guests_Create: 'Pages.Guests.Create',
   Pages_Guests_Edit: 'Pages.Guests.Edit',

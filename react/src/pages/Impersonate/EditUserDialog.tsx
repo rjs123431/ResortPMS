@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { userService, UserDto } from '@/services/user.service';
-import { roleService } from '@/services/role.service';
+import { userService, UserDto, type RoleOption } from '@/services/user.service';
 import type { UserListItem } from '@/types/user.types';
-import type { RoleDto } from '@/types/role.types';
 
 interface EditUserDialogProps {
   open: boolean;
@@ -17,7 +15,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, user, onCl
   const [form, setForm] = useState<UserListItem | null>(user);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [roles, setRoles] = useState<RoleDto[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
   const [checkedRoles, setCheckedRoles] = useState<string[]>([]);
 
   useEffect(() => {
@@ -32,9 +30,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, user, onCl
 
   useEffect(() => {
     if (open) {
-      roleService.getAll().then(res => {
-        setRoles(res.result.items);
-      });
+      userService.getRoles().then(setRoles);
     }
   }, [open]);
 
@@ -43,9 +39,10 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, user, onCl
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleRoleChange = (role: RoleDto, checked: boolean) => {
+  const handleRoleChange = (role: RoleOption, checked: boolean) => {
+    const key = role.normalizedName ?? role.name;
     setCheckedRoles(prev =>
-      checked ? [...prev, role.normalizedName] : prev.filter(r => r !== role.normalizedName)
+      checked ? [...prev, key] : prev.filter(r => r !== key)
     );
   };
 
@@ -128,17 +125,20 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, user, onCl
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Roles</label>
               <div className="flex flex-wrap gap-2">
-                {roles.map((role) => (
-                  <label key={role.normalizedName} className="inline-flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={checkedRoles.includes(role.normalizedName)}
-                      onChange={e => handleRoleChange(role, e.target.checked)}
-                    />
-                    <span className="text-gray-800 dark:text-gray-100">{role.displayName || role.name}</span>
-                  </label>
-                ))}
+                {roles.map((role) => {
+                  const key = role.normalizedName ?? role.name;
+                  return (
+                    <label key={key} className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="form-checkbox h-4 w-4 text-blue-600"
+                        checked={checkedRoles.includes(key)}
+                        onChange={e => handleRoleChange(role, e.target.checked)}
+                      />
+                      <span className="text-gray-800 dark:text-gray-100">{role.displayName || role.name}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>

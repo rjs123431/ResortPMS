@@ -52,6 +52,8 @@ const POSTablesPage = lazy(() => import('@pages/Resort/POS/POSTablesPage').then(
 const POSOrdersPage = lazy(() => import('@pages/Resort/POS/POSOrdersPage').then((m) => ({ default: m.POSOrdersPage })));
 const POSReportsPage = lazy(() => import('@pages/Resort/POS/POSReportsPage').then((m) => ({ default: m.POSReportsPage })));
 const POSSettingsPage = lazy(() => import('@pages/Resort/POS/POSSettingsPage').then((m) => ({ default: m.POSSettingsPage })));
+const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
+const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -483,6 +485,26 @@ const App: React.FC = () => {
                         <PageTitle title="POS Settings">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
                             <POSSettingsPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/administration/users"
+                      element={
+                        <PageTitle title="Users">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Users]}>
+                            <UsersPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/administration/roles"
+                      element={
+                        <PageTitle title="Roles">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Roles]}>
+                            <RolesPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
