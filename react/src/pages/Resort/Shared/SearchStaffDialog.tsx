@@ -35,9 +35,9 @@ export const SearchStaffDialog = ({ open, onClose, onSelectStaff }: SearchStaffD
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/50" aria-hidden />
-      <div className="flex min-h-screen items-start justify-center p-4 pt-6 md:pt-10">
-        <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-start justify-center p-4 pt-6 md:pt-10 pointer-events-none">
+        <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="mb-4 flex items-center justify-between">
             <DialogTitle as="h3" className="text-lg font-semibold">Search Staff</DialogTitle>
             <button

@@ -56,9 +56,9 @@ export const CancelOrderDialog = ({
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 z-0 bg-black/50" aria-hidden />
-      <div className="relative z-10 flex min-h-full items-start justify-center pt-6 pb-6 px-4">
-        <DialogPanel className="w-full max-w-md rounded-xl bg-white shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 z-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative z-10 flex min-h-full items-start justify-center pt-6 pb-6 px-4 pointer-events-none">
+        <DialogPanel className="w-full max-w-md rounded-xl bg-white shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
             <DialogTitle as="h2" className="text-lg font-semibold text-gray-900 dark:text-white">
               Cancel order

@@ -21,6 +21,7 @@ type RoleDialogProps = {
   isEdit: boolean;
   form: RoleFormState;
   permissions: FlatPermissionDto[];
+  permissionsLoading?: boolean;
   canCreate: boolean;
   canEdit: boolean;
   isSaving: boolean;
@@ -30,9 +31,18 @@ type RoleDialogProps = {
 };
 
 function buildTree(flat: FlatPermissionDto[]): PermissionNode[] {
+  if (!flat.length) return [];
+
+  const nameSet = new Set(flat.map((p) => p.name));
   const byParent = new Map<string | null, FlatPermissionDto[]>();
+
   for (const p of flat) {
-    const key = p.parentName ?? null;
+    const parent = p.parentName ?? null;
+    const isRoot =
+      !parent ||
+      parent === '' ||
+      !nameSet.has(parent);
+    const key = isRoot ? null : parent;
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key)!.push(p);
   }
@@ -40,7 +50,7 @@ function buildTree(flat: FlatPermissionDto[]): PermissionNode[] {
   function build(parentKey: string | null): PermissionNode[] {
     const list = byParent.get(parentKey) ?? [];
     return list
-      .sort((a, b) => a.displayName.localeCompare(b.displayName))
+      .sort((a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name))
       .map((p) => ({
         name: p.name,
         displayName: p.displayName,
@@ -52,29 +62,54 @@ function buildTree(flat: FlatPermissionDto[]): PermissionNode[] {
   return build(null);
 }
 
+/** Build a map of each node name -> set of self + all descendant names (for cascade). */
+function buildDescendantMap(nodes: PermissionNode[]): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+  function visit(node: PermissionNode): Set<string> {
+    const set = new Set<string>([node.name]);
+    for (const child of node.children) {
+      visit(child).forEach((n) => set.add(n));
+    }
+    map.set(node.name, set);
+    return set;
+  }
+  for (const node of nodes) visit(node);
+  return map;
+}
+
 function PermissionTree({
   nodes,
   level,
   grantedSet,
-  onToggle,
+  descendantMap,
+  onToggleCascade,
 }: {
   nodes: PermissionNode[];
   level: number;
   grantedSet: Set<string>;
-  onToggle: (name: string, checked: boolean) => void;
+  descendantMap: Map<string, Set<string>>;
+  onToggleCascade: (names: Set<string>, checked: boolean) => void;
 }) {
   return (
     <ul className={level > 0 ? 'ml-4 border-l border-gray-200 pl-2 dark:border-gray-600' : ''}>
       {nodes.map((node) => {
-        const checked = grantedSet.has(node.name);
+        const selfAndDescendants = descendantMap.get(node.name) ?? new Set([node.name]);
+        const grantedCount = [...selfAndDescendants].filter((n) => grantedSet.has(n)).length;
+        const totalCount = selfAndDescendants.size;
+        const checked = totalCount > 0 && grantedCount === totalCount;
+        const indeterminate = grantedCount > 0 && grantedCount < totalCount;
         const hasChildren = node.children.length > 0;
+
         return (
           <li key={node.name} className="py-0.5">
             <label className="flex cursor-pointer items-start gap-2 text-sm">
               <input
                 type="checkbox"
+                ref={(el) => {
+                  if (el) el.indeterminate = indeterminate;
+                }}
                 checked={checked}
-                onChange={(e) => onToggle(node.name, e.target.checked)}
+                onChange={(e) => onToggleCascade(selfAndDescendants, e.target.checked)}
                 className="mt-1"
               />
               <span className="text-gray-700 dark:text-gray-300">
@@ -86,7 +121,8 @@ function PermissionTree({
                 nodes={node.children}
                 level={level + 1}
                 grantedSet={grantedSet}
-                onToggle={onToggle}
+                descendantMap={descendantMap}
+                onToggleCascade={onToggleCascade}
               />
             ) : null}
           </li>
@@ -101,6 +137,7 @@ export const RoleDialog = ({
   isEdit,
   form,
   permissions,
+  permissionsLoading = false,
   canCreate,
   canEdit,
   isSaving,
@@ -109,6 +146,7 @@ export const RoleDialog = ({
   onSave,
 }: RoleDialogProps) => {
   const tree = useMemo(() => buildTree(permissions), [permissions]);
+  const descendantMap = useMemo(() => buildDescendantMap(tree), [tree]);
   const grantedSet = useMemo(
     () => new Set(form.grantedPermissions ?? []),
     [form.grantedPermissions]
@@ -126,11 +164,14 @@ export const RoleDialog = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const onToggle = (name: string, checked: boolean) => {
-    const next = checked
-      ? [...(form.grantedPermissions ?? []), name]
-      : (form.grantedPermissions ?? []).filter((n) => n !== name);
-    onFormChange((s) => ({ ...s, grantedPermissions: next }));
+  const onToggleCascade = (names: Set<string>, checked: boolean) => {
+    const current = new Set(form.grantedPermissions ?? []);
+    if (checked) {
+      names.forEach((n) => current.add(n));
+    } else {
+      names.forEach((n) => current.delete(n));
+    }
+    onFormChange((s) => ({ ...s, grantedPermissions: [...current] }));
   };
 
   const canSave = isEdit ? canEdit : canCreate;
@@ -138,9 +179,9 @@ export const RoleDialog = ({
 
   return (
     <Dialog open={isOpen} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/50" aria-hidden />
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <DialogPanel className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="flex-shrink-0 p-5 pb-0">
             <div className="mb-4 flex items-center justify-between">
               <DialogTitle
@@ -205,12 +246,23 @@ export const RoleDialog = ({
               Permissions
             </label>
             <div className="max-h-64 overflow-y-auto rounded border border-gray-200 p-2 dark:border-gray-600">
-              <PermissionTree
-                nodes={tree}
-                level={0}
-                grantedSet={grantedSet}
-                onToggle={onToggle}
-              />
+              {permissionsLoading ? (
+                <p className="py-4 text-center text-sm text-gray-500">
+                  Loading permissions...
+                </p>
+              ) : tree.length === 0 ? (
+                <p className="py-4 text-center text-sm text-gray-500">
+                  No permissions available.
+                </p>
+              ) : (
+                <PermissionTree
+                  nodes={tree}
+                  level={0}
+                  grantedSet={grantedSet}
+                  descendantMap={descendantMap}
+                  onToggleCascade={onToggleCascade}
+                />
+              )}
             </div>
           </div>
 

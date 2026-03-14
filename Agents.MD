@@ -35,3 +35,34 @@ ArrivalDate = check-in date
 DepartureDate = check-out date
 
 A room is occupied for nights between:
+
+---
+
+# React Dialog Overlays (Headless UI)
+
+When adding or editing dialogs that use `@headlessui/react` `Dialog`, use this overlay pattern so dialogs stack correctly and the overlay does not block or capture clicks meant for the panel.
+
+## Pattern
+
+1. **Root**: `<Dialog className="fixed inset-0 z-50 overflow-y-auto">`
+2. **Backdrop**: A separate `div` with `fixed inset-0 bg-black/50 pointer-events-none` and `aria-hidden`. This is visual only; it does not receive pointer events.
+3. **Wrapper**: A `div` with `relative flex min-h-screen items-center justify-center p-4 pointer-events-none` so the centering container does not steal clicks.
+4. **Panel**: `DialogPanel` (or `Dialog.Panel`) must include `pointer-events-auto` so only the panel receives clicks. Close via a Close/Cancel button and/or Escape (handle in `useEffect` with `keydown`).
+
+Example:
+
+```tsx
+<Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+  <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+  <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+    <DialogPanel className="... pointer-events-auto">
+      {/* content */}
+    </DialogPanel>
+  </div>
+</Dialog>
+```
+
+## Rationale
+
+- Without `pointer-events-none` on the backdrop and wrapper, the overlay can capture clicks and cause focus/stacking issues when multiple dialogs or dropdowns are present (e.g. Add Extra Bed, New Guest, Search Guest).
+- `pointer-events-auto` on the panel ensures the dialog content remains interactive and that nested controls (inputs, buttons) work correctly.

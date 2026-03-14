@@ -88,9 +88,9 @@ export const AssignRoomDialog = ({
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/40" aria-hidden />
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <DialogPanel className="w-full max-w-xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="w-full max-w-xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 pointer-events-auto">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
               {isChangeRoom ? 'Change Room' : 'Assign Room'}

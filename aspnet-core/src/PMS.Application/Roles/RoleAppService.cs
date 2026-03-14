@@ -140,13 +140,15 @@ namespace PMS.Roles
         public async Task<GetRoleForEditOutput> GetRoleForEdit(EntityDto input)
         {
             var permissions = PermissionManager.GetAllPermissions();
-            var role = await _roleManager.Roles.FirstOrDefaultAsync(r => r.Id == input.Id);
-            var grantedPermissions = new List<Permission>();
+            Role role = null;
+            if (input.Id > 0)
+                role = await _roleManager.Roles.FirstOrDefaultAsync(r => r.Id == input.Id);
 
+            var grantedPermissions = new List<Permission>();
             if (role != null)
                 grantedPermissions = (await _roleManager.GetGrantedPermissionsAsync(role)).ToList();
 
-            var roleEditDto = ObjectMapper.Map<RoleEditDto>(role);
+            var roleEditDto = role != null ? ObjectMapper.Map<RoleEditDto>(role) : null;
 
             return new GetRoleForEditOutput
             {

@@ -34,9 +34,9 @@ export const SelectExtraBedTypeDialog = ({
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/50" aria-hidden />
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="mb-4 flex items-center justify-between">
             <DialogTitle as="h3" className="text-lg font-semibold">
               Select Extra Bed Type

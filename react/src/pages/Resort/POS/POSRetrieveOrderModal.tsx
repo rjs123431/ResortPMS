@@ -75,9 +75,9 @@ export const POSRetrieveOrderModal = ({
 
   return (
     <Dialog open={open} onClose={() => { }} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 z-0 bg-black/50" aria-hidden />
-      <div className="relative z-10 flex min-h-full items-start justify-center pt-6 pb-6 pl-4 pr-4">
-        <DialogPanel className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 z-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative z-10 flex min-h-full items-start justify-center pt-6 pb-6 pl-4 pr-4 pointer-events-none">
+        <DialogPanel className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="shrink-0 border-b border-gray-200 p-4 dark:border-gray-700">
             <div className="mb-3 flex items-center justify-between gap-3">
               <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">

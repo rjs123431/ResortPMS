@@ -561,8 +561,9 @@ export const LeaveRequestFormDialog: React.FC<LeaveRequestFormDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen i`tems-center justify-center p-4 bg-black/30">
-        <DialogPanel className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto pointer-events-auto">
           <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
             <DialogTitle as="h2" className="text-lg font-semibold text-gray-900 dark:text-white">
               {leaveRequestId ? 'Edit Leave Request' : 'Apply for Leave'}

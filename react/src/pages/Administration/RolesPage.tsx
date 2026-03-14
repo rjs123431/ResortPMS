@@ -75,14 +75,14 @@ export const RolesPage = () => {
   const items = useMemo(() => data?.items ?? [], [data]);
   const isDialogOpen = showCreate || editingId != null;
 
-  const permissionsForNew = useQuery({
-    queryKey: ['admin-role-permissions-all'],
-    queryFn: () => roleService.getAllPermissions(),
-    enabled: showCreate,
+  const { data: newRoleData, isLoading: newRolePermissionsLoading } = useQuery({
+    queryKey: ['admin-role-edit', 0],
+    queryFn: () => roleService.getForEdit(0),
+    enabled: canCreate,
   });
 
   const permissionsInDialog = showCreate
-    ? (permissionsForNew.data ?? [])
+    ? (newRoleData?.permissions ?? [])
     : permissions;
 
   const loadForEdit = (id: number) => {
@@ -226,6 +226,7 @@ export const RolesPage = () => {
           isEdit={editingId != null}
           form={form}
           permissions={permissionsInDialog}
+          permissionsLoading={showCreate && newRolePermissionsLoading}
           canCreate={canCreate}
           canEdit={canEdit}
           isSaving={createMutation.isPending || updateMutation.isPending}

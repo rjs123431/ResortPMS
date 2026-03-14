@@ -204,8 +204,9 @@ export const MissedPunchRequestFormDialog: React.FC<MissedPunchRequestFormDialog
 
   return (
     <Dialog open={isOpen} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center px-4 bg-black/50">
-        <DialogPanel className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center px-4 pointer-events-none">
+        <DialogPanel className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-lg pointer-events-auto">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <DialogTitle as="h2" className="text-lg font-semibold text-gray-900 dark:text-white">Non-Swipe Request</DialogTitle>
             <button

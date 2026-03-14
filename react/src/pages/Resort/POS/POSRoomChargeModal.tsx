@@ -42,9 +42,9 @@ export const POSRoomChargeModal = ({
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 z-0 bg-black/50" aria-hidden />
-      <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-        <DialogPanel className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 z-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative z-10 flex min-h-full items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="border-b border-gray-200 p-4 dark:border-gray-700">
             <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">
               Charge to Room

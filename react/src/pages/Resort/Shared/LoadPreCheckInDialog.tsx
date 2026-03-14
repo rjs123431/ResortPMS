@@ -50,10 +50,10 @@ export const LoadPreCheckInDialog = ({
   }, [open, onClose]);
 
   return (
-    <Dialog open={open} onClose={() => {}} className="relative z-50">
-      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
+    <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden="true" />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="mb-4 flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
               Load Pre-Check-In

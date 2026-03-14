@@ -18,63 +18,8 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         // SETUP
         var setup = webApp.CreateChildPermission(PermissionNames.Pages_Setup, L("Setup"), multiTenancySides: MultiTenancySides.Tenant);
 
-        var items = setup.CreateChildPermission(PermissionNames.Pages_Items, L("Items"), multiTenancySides: MultiTenancySides.Tenant);
-        items.CreateChildPermission(PermissionNames.Pages_Items_Create, L("Create"));
-        items.CreateChildPermission(PermissionNames.Pages_Items_Edit, L("Edit"));
-
-        var categories = setup.CreateChildPermission(PermissionNames.Pages_Categories, L("Categories"), multiTenancySides: MultiTenancySides.Tenant);
-        categories.CreateChildPermission(PermissionNames.Pages_Categories_Create, L("Create"));
-        categories.CreateChildPermission(PermissionNames.Pages_Categories_Edit, L("Edit"));
-
-        // TRANSACTIONS
+        // TRANSACTIONS (hotel workflow)
         var transactions = webApp.CreateChildPermission(PermissionNames.Pages_Transactions, L("Transactions"), multiTenancySides: MultiTenancySides.Tenant);
-
-        var stockIn = transactions.CreateChildPermission(PermissionNames.Pages_StockIn, L("StockIn"), multiTenancySides: MultiTenancySides.Tenant);
-        stockIn.CreateChildPermission(PermissionNames.Pages_StockIn_Create, L("Create"));
-        stockIn.CreateChildPermission(PermissionNames.Pages_StockIn_Print, L("Print"));
-
-        var stockOut = transactions.CreateChildPermission(PermissionNames.Pages_StockOut, L("StockOut"), multiTenancySides: MultiTenancySides.Tenant);
-        stockOut.CreateChildPermission(PermissionNames.Pages_StockOut_Create, L("Create"));
-        stockOut.CreateChildPermission(PermissionNames.Pages_StockOut_Print, L("Print"));
-        
-        var stockAdjustment = transactions.CreateChildPermission(PermissionNames.Pages_StockAdjustment, L("StockAdjustment"), multiTenancySides: MultiTenancySides.Tenant);
-        stockAdjustment.CreateChildPermission(PermissionNames.Pages_StockAdjustment_Create, L("Create"));
-        stockAdjustment.CreateChildPermission(PermissionNames.Pages_StockAdjustment_Print, L("Print"));
-
-        var physicalCount = transactions.CreateChildPermission(PermissionNames.Pages_PhysicalCount, L("PhysicalCount"), multiTenancySides: MultiTenancySides.Tenant);
-        physicalCount.CreateChildPermission(PermissionNames.Pages_PhysicalCount_Create, L("Create"));
-        physicalCount.CreateChildPermission(PermissionNames.Pages_PhysicalCount_Start, L("Start"));
-        physicalCount.CreateChildPermission(PermissionNames.Pages_PhysicalCount_Complete, L("Complete"));
-        physicalCount.CreateChildPermission(PermissionNames.Pages_PhysicalCount_Cancel, L("Cancel"));
-        physicalCount.CreateChildPermission(PermissionNames.Pages_PhysicalCount_Print, L("Print"));
-        
-
-        // REPORTS
-        var reports = webApp.CreateChildPermission(PermissionNames.Pages_Reports, L("Reports"), multiTenancySides: MultiTenancySides.Tenant);
-       
-        var inventorySummary = reports.CreateChildPermission(PermissionNames.Pages_PMSSummary, L("PMSSummary"), multiTenancySides: MultiTenancySides.Tenant);
-        inventorySummary.CreateChildPermission(PermissionNames.Pages_PMSSummary_Print, L("Print"));
-        inventorySummary.CreateChildPermission(PermissionNames.Pages_PMSSummary_Export, L("Export"));
-        
-        var withdrawalReport = reports.CreateChildPermission(PermissionNames.Pages_WithdrawalReport, L("WithdrawalReport"), multiTenancySides: MultiTenancySides.Tenant);
-        withdrawalReport.CreateChildPermission(PermissionNames.Pages_WithdrawalReport_Print, L("Print"));
-        withdrawalReport.CreateChildPermission(PermissionNames.Pages_WithdrawalReport_Export, L("Export"));
-        
-        var stockInReport = reports.CreateChildPermission(PermissionNames.Pages_StockInReport, L("StockInReport"), multiTenancySides: MultiTenancySides.Tenant);
-        stockInReport.CreateChildPermission(PermissionNames.Pages_StockInReport_Print, L("Print"));
-        stockInReport.CreateChildPermission(PermissionNames.Pages_StockInReport_Export, L("Export"));
-        
-        var stockOutReport = reports.CreateChildPermission(PermissionNames.Pages_StockOutReport, L("StockOutReport"), multiTenancySides: MultiTenancySides.Tenant);
-        stockOutReport.CreateChildPermission(PermissionNames.Pages_StockOutReport_Print, L("Print"));
-        stockOutReport.CreateChildPermission(PermissionNames.Pages_StockOutReport_Export, L("Export"));
-        
-        var stockAdjustmentReport = reports.CreateChildPermission(PermissionNames.Pages_StockAdjustmentReport, L("StockAdjustmentReport"), multiTenancySides: MultiTenancySides.Tenant);
-        stockAdjustmentReport.CreateChildPermission(PermissionNames.Pages_StockAdjustmentReport_Print, L("Print"));
-        stockAdjustmentReport.CreateChildPermission(PermissionNames.Pages_StockAdjustmentReport_Export, L("Export"));
-        
-        var transferReport = reports.CreateChildPermission(PermissionNames.Pages_TransferReport, L("TransferReport"), multiTenancySides: MultiTenancySides.Tenant);
-        transferReport.CreateChildPermission(PermissionNames.Pages_TransferReport_Print, L("Print"));
-        transferReport.CreateChildPermission(PermissionNames.Pages_TransferReport_Export, L("Export"));
 
         // Administration
         var administration = webApp.CreateChildPermission(PermissionNames.Pages_Admin, L("Administration"), multiTenancySides: MultiTenancySides.Tenant);

@@ -63,9 +63,9 @@ export const GuestRequestDialog = ({ open, isSaving = false, onClose, onSave }: 
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/40" aria-hidden />
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <DialogPanel className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">Create Guest Request</DialogTitle>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
             Selecting Pickup Cleaning or Stayover Cleaning automatically creates a housekeeping task.

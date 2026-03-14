@@ -593,9 +593,9 @@ export const ReservationDetailPage = () => {
 
         {reservationDetail?.status === ReservationStatus.Pending ? (
           <Dialog open={isDepositDialogOpen} onClose={() => {}} className="relative z-50">
-            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-              <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
+            <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden="true" />
+            <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+              <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
                 <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">Add Deposit</DialogTitle>
                 <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
                   <div>
@@ -681,10 +681,10 @@ export const ReservationDetailPage = () => {
           </Dialog>
         ) : null}
 
-        <Dialog open={isGuestDialogOpen} onClose={() => {}} className="relative z-50">
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex min-h-screen items-center justify-center bg-black/50 p-4">
-              <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
+        <Dialog open={isGuestDialogOpen} onClose={() => {}} className="relative z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+          <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+              <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
                 <div className="mb-4 flex items-center justify-between">
                   <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">Search Guests</DialogTitle>
                   <button className="rounded bg-gray-200 px-2 py-1 text-sm dark:bg-gray-700" onClick={closeGuestDialog}>
@@ -845,7 +845,6 @@ export const ReservationDetailPage = () => {
                 </div>
               </DialogPanel>
             </div>
-          </div>
         </Dialog>
 
         <AssignRoomDialog

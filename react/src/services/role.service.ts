@@ -92,13 +92,16 @@ export const roleService = {
   },
 
   getAllPermissions: async (): Promise<FlatPermissionDto[]> => {
-    const response = await api.get<{ result: { items: PermissionDto[] } }>(
-      '/api/services/app/Role/GetAllPermissions'
-    );
-    const items = response.data.result?.items ?? [];
-    return items.map((p) => ({
+    const response = await api.get<{
+      result: { items?: PermissionDto[] } | PermissionDto[];
+    }>('/api/services/app/Role/GetAllPermissions');
+    const raw = response.data.result;
+    const items = Array.isArray(raw)
+      ? raw
+      : (raw?.items ?? []);
+    return items.map((p: PermissionDto) => ({
       ...p,
-      parentName: p.name.includes('.')
+      parentName: p.name?.includes('.')
         ? p.name.split('.').slice(0, -1).join('.')
         : null,
     }));

@@ -598,9 +598,9 @@ export const CheckOutPage = () => {
         />
 
         <Dialog open={showSettleConfirm} onClose={() => {}} className="relative z-50">
-          <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Dialog.Panel className="mx-auto max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+          <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden="true" />
+          <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <Dialog.Panel className="mx-auto max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800 pointer-events-auto">
               <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
                 Settle Folio
               </Dialog.Title>

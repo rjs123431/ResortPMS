@@ -52,9 +52,9 @@ export const EditUserPasswordDialog: React.FC<EditUserPasswordDialogProps> = ({ 
 
   return (
     <Dialog open={open} onClose={onClose} className="fixed z-50 inset-0 overflow-y-auto">
-      <div className="fixed inset-0 z-40 bg-black bg-opacity-30 transition-opacity" onClick={onClose} />
-      <div className="flex items-center justify-center min-h-screen px-4">
-        <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md mx-auto p-6 z-50">
+      <div className="fixed inset-0 z-40 bg-black bg-opacity-30 transition-opacity pointer-events-auto" onClick={onClose} aria-hidden />
+      <div className="flex items-center justify-center min-h-screen px-4 pointer-events-none">
+        <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md mx-auto p-6 z-50 pointer-events-auto">
           <Dialog.Title className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Reset User Password</Dialog.Title>
           <div className="space-y-4">
             <div>

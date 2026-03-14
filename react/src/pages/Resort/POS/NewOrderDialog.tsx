@@ -84,9 +84,9 @@ export const NewOrderDialog = ({
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 z-0 bg-black/50" aria-hidden />
-      <div className="relative z-10 flex min-h-full items-center justify-center p-4 pt-8 pb-8">
-        <DialogPanel className="flex max-h-[calc(100vh-4rem)] w-full max-w-2xl shrink-0 flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 z-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative z-10 flex min-h-full items-center justify-center p-4 pt-8 pb-8 pointer-events-none">
+        <DialogPanel className="flex max-h-[calc(100vh-4rem)] w-full max-w-2xl shrink-0 flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
             <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">
               New Order
@@ -165,9 +165,9 @@ export const NewOrderDialog = ({
             </div>
 
             <Dialog open={showServerPopup} onClose={() => {}} className="relative z-[60]">
-              <div className="fixed inset-0 z-0 bg-black/50" aria-hidden />
-              <div className="fixed inset-0 z-10 flex items-center justify-center p-4">
-                <DialogPanel className="max-h-[80vh] w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
+              <div className="fixed inset-0 z-0 bg-black/50 pointer-events-none" aria-hidden />
+              <div className="fixed inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
+                <DialogPanel className="max-h-[80vh] w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800 pointer-events-auto">
                   <DialogTitle as="h4" className="border-b border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:text-white">
                     Select server
                   </DialogTitle>

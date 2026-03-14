@@ -41,9 +41,9 @@ export const AddExtraBedDialog = ({ open, extraBedTypes, onClose, onAdd }: AddEx
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/40" aria-hidden />
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800">
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+        <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">Add Extra Bed</DialogTitle>
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full border border-gray-200 text-sm dark:border-gray-700">

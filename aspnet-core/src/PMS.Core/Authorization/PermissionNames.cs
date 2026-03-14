@@ -14,63 +14,8 @@ namespace PMS.Authorization
         // SETUP
         public const string Pages_Setup = "Pages.Setup";
 
-        public const string Pages_Items = "Pages.Items";
-        public const string Pages_Items_Create = "Pages.Items.Create";
-        public const string Pages_Items_Edit = "Pages.Items.Edit";
-
-        public const string Pages_Categories = "Pages.Categories";
-        public const string Pages_Categories_Create = "Pages.Categories.Create";
-        public const string Pages_Categories_Edit = "Pages.Categories.Edit";
-
-        // TRANSACTIONS
+        // TRANSACTIONS (hotel workflow)
         public const string Pages_Transactions = "Pages.Transactions";
-
-        public const string Pages_StockIn = "Pages.StockIn";
-        public const string Pages_StockIn_Create = "Pages.StockIn.Create";
-        public const string Pages_StockIn_Print = "Pages.StockIn.Print";
-
-        public const string Pages_StockOut = "Pages.StockOut";
-        public const string Pages_StockOut_Create = "Pages.StockOut.Create";
-        public const string Pages_StockOut_Print = "Pages.StockOut.Print";
-
-        public const string Pages_StockAdjustment = "Pages.StockAdjustment";
-        public const string Pages_StockAdjustment_Create = "Pages.StockAdjustment.Create";
-        public const string Pages_StockAdjustment_Print = "Pages.StockAdjustment.Print";
-
-        public const string Pages_PhysicalCount = "Pages.PhysicalCount";
-        public const string Pages_PhysicalCount_Create = "Pages.PhysicalCount.Create";
-        public const string Pages_PhysicalCount_Start = "Pages.PhysicalCount.Start";
-        public const string Pages_PhysicalCount_Complete = "Pages.PhysicalCount.Complete";
-        public const string Pages_PhysicalCount_Cancel = "Pages.PhysicalCount.Cancel";
-        public const string Pages_PhysicalCount_Print = "Pages.PhysicalCount.Print";
-
-
-        // REPORTS
-        public const string Pages_Reports = "Pages.Reports";
-
-        public const string Pages_PMSSummary = "Pages.PMSSummary";
-        public const string Pages_PMSSummary_Print = "Pages.PMSSummary.Print";
-        public const string Pages_PMSSummary_Export = "Pages.PMSSummary.Export";
-
-        public const string Pages_WithdrawalReport = "Pages.WithdrawalReport";
-        public const string Pages_WithdrawalReport_Print = "Pages.WithdrawalReport.Print";
-        public const string Pages_WithdrawalReport_Export = "Pages.WithdrawalReport.Export";
-
-        public const string Pages_StockInReport = "Pages.StockInReport";
-        public const string Pages_StockInReport_Print = "Pages.StockInReport.Print";
-        public const string Pages_StockInReport_Export = "Pages.StockInReport.Export";
-
-        public const string Pages_StockOutReport = "Pages.StockOutReport";
-        public const string Pages_StockOutReport_Print = "Pages.StockOutReport.Print";
-        public const string Pages_StockOutReport_Export = "Pages.StockOutReport.Export";
-
-        public const string Pages_StockAdjustmentReport = "Pages.StockAdjustmentReport";
-        public const string Pages_StockAdjustmentReport_Print = "Pages.StockAdjustmentReport.Print";
-        public const string Pages_StockAdjustmentReport_Export = "Pages.StockAdjustmentReport.Export";
-
-        public const string Pages_TransferReport = "Pages.TransferReport";
-        public const string Pages_TransferReport_Print = "Pages.TransferReport.Print";
-        public const string Pages_TransferReport_Export = "Pages.TransferReport.Export";
 
         public const string Pages_Admin = "Pages.Admin";
         public const string Pages_Admin_Roles = "Pages.Admin.Roles";
