@@ -15,6 +15,7 @@ import { initAbpEvents } from '@/utils/abp-events';
 import './index.css';
 import { PermissionNames } from './config/permissionNames';
 import { ImpersonatePage } from './pages/Impersonate/ImpersonatePage';
+import { RoomRackPage } from '@/pages/Resort/RoomRack/RoomRackPage';
 
 const LoginPage = lazy(() => import('@pages/Login/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('@pages/Register/RegisterPage').then((m) => ({ default: m.RegisterPage })));
@@ -46,8 +47,6 @@ const StayDetailPage = lazy(() => import('@pages/Resort/Stays/StayDetailPage').t
 const CheckOutListPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutListPage').then((m) => ({ default: m.CheckOutListPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
 const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutConfirmationPage').then((m) => ({ default: m.CheckOutConfirmationPage })));
-const RoomRackPage = lazy(() => import('@pages/Resort/RoomRack/RoomRackPage').then((m) => ({ default: m.RoomRackPage })));
-const FrontDeskGridPage = lazy(() => import('@pages/Resort/FrontDesk/FrontDeskGridPage').then((m) => ({ default: m.FrontDeskGridPage })));
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
@@ -277,6 +276,16 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
+                      path="/room-rack"
+                      element={
+                        <PageTitle title="Room Rack">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                            <RoomRackPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
                       path="/reservations"
                       element={
                         <PageTitle title="Reservations">
@@ -402,26 +411,6 @@ const App: React.FC = () => {
                         <PageTitle title="Check-Out Confirmation">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
                             <CheckOutConfirmationPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/room-rack"
-                      element={
-                        <PageTitle title="Room Rack">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
-                            <RoomRackPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/front-desk/grid"
-                      element={
-                        <PageTitle title="Front Desk Grid">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
-                            <FrontDeskGridPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

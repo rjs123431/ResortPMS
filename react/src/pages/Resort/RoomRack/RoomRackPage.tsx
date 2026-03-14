@@ -1,290 +1,616 @@
-import { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { MainLayout } from '@components/layout/MainLayout';
-import { ReservationStatus, RoomOperationalStatus } from '@/types/resort.types';
-import type { RoomListDto } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
+import type { RoomListDto, StayListDto, ReservationDetailDto, ReservationRoomDetailDto } from '@/types/resort.types';
+import { ReservationStatus } from '@/types/resort.types';
+import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 
-type StatusKey = 'occupied' | 'reservedArrivalToday' | 'vacant' | 'outOfOrder';
-
-/** Read ops status from room; API may return camelCase or PascalCase. */
-function getOperationalStatus(room: RoomListDto | Record<string, unknown>): RoomOperationalStatus {
-  const ops = (room as RoomListDto).operationalStatus ?? (room as Record<string, unknown>).OperationalStatus;
-  return typeof ops === 'number' ? (ops as RoomOperationalStatus) : RoomOperationalStatus.Vacant;
-}
-
-interface RoomRackRow {
-  roomId: string;
-  roomNumber: string;
-  roomTypeName: string;
-  statusKey: StatusKey;
-  label: string;
-  statusSortOrder: number;
-}
-
-const STATUS_FILTERS: { key: StatusKey; label: string }[] = [
-  { key: 'occupied', label: 'Occupied' },
-  { key: 'reservedArrivalToday', label: 'Reserved (Arrival Today)' },
-  { key: 'vacant', label: 'Vacant' },
-  { key: 'outOfOrder', label: 'Out of Order / Out of Service' },
-];
-
-const STATUS_STYLES: Record<StatusKey, { badgeClass: string; cardClass: string }> = {
-  occupied: {
-    badgeClass: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-    cardClass: 'border-l-4 border-l-rose-500',
-  },
-  reservedArrivalToday: {
-    badgeClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-    cardClass: 'border-l-4 border-l-indigo-500',
-  },
-  vacant: {
-    badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-    cardClass: 'border-l-4 border-l-emerald-500',
-  },
-  outOfOrder: {
-    badgeClass: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
-    cardClass: 'border-l-4 border-l-slate-500',
-  },
+const toDateKey = (d: Date | string | undefined): string => {
+  if (d == null) return '';
+  const date = typeof d === 'string' ? new Date(d) : d;
+  if (Number.isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 };
+
+/** Property policy: check-in at 2:00 PM, checkout at 12:00 PM. Used for grid bar positioning. */
+const CHECK_IN_HOUR_FRAC = 14 / 24; // 2pm = start of bar on check-in day
+const CHECK_OUT_HOUR_FRAC = 12 / 24; // 12 noon = end of bar on checkout day
+
+/** AM half (left) of a column = end of previous night → previous date; PM half (right) = check-in 2pm → current date. */
+function getDateIndexFromPosition(pct: number, n: number): number | null {
+  const colRaw = pct * n;
+  const colIndex = Math.floor(colRaw);
+  const posInCol = colRaw - colIndex;
+  const dateIndex = posInCol < 0.5 ? colIndex - 1 : colIndex;
+  if (dateIndex < 0 || dateIndex >= n) return null;
+  return dateIndex;
+}
+
+type StayRow = StayListDto & { CheckInDateTime?: string; ExpectedCheckOutDateTime?: string; RoomNumber?: string; StayNo?: string; GuestName?: string; Id?: string };
+
+/** Stay occupies date if checkIn <= date < expectedCheckOut (checkout day exclusive). Supports camelCase and PascalCase from API. */
+const stayCoversDate = (stay: StayRow, dateKey: string): boolean => {
+  const checkInRaw = stay.checkInDateTime ?? stay.CheckInDateTime;
+  const checkOutRaw = stay.expectedCheckOutDateTime ?? stay.ExpectedCheckOutDateTime;
+  const checkIn = toDateKey(checkInRaw);
+  const checkOut = toDateKey(checkOutRaw);
+  if (!checkIn || !checkOut) return false;
+  return dateKey >= checkIn && dateKey < checkOut;
+};
+
+/** Extract room number(s) from stay; API may return one or comma-separated, camelCase or PascalCase. */
+const getStayRoomNumbers = (stay: StayRow): string[] => {
+  const raw = stay.roomNumber ?? stay.RoomNumber;
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+};
+
+const reservationRoomCoversDate = (room: ReservationRoomDetailDto, dateKey: string): boolean => {
+  const arr = toDateKey(room.arrivalDate);
+  const dep = toDateKey(room.departureDate);
+  return dateKey >= arr && dateKey < dep;
+};
+
+type CellInfo = { type: 'stay'; stayNo: string; guestName: string; stayId: string } | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string } | null;
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
-const toDateInputValue = (value: Date) => {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const toDateKey = (value: Date | string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
 export const RoomRackPage = () => {
-  const [activeStatuses, setActiveStatuses] = useState<StatusKey[]>(STATUS_FILTERS.map((s) => s.key));
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [activeRoomTypes, setActiveRoomTypes] = useState<string[]>([]); // will set default after room types load
+  const navigate = useNavigate();
+  const [startDate, setStartDate] = useState<Date>(() => new Date());
+  const [endDate, setEndDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 13);
+    return d;
+  });
 
-  const selectedDateKey = useMemo(() => toDateInputValue(selectedDate), [selectedDate]);
+  const startKey = useMemo(() => toDateKey(startDate), [startDate]);
+  const endKey = useMemo(() => toDateKey(endDate), [endDate]);
+  const dateColumns = useMemo(() => {
+    const out: string[] = [];
+    const start = new Date(startKey);
+    const end = new Date(endKey);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      out.push(toDateKey(d));
+    }
+    return out;
+  }, [startKey, endKey]);
 
-  const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
-    queryKey: ['room-rack-rooms'],
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const timelineDragRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  type GridSelection = {
+    roomId: string;
+    roomNumber: string;
+    roomTypeId: string;
+    roomTypeName: string;
+    startIndex: number;
+    endIndex: number;
+  };
+  const [selection, setSelection] = useState<GridSelection | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [quickReservationOpen, setQuickReservationOpen] = useState(false);
+  const [quickReservationPayload, setQuickReservationPayload] = useState<QuickReservationPayload | null>(null);
+  const [hoveredEmptyCell, setHoveredEmptyCell] = useState<{ roomId: string; dateIndex: number } | null>(null);
+  const selectionRef = useRef<GridSelection | null>(null);
+  selectionRef.current = selection;
+
+  const updateScrollArrows = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const run = () => updateScrollArrows();
+    run();
+    const t = setTimeout(run, 0);
+    window.addEventListener('resize', run);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', run);
+    };
+  }, [updateScrollArrows, dateColumns.length]);
+
+  const scrollBy = useCallback((delta: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  }, []);
+
+  const { data: roomsData } = useQuery({
+    queryKey: ['frontdesk-grid-rooms'],
     queryFn: () => resortService.getRooms('', 0, 500),
-    staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
   });
 
-  const { data: inHouseData, isLoading: isLoadingInHouse } = useQuery({
-    queryKey: ['room-rack-in-house'],
+  const { data: staysData } = useQuery({
+    queryKey: ['frontdesk-grid-stays'],
     queryFn: () => resortService.getInHouseStays('', 0, 500),
-    staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
   });
 
-  const { data: reservationsData, isLoading: isLoadingReservations } = useQuery({
-    queryKey: ['room-rack-reservations', selectedDateKey],
-    queryFn: () => resortService.getReservations('', 0, 200),
-    staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+  const { data: reservationsListData } = useQuery({
+    queryKey: ['frontdesk-grid-reservations-list'],
+    queryFn: () => resortService.getReservations('', 0, 300),
   });
 
-  const arrivalTodayReservationIds = useMemo(() => {
-    const targetDate = toDateKey(selectedDate);
-    return (reservationsData?.items ?? [])
-      .filter((r) => {
-        const isArrivalToday = toDateKey(r.arrivalDate) === targetDate;
-        const isReservedState = r.status === ReservationStatus.Confirmed || r.status === ReservationStatus.Pending;
-        return isArrivalToday && isReservedState;
-      })
-      .map((r) => r.id);
-  }, [reservationsData, selectedDate]);
+  const overlappingReservationIds = useMemo(() => {
+    const list = reservationsListData?.items ?? [];
+    return list
+      .filter(
+        (r) =>
+          (r.status === ReservationStatus.Pending || r.status === ReservationStatus.Confirmed) &&
+          toDateKey(r.departureDate) >= startKey &&
+          toDateKey(r.arrivalDate) <= endKey
+      )
+      .map((r) => r.id)
+      .slice(0, 80);
+  }, [reservationsListData, startKey, endKey]);
 
-  const { data: reservationDetails, isLoading: isLoadingReservationDetails } = useQuery({
-    queryKey: ['room-rack-reservation-details', selectedDateKey, arrivalTodayReservationIds],
-    enabled: arrivalTodayReservationIds.length > 0,
-    queryFn: async () => Promise.all(arrivalTodayReservationIds.map((id) => resortService.getReservation(id))),
-    staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+  const { data: reservationDetails } = useQuery({
+    queryKey: ['frontdesk-grid-reservation-details', overlappingReservationIds],
+    enabled: overlappingReservationIds.length > 0,
+    queryFn: async () => Promise.all(overlappingReservationIds.map((id) => resortService.getReservation(id))),
   });
 
-  // Compute all room types from roomsData
-  const allRoomTypes = useMemo(() => {
-    const rooms = roomsData?.items ?? [];
-    const types = Array.from(new Set(rooms.map((r) => r.roomTypeName || 'Unknown')));
-    return types.sort((a, b) => collator.compare(a, b));
+  const roomsByType = useMemo(() => {
+    const rooms = (roomsData?.items ?? []) as RoomListDto[];
+    const map = new Map<string, RoomListDto[]>();
+    rooms.forEach((r) => {
+      const name = r.roomTypeName || 'Unknown';
+      const list = map.get(name) ?? [];
+      list.push(r);
+      map.set(name, list);
+    });
+    map.forEach((list) => list.sort((a, b) => collator.compare(a.roomNumber, b.roomNumber)));
+    return Array.from(map.entries()).sort((a, b) => collator.compare(a[0], b[0]));
   }, [roomsData]);
 
-  // Set default activeRoomTypes after room types load
-  useEffect(() => {
-    if (allRoomTypes.length > 0 && activeRoomTypes.length === 0) {
-      setActiveRoomTypes(allRoomTypes);
-    }
-  }, [allRoomTypes]);
+  const getCellInfo = useMemo((): ((roomNumber: string, dateKey: string) => CellInfo) => {
+    const stays = staysData?.items ?? [];
+    const details = reservationDetails ?? [];
+    const resByRoomDate = new Map<string, CellInfo>();
 
-  const rowsByRoomType = useMemo(() => {
-    const rooms = roomsData?.items ?? [];
-    const inHouseByRoom = new Map((inHouseData?.items ?? []).map((stay) => [stay.roomNumber, stay.guestName]));
-    const reservedRoomNumbers = new Set<string>();
-    (reservationDetails ?? []).forEach((res) => {
-      res.rooms.forEach((rm) => {
-        if (rm.roomNumber) reservedRoomNumbers.add(rm.roomNumber);
+    stays.forEach((stay: StayRow) => {
+      const roomNumbers = getStayRoomNumbers(stay);
+      const stayNo = stay.stayNo ?? stay.StayNo ?? '';
+      const guestName = stay.guestName ?? stay.GuestName ?? '';
+      const stayId = stay.id ?? stay.Id ?? '';
+      if (roomNumbers.length === 0) return;
+      dateColumns.forEach((dateKey) => {
+        if (!stayCoversDate(stay, dateKey)) return;
+        roomNumbers.forEach((roomNum) => {
+          const key = `${roomNum}|${dateKey}`;
+          resByRoomDate.set(key, { type: 'stay', stayNo: String(stayNo), guestName: String(guestName), stayId: String(stayId) });
+        });
       });
     });
 
-    const rows: RoomRackRow[] = rooms
-      .map((room): RoomRackRow => {
-        const operationalStatus = getOperationalStatus(room);
-        const occupiedGuest = inHouseByRoom.get(room.roomNumber);
-
-        if (occupiedGuest || operationalStatus === RoomOperationalStatus.Occupied) {
-          const label = occupiedGuest ? `Occupied (${occupiedGuest})` : 'Occupied';
-          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'occupied', label, statusSortOrder: 0 };
-        }
-
-        if (operationalStatus === RoomOperationalStatus.OutOfOrder || operationalStatus === RoomOperationalStatus.OutOfService) {
-          const label = operationalStatus === RoomOperationalStatus.OutOfOrder ? 'Out of Order' : 'Out of Service';
-          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'outOfOrder', label, statusSortOrder: 3 };
-        }
-
-        if (reservedRoomNumbers.has(room.roomNumber)) {
-          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'reservedArrivalToday', label: 'Reserved (Arrival Today)', statusSortOrder: 1 };
-        }
-
-        if (operationalStatus === RoomOperationalStatus.Reserved) {
-          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'reservedArrivalToday', label: 'Reserved', statusSortOrder: 1 };
-        }
-
-        return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'vacant', label: 'Vacant', statusSortOrder: 2 };
-      })
-      .filter((row) => activeStatuses.includes(row.statusKey))
-      .filter((row) => activeRoomTypes.includes(row.roomTypeName))
-      .sort((a, b) => {
-        if (a.statusSortOrder !== b.statusSortOrder) return a.statusSortOrder - b.statusSortOrder;
-        return collator.compare(a.roomNumber, b.roomNumber);
+    details.forEach((res: ReservationDetailDto) => {
+      (res.rooms ?? []).forEach((room: ReservationRoomDetailDto) => {
+        if (!room.roomNumber) return;
+        const roomNum = room.roomNumber.trim();
+        dateColumns.forEach((dateKey) => {
+          if (reservationRoomCoversDate(room, dateKey)) {
+            const key = `${roomNum}|${dateKey}`;
+            if (!resByRoomDate.has(key))
+              resByRoomDate.set(key, {
+                type: 'reservation',
+                reservationNo: res.reservationNo,
+                guestName: res.guestName ?? '',
+                reservationId: res.id,
+              });
+          }
+        });
       });
-
-    const grouped = new Map<string, RoomRackRow[]>();
-    rows.forEach((row) => {
-      const current = grouped.get(row.roomTypeName) ?? [];
-      current.push(row);
-      grouped.set(row.roomTypeName, current);
     });
-    return grouped;
-  }, [activeStatuses, activeRoomTypes, inHouseData, reservationDetails, roomsData]);
 
-  const roomTypeGroups = useMemo(
-    () => Array.from(rowsByRoomType.entries()).sort((a, b) => collator.compare(a[0], b[0])),
-    [rowsByRoomType],
+    return (roomNumber: string, dateKey: string) => resByRoomDate.get(`${roomNumber.trim()}|${dateKey}`) ?? null;
+  }, [staysData, reservationDetails, dateColumns]);
+
+  const isDateOccupied = useCallback(
+    (roomNumber: string, dateIndex: number) => {
+      if (dateIndex < 0 || dateIndex >= dateColumns.length) return true;
+      return getCellInfo(roomNumber, dateColumns[dateIndex]) !== null;
+    },
+    [getCellInfo, dateColumns]
   );
 
-  const isLoading = isLoadingRooms || isLoadingInHouse || isLoadingReservations || isLoadingReservationDetails;
+  useEffect(() => {
+    if (!isDragging || !selection) return;
+    const handleMove = (e: MouseEvent) => {
+      const el = timelineDragRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const n = dateColumns.length;
+      const x = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, x / rect.width));
+      const col = getDateIndexFromPosition(pct, n);
+      if (col === null) return;
+      const start = selection.startIndex;
+      let newEnd = col;
+      if (newEnd >= start) {
+        for (let i = start; i <= newEnd; i++) {
+          if (isDateOccupied(selection.roomNumber, i)) {
+            newEnd = i - 1;
+            break;
+          }
+        }
+      } else {
+        for (let i = start; i >= newEnd; i--) {
+          if (isDateOccupied(selection.roomNumber, i)) {
+            newEnd = i + 1;
+            break;
+          }
+        }
+      }
+      setSelection((prev) => (prev ? { ...prev, endIndex: newEnd } : null));
+    };
+    const handleUp = () => {
+      setIsDragging(false);
+      timelineDragRef.current = null;
+      const sel = selectionRef.current;
+      if (sel) {
+        const startIndex = sel.startIndex;
+        const endIndex = sel.endIndex;
+        const checkInDate = dateColumns[startIndex];
+        const lastNight = new Date(dateColumns[endIndex] + 'T12:00:00');
+        lastNight.setDate(lastNight.getDate() + 1);
+        const checkOutDate = toDateKey(lastNight);
+        setQuickReservationPayload({
+          checkInDate,
+          checkOutDate,
+          roomTypeName: sel.roomTypeName,
+          roomTypeId: sel.roomTypeId,
+          roomNumber: sel.roomNumber,
+          roomId: sel.roomId,
+        });
+        setQuickReservationOpen(true);
+        // keep selection so highlight remains visible while dialog is open
+      } else {
+        setSelection(null);
+      }
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isDragging, dateColumns, isDateOccupied]);
+
+  const roomNumberToType = useMemo(() => {
+    const map = new Map<string, string>();
+    roomsByType.forEach(([roomTypeName, roomList]) => {
+      roomList.forEach((r) => map.set(r.roomNumber.trim(), roomTypeName));
+    });
+    return map;
+  }, [roomsByType]);
+
+  const bookingCountByRoomTypeAndDate = useMemo(() => {
+    const countBy = new Map<string, number>();
+    const key = (type: string, date: string) => `${type}|${date}`;
+    const add = (type: string, date: string) => {
+      const k = key(type, date);
+      countBy.set(k, (countBy.get(k) ?? 0) + 1);
+    };
+
+    (staysData?.items ?? []).forEach((stay: StayRow) => {
+      const roomNumbers = getStayRoomNumbers(stay);
+      dateColumns.forEach((dateKey) => {
+        if (!stayCoversDate(stay, dateKey)) return;
+        roomNumbers.forEach((roomNum) => {
+          const typeName = roomNumberToType.get(roomNum.trim());
+          if (typeName) add(typeName, dateKey);
+        });
+      });
+    });
+
+    (reservationDetails ?? []).forEach((res: ReservationDetailDto) => {
+      if (res.status === ReservationStatus.CheckedIn) return;
+      (res.rooms ?? []).forEach((room: ReservationRoomDetailDto) => {
+        if (room.roomId || (room.roomNumber?.trim() ?? '')) return;
+        const typeName = room.roomTypeName?.trim() ?? '';
+        if (!typeName) return;
+        dateColumns.forEach((dateKey) => {
+          if (reservationRoomCoversDate(room, dateKey)) add(typeName, dateKey);
+        });
+      });
+    });
+
+    return (roomTypeName: string, dateKey: string) => countBy.get(`${roomTypeName}|${dateKey}`) ?? 0;
+  }, [staysData, reservationDetails, dateColumns, roomNumberToType]);
 
   return (
     <MainLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Rack</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Live front desk room board grouped by room type.</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Front Desk Grid</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Room occupancy by date. Rows = rooms (by type), columns = dates.</p>
           </div>
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date: Date | null) => setSelectedDate(date ?? new Date())}
-              dateFormat="yyyy-MM-dd"
-              className="w-full max-w-xs rounded border p-2 dark:bg-gray-700"
-            />
-          </div>
-
-          <div className="mb-4">
-            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Filter By Status</p>
-            <div className="flex flex-wrap gap-3">
-              {STATUS_FILTERS.map((status) => (
-                <label key={status.key} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={activeStatuses.includes(status.key)}
-                    onChange={(e) => {
-                      setActiveStatuses((prev) =>
-                        e.target.checked ? Array.from(new Set([...prev, status.key])) : prev.filter((item) => item !== status.key),
-                      );
-                    }}
-                  />
-                  <span className="text-gray-700 dark:text-gray-300">{status.label}</span>
-                </label>
-              ))}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const d1 = new Date(startDate);
+                const d2 = new Date(endDate);
+                d1.setDate(d1.getDate() - 1);
+                d2.setDate(d2.getDate() - 1);
+                setStartDate(d1);
+                setEndDate(d2);
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              title="Previous day"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2 rounded border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center pl-2 text-gray-500 dark:text-gray-400">
+                <CalendarIcon className="h-5 w-5" />
+              </span>
+              <DatePicker
+                selected={startDate}
+                onChange={(d: Date | null) => setStartDate(d ?? new Date())}
+                dateFormat="yyyy-MM-dd"
+                className="min-w-[120px] border-0 bg-transparent py-2 pr-2 focus:ring-0 dark:bg-transparent"
+                popperClassName="!z-[100]"
+              />
+              <span className="text-gray-400 dark:text-gray-500">–</span>
+              <DatePicker
+                selected={endDate}
+                onChange={(d: Date | null) => setEndDate(d ?? new Date())}
+                dateFormat="yyyy-MM-dd"
+                className="min-w-[120px] border-0 bg-transparent py-2 pr-2 focus:ring-0 dark:bg-transparent"
+                popperClassName="!z-[100]"
+              />
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                const d1 = new Date(startDate);
+                const d2 = new Date(endDate);
+                d1.setDate(d1.getDate() + 1);
+                d2.setDate(d2.getDate() + 1);
+                setStartDate(d1);
+                setEndDate(d2);
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              title="Next day"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
           </div>
 
-          <div className="mb-4">
-            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Filter By Room Type</p>
-            <div className="flex flex-wrap gap-3">
-              {allRoomTypes.map((roomType) => (
-                <label key={roomType} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={activeRoomTypes.includes(roomType)}
-                    onChange={(e) => {
-                      setActiveRoomTypes((prev) =>
-                        e.target.checked ? Array.from(new Set([...prev, roomType])) : prev.filter((item) => item !== roomType)
-                      );
-                    }}
-                  />
-                  <span className="text-gray-700 dark:text-gray-300">{roomType}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {isLoading ? <p className="text-sm text-gray-500">Loading room rack...</p> : null}
-
-          {!isLoading ? (
-            <div className="space-y-5">
-              {roomTypeGroups.length === 0 ? <p className="text-sm text-gray-500">No rooms found for selected status filters.</p> : null}
-              {roomTypeGroups.map(([roomTypeName, rows]) => (
-                <div key={roomTypeName} className="rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-700">
-                    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">{roomTypeName}</h2>
-                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">{rows.length}</span>
-                  </div>
-                  {rows.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-gray-500">No rooms in this room type.</p>
-                  ) : (
-                    <ul className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {rows.map((row) => (
-                        <li key={row.roomId} className={`rounded-md border border-gray-200 p-3 dark:border-gray-700 ${STATUS_STYLES[row.statusKey].cardClass}`}>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Room {row.roomNumber}</p>
-                          <p className="mt-2">
-                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.statusKey].badgeClass}`}>
-                              {row.label}
-                            </span>
-                          </p>
-                        </li>
+          <div className="relative">
+            <div
+              ref={scrollRef}
+              className="overflow-x-auto"
+              onScroll={updateScrollArrows}
+            >
+              <table className="min-w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
+                    <th className="sticky left-0 z-[1] min-w-[100px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 dark:bg-gray-700/50 dark:text-white">Room</th>
+                    {dateColumns.map((dateKey) => {
+                    const d = new Date(dateKey + 'T12:00:00');
+                    return (
+                      <th key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center font-medium text-gray-700 last:border-r-0 dark:text-gray-200">
+                        <div>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                        <div className="text-xs font-normal text-gray-500 dark:text-gray-400">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {roomsByType.map(([roomTypeName, rooms]) => (
+                  <React.Fragment key={roomTypeName}>
+                    <tr className="bg-gray-100 dark:bg-gray-700/30">
+                      <td className="sticky left-0 z-[1] min-w-[100px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 dark:bg-gray-700/30 dark:text-gray-200">
+                        {roomTypeName}
+                      </td>
+                      {dateColumns.map((dateKey) => (
+                        <td key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center last:border-r-0">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{bookingCountByRoomTypeAndDate(roomTypeName, dateKey)}</span>
+                          <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">bookings</span>
+                        </td>
                       ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
+                    </tr>
+                    {rooms.map((room) => {
+                      const roomNum = room.roomNumber;
+                      const n = dateColumns.length;
+                      const segments: { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string }[] = [];
+                      let i = 0;
+                      while (i < dateColumns.length) {
+                        const cell = getCellInfo(roomNum, dateColumns[i]);
+                        if (!cell) {
+                          i++;
+                          continue;
+                        }
+                        const cellId = cell.type === 'stay' ? `s-${cell.stayId}` : `r-${cell.reservationId}`;
+                        const startIndex = i;
+                        let endIndex = i + 1;
+                        while (endIndex < dateColumns.length) {
+                          const nextCell = getCellInfo(roomNum, dateColumns[endIndex]);
+                          const nextId = nextCell?.type === 'stay' ? `s-${nextCell.stayId}` : nextCell?.type === 'reservation' ? `r-${nextCell.reservationId}` : null;
+                          if (nextId !== cellId) break;
+                          endIndex++;
+                        }
+                        const guestName = cell.type === 'stay' ? cell.guestName : cell.guestName;
+                        const navPath = cell.type === 'stay' ? `/stays/${cell.stayId}` : `/reservations/${cell.reservationId}`;
+                        const bgClass = cell.type === 'stay' ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-green-100 dark:bg-green-900/30';
+                        const textClass = cell.type === 'stay' ? 'text-blue-900 hover:underline dark:text-blue-100' : 'text-green-900 hover:underline dark:text-green-100';
+                        segments.push({ id: `${cellId}-${startIndex}`, guestName: guestName || '—', navPath, startIndex, endIndex, bgClass, textClass });
+                        i = endIndex;
+                      }
+                      return (
+                        <tr key={room.id} className="border-b">
+                          <td className="sticky left-0 z-[1] border-r bg-white p-2 font-medium text-gray-900 dark:bg-gray-800 dark:text-white">
+                            {roomNum}
+                          </td>
+                          <td colSpan={n} className="min-w-0 p-0 align-top">
+                            <div
+                              className="relative w-full h-8 min-h-[2rem] border-b border-gray-200 dark:border-gray-600"
+                              style={{
+                                backgroundImage: `linear-gradient(to right, var(--tw-border-color, rgb(229 231 235)) 1px, transparent 1px)`,
+                                backgroundSize: `${100 / n}% 100%`,
+                              }}
+                              onMouseMove={(e) => {
+                                if (isDragging) return;
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const x = e.clientX - rect.left;
+                                const pct = Math.max(0, Math.min(1, x / rect.width));
+                                const dateIndex = getDateIndexFromPosition(pct, n);
+                                if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) {
+                                  setHoveredEmptyCell(null);
+                                  return;
+                                }
+                                setHoveredEmptyCell({ roomId: room.id, dateIndex });
+                              }}
+                              onMouseLeave={() => setHoveredEmptyCell(null)}
+                              onMouseDown={(e) => {
+                                if ((e.target as HTMLElement).closest('button')) return;
+                                const el = e.currentTarget;
+                                const rect = el.getBoundingClientRect();
+                                const x = e.clientX - rect.left;
+                                const pct = Math.max(0, Math.min(1, x / rect.width));
+                                const dateIndex = getDateIndexFromPosition(pct, n);
+                                if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) return;
+                                timelineDragRef.current = el;
+                                setSelection({
+                                  roomId: room.id,
+                                  roomNumber: roomNum,
+                                  roomTypeId: room.roomTypeId,
+                                  roomTypeName: room.roomTypeName ?? roomTypeName,
+                                  startIndex: dateIndex,
+                                  endIndex: dateIndex,
+                                });
+                                setIsDragging(true);
+                              }}
+                            >
+                              <div
+                                className="absolute inset-0 z-0 cursor-pointer"
+                                aria-hidden
+                                style={{ pointerEvents: isDragging ? 'none' : 'auto' }}
+                              />
+                              {hoveredEmptyCell && hoveredEmptyCell.roomId === room.id && (
+                                <div
+                                  className="absolute top-0 bottom-0 z-[5] pointer-events-none bg-gray-200/60 dark:bg-gray-500/40"
+                                  style={{
+                                    left: `${((hoveredEmptyCell.dateIndex + CHECK_IN_HOUR_FRAC) / n) * 100}%`,
+                                    width: `${((1 + CHECK_OUT_HOUR_FRAC - CHECK_IN_HOUR_FRAC) / n) * 100}%`,
+                                    transform: 'skewX(-12deg)',
+                                    transformOrigin: 'bottom left',
+                                  }}
+                                />
+                              )}
+                              {segments.map((seg) => {
+                                const leftPct = ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                const rightPct = ((seg.endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
+                                const widthPct = rightPct - leftPct;
+                                return (
+                                  <div
+                                    key={seg.id}
+                                    className={`absolute top-0 bottom-0 z-10 min-w-0 flex items-center overflow-hidden border border-gray-300/50 dark:border-gray-600/50 ${seg.bgClass}`}
+                                    style={{
+                                      left: `${leftPct}%`,
+                                      width: `${widthPct}%`,
+                                      transform: 'skewX(-12deg)',
+                                      transformOrigin: 'bottom left',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
+                                      style={{ transform: 'skewX(12deg)' }}
+                                      onClick={() => navigate(seg.navPath)}
+                                      title={seg.guestName}
+                                    >
+                                      {seg.guestName}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                              {selection && selection.roomId === room.id && (() => {
+                                const minStart = Math.min(selection.startIndex, selection.endIndex);
+                                const maxEnd = Math.max(selection.startIndex, selection.endIndex);
+                                const nights = maxEnd - minStart + 1;
+                                const nightLabel = nights === 1 ? '1 night' : `${nights} nights`;
+                                const leftPct = ((minStart + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                const rightPct = ((maxEnd + 1 + CHECK_OUT_HOUR_FRAC) / n) * 100;
+                                const widthPct = rightPct - leftPct;
+                                return (
+                                  <div
+                                    className="absolute top-0 bottom-0 z-20 min-w-0 flex items-center pointer-events-none border-2 border-primary-500 bg-primary-500/30 dark:bg-primary-400/30"
+                                    style={{
+                                      left: `${leftPct}%`,
+                                      width: `${widthPct}%`,
+                                      transform: 'skewX(-12deg)',
+                                      transformOrigin: 'bottom left',
+                                    }}
+                                  >
+                                    <span
+                                      className="px-1.5 text-xs font-medium text-primary-800 dark:text-primary-200"
+                                      style={{ transform: 'skewX(12deg)' }}
+                                    >
+                                      {nightLabel}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
             </div>
-          ) : null}
+            {canScrollLeft && (
+              <button
+                type="button"
+                onClick={() => scrollBy(-200)}
+                className="absolute left-[100px] top-10 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white/95 text-gray-700 shadow hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700"
+                aria-label="Scroll dates left"
+              >
+                <span className="text-lg leading-none">‹</span>
+              </button>
+            )}
+            {canScrollRight && (
+              <button
+                type="button"
+                onClick={() => scrollBy(200)}
+                className="absolute right-0 top-10 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white/95 text-gray-700 shadow hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700"
+                aria-label="Scroll dates right"
+              >
+                <span className="text-lg leading-none">›</span>
+              </button>
+            )}
+          </div>
         </section>
       </div>
+      <QuickReservationDialog
+        open={quickReservationOpen}
+        onClose={() => { setQuickReservationOpen(false); setQuickReservationPayload(null); setSelection(null); }}
+        payload={quickReservationPayload}
+      />
     </MainLayout>
   );
 };

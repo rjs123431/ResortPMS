@@ -45,12 +45,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         ),
         children: [
           {
-            path: '/new-reservation',
-            label: 'New Reservation',
-            permissions: [PermissionNames.Pages_Reservations],
+            path: '/room-rack',
+            label: 'Room Rack',
+            permissions: [PermissionNames.Pages_Rooms],
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 01.553-.894L9 2m0 18l6-3m-6 3V2m6 15l6 3m0 0V8m0 12V8m0 0l-6-3m6 3l-6 3m0-6L9 2" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2m0 0v10a2 2 0 01-2 2H8a2 2 0 01-2-2V7m4 4h4m-4 4h4" />
               </svg>
             ),
           },
@@ -91,16 +91,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V7m-6 14h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-            ),
-          },
-          {
-            path: '/room-rack',
-            label: 'Room Rack',
-            permissions: [PermissionNames.Pages_Rooms],
-            icon: (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2m0 0v10a2 2 0 01-2 2H8a2 2 0 01-2-2V7m4 4h4m-4 4h4" />
               </svg>
             ),
           },
