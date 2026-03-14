@@ -103,7 +103,7 @@ export const POSPage = () => {
           </div>
 
           {hasOpenSession ? (
-            <Link to="/pos" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
+            <Link to="/pos/order/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
               New Order
             </Link>
           ) : (

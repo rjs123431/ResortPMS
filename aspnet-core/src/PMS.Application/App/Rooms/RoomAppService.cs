@@ -7,6 +7,7 @@ using Abp.Domain.Repositories;
 using Abp.Linq.Extensions;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
+using PMS.App.RoomRatePlans;
 using PMS.App.Rooms.Dto;
 using PMS.Authorization;
 using System.Linq;
@@ -93,7 +94,8 @@ public class RoomAppService(
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
-    IRepository<PreCheckInRoom, Guid> preCheckInRoomRepository
+    IRepository<PreCheckInRoom, Guid> preCheckInRoomRepository,
+    IRoomRatePlanAppService roomRatePlanAppService
 ) : PMSAppServiceBase, IRoomAppService
 {
     [AbpAuthorize(PermissionNames.Pages_Rooms_Create)]
@@ -257,15 +259,30 @@ public class RoomAppService(
             }
         }
 
-        return items.Select(MapToRoomListDto).ToList();
+        System.Collections.Generic.Dictionary<Guid, decimal> rateOverrides = null;
+        if (hasDateRange && items.Count > 0)
+        {
+            var arrivalDate = input.ArrivalDate!.Value.Date;
+            var departureDate = input.DepartureDate!.Value.Date;
+            var roomTypeIds = items.Select(r => r.RoomTypeId).Distinct().ToList();
+            rateOverrides = new System.Collections.Generic.Dictionary<Guid, decimal>();
+            foreach (var rtId in roomTypeIds)
+            {
+                var rate = await roomRatePlanAppService.GetEffectiveRatePerNightForStayAsync(rtId, arrivalDate, departureDate);
+                rateOverrides[rtId] = rate;
+            }
+        }
+
+        return items.Select(r => MapToRoomListDto(r, rateOverrides)).ToList();
     }
 
-    private static RoomListDto MapToRoomListDto(Room room)
+    private static RoomListDto MapToRoomListDto(Room room, System.Collections.Generic.Dictionary<Guid, decimal> rateOverrides = null)
     {
         var roomTypeName = room.RoomType?.Name ?? string.Empty;
         var roomTypeDescription = room.RoomType?.Description ?? string.Empty;
         var profile = GetRoomTypeProfile(roomTypeName, roomTypeDescription);
 
+        var baseRate = (rateOverrides != null && rateOverrides.TryGetValue(room.RoomTypeId, out var overridden)) ? overridden : (room.RoomType?.BaseRate ?? 0);
         return new RoomListDto
         {
             Id = room.Id,
@@ -278,7 +295,7 @@ public class RoomAppService(
             AmenityItems = profile.AmenityItems,
             MaxAdults = room.RoomType?.MaxAdults ?? 0,
             MaxChildren = room.RoomType?.MaxChildren ?? 0,
-            BaseRate = room.RoomType?.BaseRate ?? 0,
+            BaseRate = baseRate,
             Floor = room.Floor,
             OperationalStatus = room.OperationalStatus,
             HousekeepingStatus = room.HousekeepingStatus,

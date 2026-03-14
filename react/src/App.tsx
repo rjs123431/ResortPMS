@@ -29,6 +29,7 @@ const MyAccountPage = lazy(() => import('@pages/Devices/MyAccountPage').then((m)
 const GuestListPage = lazy(() => import('@pages/Resort/Guests/GuestsPage').then((m) => ({ default: m.GuestListPage })));
 const RoomsPage = lazy(() => import('@pages/Resort/Rooms/RoomsPage').then((m) => ({ default: m.RoomListPage })));
 const RoomTypeListPage = lazy(() => import('@pages/Resort/RoomTypes/RoomTypesPage').then((m) => ({ default: m.RoomTypeListPage })));
+const RoomRatePlansPage = lazy(() => import('@pages/Resort/RoomRatePlans/RoomRatePlansPage').then((m) => ({ default: m.RoomRatePlansPage })));
 const ChargeTypeListPage = lazy(() => import('@pages/Resort/ChargeTypes/ChargeTypesPage').then((m) => ({ default: m.ChargeTypeListPage })));
 const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/PaymentMethodsPage').then((m) => ({ default: m.PaymentMethodListPage })));
 const ExtraBedTypeListPage = lazy(() => import('./pages/Resort/ExtraBedTypes/ExtraBedTypesPage').then((m) => ({ default: m.ExtraBedTypeListPage })));
@@ -57,6 +58,9 @@ const POSReportsPage = lazy(() => import('@pages/Resort/POS/POSReportsPage').the
 const POSSettingsPage = lazy(() => import('@pages/Resort/POS/POSSettingsPage').then((m) => ({ default: m.POSSettingsPage })));
 const PosOutletsPage = lazy(() => import('@pages/Resort/POS/PosOutletsPage').then((m) => ({ default: m.PosOutletsPage })));
 const PosMenuPage = lazy(() => import('@pages/Resort/POS/PosMenuPage').then((m) => ({ default: m.PosMenuPage })));
+const PosOptionGroupsPage = lazy(() => import('@pages/Resort/POS/PosOptionGroupsPage').then((m) => ({ default: m.PosOptionGroupsPage })));
+const PosPriceAdjustmentsPage = lazy(() => import('@pages/Resort/POS/PosPriceAdjustmentsPage').then((m) => ({ default: m.PosPriceAdjustmentsPage })));
+const PosPromosPage = lazy(() => import('@pages/Resort/POS/PosPromosPage').then((m) => ({ default: m.PosPromosPage })));
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 
@@ -217,6 +221,16 @@ const App: React.FC = () => {
                         <PageTitle title="Room Types">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomTypes]}>
                             <RoomTypeListPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/room-rate-plans"
+                      element={
+                        <PageTitle title="Room Rate Plans">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomRatePlans]}>
+                            <RoomRatePlansPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
@@ -511,6 +525,36 @@ const App: React.FC = () => {
                         <PageTitle title="POS Menu">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
                             <PosMenuPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/option-groups"
+                      element={
+                        <PageTitle title="POS Option Groups">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <PosOptionGroupsPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/price-adjustments"
+                      element={
+                        <PageTitle title="POS Price Adjustments">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <PosPriceAdjustmentsPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/promos"
+                      element={
+                        <PageTitle title="POS Promos">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <PosPromosPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

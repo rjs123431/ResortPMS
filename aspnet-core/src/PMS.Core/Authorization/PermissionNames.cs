@@ -40,6 +40,11 @@ namespace PMS.Authorization
         public const string Pages_RoomTypes_Create = "Pages.RoomTypes.Create";
         public const string Pages_RoomTypes_Edit = "Pages.RoomTypes.Edit";
 
+        // SETUP — Room Rate Plans
+        public const string Pages_RoomRatePlans = "Pages.RoomRatePlans";
+        public const string Pages_RoomRatePlans_Create = "Pages.RoomRatePlans.Create";
+        public const string Pages_RoomRatePlans_Edit = "Pages.RoomRatePlans.Edit";
+
         // SETUP — Rooms
         public const string Pages_Rooms = "Pages.Rooms";
         public const string Pages_Rooms_Create = "Pages.Rooms.Create";

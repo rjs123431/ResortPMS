@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.EntityFrameworkCore;
 
@@ -11,9 +12,11 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    partial class PMSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260314074042_InitDatabase")]
+    partial class InitDatabase
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2307,115 +2310,6 @@ namespace PMS.Migrations
                     b.ToTable("MenuItemOptionPriceOverride", (string)null);
                 });
 
-            modelBuilder.Entity("PMS.App.MenuItemPriceAdjustment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("CreatorUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("EffectiveDate")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("LastModificationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("LastModifierUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("MenuItemId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("NewPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MenuItemId", "EffectiveDate");
-
-                    b.ToTable("MenuItemPriceAdjustment", (string)null);
-                });
-
-            modelBuilder.Entity("PMS.App.MenuItemPromo", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("CreatorUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("DateFrom")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime>("DateTo")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("LastModificationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("LastModifierUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<decimal>("PercentageDiscount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<string>("PromoName")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DateFrom", "DateTo");
-
-                    b.ToTable("MenuItemPromo", (string)null);
-                });
-
-            modelBuilder.Entity("PMS.App.MenuItemPromoItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("CreatorUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("LastModificationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("LastModifierUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("MenuItemId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("MenuItemPromoId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MenuItemId");
-
-                    b.HasIndex("MenuItemPromoId", "MenuItemId")
-                        .IsUnique();
-
-                    b.ToTable("MenuItemPromoItem", (string)null);
-                });
-
             modelBuilder.Entity("PMS.App.MenuModifier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2639,34 +2533,12 @@ namespace PMS.Migrations
                     b.Property<Guid?>("PosTerminalId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("RoomServiceChargeAmount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("RoomServiceChargePercent")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("RoomServiceChargeType")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("SeniorCitizenDiscount")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<Guid?>("ServerStaffId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("ServiceChargeAmount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("ServiceChargePercent")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("ServiceChargeType")
-                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -2735,10 +2607,6 @@ namespace PMS.Migrations
                     b.Property<string>("Notes")
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
-
-                    b.Property<decimal?>("OriginalPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
 
                     b.Property<Guid>("PosOrderId")
                         .HasColumnType("uniqueidentifier");
@@ -2892,28 +2760,6 @@ namespace PMS.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
-
-                    b.Property<decimal>("RoomServiceChargeAmount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("RoomServiceChargePercent")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("RoomServiceChargeType")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("ServiceChargeFixedAmount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("ServiceChargePercent")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("ServiceChargeType")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -3520,46 +3366,6 @@ namespace PMS.Migrations
                     b.HasIndex("RoomTypeId");
 
                     b.ToTable("QuotationRoom", (string)null);
-                });
-
-            modelBuilder.Entity("PMS.App.RatePlanDateOverride", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("CreatorUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTime?>("LastModificationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("LastModifierUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<decimal>("OverridePrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<DateTime>("RateDate")
-                        .HasColumnType("date");
-
-                    b.Property<Guid>("RoomRatePlanId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoomRatePlanId", "RateDate")
-                        .IsUnique();
-
-                    b.ToTable("RatePlanDateOverride", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.Receipt", b =>
@@ -4205,96 +4011,6 @@ namespace PMS.Migrations
                     b.HasIndex("ToRoomTypeId");
 
                     b.ToTable("RoomChangeRequest", (string)null);
-                });
-
-            modelBuilder.Entity("PMS.App.RoomRatePlan", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("CreatorUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("date");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastModificationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("LastModifierUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("RoomTypeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("date");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoomTypeId", "Code")
-                        .IsUnique();
-
-                    b.ToTable("RoomRatePlan", (string)null);
-                });
-
-            modelBuilder.Entity("PMS.App.RoomRatePlanDay", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("BasePrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("CreatorUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("DayOfWeek")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("LastModificationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("LastModifierUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("RoomRatePlanId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoomRatePlanId", "DayOfWeek")
-                        .IsUnique();
-
-                    b.ToTable("RoomRatePlanDay", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.RoomStatusLog", b =>
@@ -5480,36 +5196,6 @@ namespace PMS.Migrations
                     b.Navigation("Option");
                 });
 
-            modelBuilder.Entity("PMS.App.MenuItemPriceAdjustment", b =>
-                {
-                    b.HasOne("PMS.App.MenuItem", "MenuItem")
-                        .WithMany("PriceAdjustments")
-                        .HasForeignKey("MenuItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MenuItem");
-                });
-
-            modelBuilder.Entity("PMS.App.MenuItemPromoItem", b =>
-                {
-                    b.HasOne("PMS.App.MenuItem", "MenuItem")
-                        .WithMany()
-                        .HasForeignKey("MenuItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("PMS.App.MenuItemPromo", "MenuItemPromo")
-                        .WithMany("Items")
-                        .HasForeignKey("MenuItemPromoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MenuItem");
-
-                    b.Navigation("MenuItemPromo");
-                });
-
             modelBuilder.Entity("PMS.App.MenuModifier", b =>
                 {
                     b.HasOne("PMS.App.MenuItem", "MenuItem")
@@ -5793,17 +5479,6 @@ namespace PMS.Migrations
                     b.Navigation("RoomType");
                 });
 
-            modelBuilder.Entity("PMS.App.RatePlanDateOverride", b =>
-                {
-                    b.HasOne("PMS.App.RoomRatePlan", "RoomRatePlan")
-                        .WithMany("DateOverrides")
-                        .HasForeignKey("RoomRatePlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RoomRatePlan");
-                });
-
             modelBuilder.Entity("PMS.App.Receipt", b =>
                 {
                     b.HasOne("PMS.App.Stay", "Stay")
@@ -6003,28 +5678,6 @@ namespace PMS.Migrations
                     b.Navigation("ToRoom");
 
                     b.Navigation("ToRoomType");
-                });
-
-            modelBuilder.Entity("PMS.App.RoomRatePlan", b =>
-                {
-                    b.HasOne("PMS.App.RoomType", "RoomType")
-                        .WithMany("RatePlans")
-                        .HasForeignKey("RoomTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("RoomType");
-                });
-
-            modelBuilder.Entity("PMS.App.RoomRatePlanDay", b =>
-                {
-                    b.HasOne("PMS.App.RoomRatePlan", "RoomRatePlan")
-                        .WithMany("DayRates")
-                        .HasForeignKey("RoomRatePlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RoomRatePlan");
                 });
 
             modelBuilder.Entity("PMS.App.RoomStatusLog", b =>
@@ -6355,13 +6008,6 @@ namespace PMS.Migrations
                     b.Navigation("Modifiers");
 
                     b.Navigation("OptionPriceOverrides");
-
-                    b.Navigation("PriceAdjustments");
-                });
-
-            modelBuilder.Entity("PMS.App.MenuItemPromo", b =>
-                {
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("PMS.App.OptionGroup", b =>
@@ -6432,17 +6078,8 @@ namespace PMS.Migrations
                     b.Navigation("StatusLogs");
                 });
 
-            modelBuilder.Entity("PMS.App.RoomRatePlan", b =>
-                {
-                    b.Navigation("DateOverrides");
-
-                    b.Navigation("DayRates");
-                });
-
             modelBuilder.Entity("PMS.App.RoomType", b =>
                 {
-                    b.Navigation("RatePlans");
-
                     b.Navigation("Rooms");
                 });
 

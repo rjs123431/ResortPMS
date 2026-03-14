@@ -30,13 +30,90 @@ public class MenuCategoryListDto : EntityDto<Guid>
     public int DisplayOrder { get; set; }
 }
 
+// Option groups (global, assigned to menu items via junction)
+public class OptionDto : EntityDto<Guid>
+{
+    public string Name { get; set; } = string.Empty;
+    /// <summary>Default from the option group. When in menu-item context, use this as the base.</summary>
+    public decimal BasePriceAdjustment { get; set; }
+    /// <summary>Effective price adjustment for this context (menu item override or base).</summary>
+    public decimal PriceAdjustment { get; set; }
+    public int DisplayOrder { get; set; }
+    /// <summary>True when this option is the (effective) default for its group. At most one per group.</summary>
+    public bool IsDefault { get; set; }
+}
+
+public class OptionPriceOverrideDto
+{
+    public Guid OptionId { get; set; }
+    public decimal PriceAdjustment { get; set; }
+}
+
+/// <summary>Override which option is default for a given option group on this menu item. Null DefaultOptionId = use group default.</summary>
+public class DefaultOptionOverrideDto
+{
+    public Guid OptionGroupId { get; set; }
+    public Guid? DefaultOptionId { get; set; }
+}
+
+public class OptionGroupDto : EntityDto<Guid>
+{
+    public string Name { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public int MinSelections { get; set; }
+    public int MaxSelections { get; set; }
+    public List<OptionDto> Options { get; set; } = [];
+    /// <summary>When in menu-item context: override which option is default for this group. Null = use option group default.</summary>
+    public Guid? DefaultOptionIdOverride { get; set; }
+}
+
+public class OptionGroupListDto : EntityDto<Guid>
+{
+    public string Name { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public int MinSelections { get; set; }
+    public int MaxSelections { get; set; }
+    public int OptionCount { get; set; }
+}
+
+public class OptionInputDto
+{
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    public decimal PriceAdjustment { get; set; }
+    public int DisplayOrder { get; set; }
+    public bool IsDefault { get; set; }
+}
+
+public class CreateOptionGroupDto
+{
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public int MinSelections { get; set; }
+    public int MaxSelections { get; set; }
+    public List<OptionInputDto> Options { get; set; } = [];
+}
+
+public class UpdateOptionGroupDto
+{
+    [Required] [StringLength(128)] public string Name { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public int MinSelections { get; set; }
+    public int MaxSelections { get; set; }
+    public List<OptionInputDto> Options { get; set; } = [];
+}
+
 public class MenuItemListDto : EntityDto<Guid>
 {
     public Guid CategoryId { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    /// <summary>Base or adjusted price (no promo). From menu item or latest price adjustment effective on the date.</summary>
+    public decimal OriginalPrice { get; set; }
+    /// <summary>Best price (promo price when a promo applies, otherwise same as OriginalPrice).</summary>
     public decimal Price { get; set; }
     public bool IsAvailable { get; set; }
+    /// <summary>Assigned option groups with their options (for POS and settings get).</summary>
+    public List<OptionGroupDto> OptionGroups { get; set; } = [];
 }
 
 // Order list item for retrieve/search
@@ -86,7 +163,28 @@ public class PosOrderDto : EntityDto<Guid>
     public List<OrderPaymentDto> Payments { get; set; } = [];
     public decimal ItemsTotal { get; set; }
     public decimal PaymentsTotal { get; set; }
+    /// <summary>Items total after discount percent, discount amount, and senior citizen discount.</summary>
+    public decimal TotalAfterDiscount { get; set; }
+    /// <summary>General service charge amount (from outlet settings).</summary>
+    public decimal ServiceChargeAmount { get; set; }
+    /// <summary>Room service charge amount (from outlet; only when order type is Room Service).</summary>
+    public decimal RoomServiceChargeAmount { get; set; }
+    /// <summary>Total after discounts + service charge + room service charge.</summary>
+    public decimal OrderTotal { get; set; }
     public decimal BalanceDue { get; set; }
+}
+
+public class UpdateOrderDiscountsDto
+{
+    [Range(0, 100)] public decimal DiscountPercent { get; set; }
+    [Range(0, double.MaxValue)] public decimal DiscountAmount { get; set; }
+    [Range(0, double.MaxValue)] public decimal SeniorCitizenDiscount { get; set; }
+}
+
+public class SelectedOptionDto
+{
+    public string GroupName { get; set; } = string.Empty;
+    public string OptionName { get; set; } = string.Empty;
 }
 
 public class OrderItemDto : EntityDto<Guid>
@@ -96,9 +194,14 @@ public class OrderItemDto : EntityDto<Guid>
     public string MenuItemName { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public decimal Price { get; set; }
+    /// <summary>Base/adjusted price at time of order (before promo).</summary>
+    public decimal OriginalPrice { get; set; }
+    /// <summary>Quantity × Price (line total).</summary>
+    public decimal Amount { get; set; }
     public decimal LineTotal { get; set; }
     public int Status { get; set; }
     public string Notes { get; set; } = string.Empty;
+    public List<SelectedOptionDto> SelectedOptions { get; set; } = [];
 }
 
 public class OrderPaymentDto : EntityDto<Guid>
@@ -128,6 +231,8 @@ public class CreatePosOrderLineDto
     [Range(1, 999)] public int Quantity { get; set; } = 1;
     [Required] public decimal Price { get; set; }
     [StringLength(512)] public string Notes { get; set; } = string.Empty;
+    /// <summary>Option IDs selected for this line (must belong to groups assigned to the menu item).</summary>
+    public List<Guid>? SelectedOptionIds { get; set; }
 }
 
 public class CreatePosOrderWithItemsDto
@@ -148,6 +253,7 @@ public class AddOrderItemDto
     [Range(1, 999)] public int Quantity { get; set; } = 1;
     [Required] public decimal Price { get; set; }
     [StringLength(512)] public string Notes { get; set; } = string.Empty;
+    public List<Guid>? SelectedOptionIds { get; set; }
 }
 
 public class AddOrderItemsDto
@@ -241,6 +347,12 @@ public class PosOutletDto : EntityDto<Guid>
     public bool IsActive { get; set; }
     public bool HasKitchen { get; set; }
     public Guid? ChargeTypeId { get; set; }
+    public int RoomServiceChargeType { get; set; } // RoomServiceChargeType enum
+    public decimal RoomServiceChargePercent { get; set; }
+    public decimal RoomServiceChargeAmount { get; set; }
+    public int ServiceChargeType { get; set; } // ServiceChargeType enum
+    public decimal ServiceChargePercent { get; set; }
+    public decimal ServiceChargeFixedAmount { get; set; }
 }
 
 public class CreatePosOutletDto
@@ -250,6 +362,12 @@ public class CreatePosOutletDto
     public bool IsActive { get; set; } = true;
     public bool HasKitchen { get; set; }
     public Guid? ChargeTypeId { get; set; }
+    public int RoomServiceChargeType { get; set; }
+    [Range(0, 100)] public decimal RoomServiceChargePercent { get; set; }
+    [Range(0, double.MaxValue)] public decimal RoomServiceChargeAmount { get; set; }
+    public int ServiceChargeType { get; set; }
+    [Range(0, 100)] public decimal ServiceChargePercent { get; set; }
+    [Range(0, double.MaxValue)] public decimal ServiceChargeFixedAmount { get; set; }
 }
 
 public class UpdatePosOutletDto
@@ -259,6 +377,12 @@ public class UpdatePosOutletDto
     public bool IsActive { get; set; }
     public bool HasKitchen { get; set; }
     public Guid? ChargeTypeId { get; set; }
+    public int RoomServiceChargeType { get; set; }
+    [Range(0, 100)] public decimal RoomServiceChargePercent { get; set; }
+    [Range(0, double.MaxValue)] public decimal RoomServiceChargeAmount { get; set; }
+    public int ServiceChargeType { get; set; }
+    [Range(0, 100)] public decimal ServiceChargePercent { get; set; }
+    [Range(0, double.MaxValue)] public decimal ServiceChargeFixedAmount { get; set; }
 }
 
 public class CreatePosTableDto
@@ -316,6 +440,11 @@ public class CreateMenuItemDto
     [Required] [StringLength(256)] public string Name { get; set; } = string.Empty;
     [Range(0, double.MaxValue)] public decimal Price { get; set; }
     public bool IsAvailable { get; set; } = true;
+    public List<Guid>? AssignedOptionGroupIds { get; set; }
+    /// <summary>Per-option price overrides for this menu item. Omit or same as base = use option default.</summary>
+    public List<OptionPriceOverrideDto>? OptionPriceOverrides { get; set; }
+    /// <summary>Per-group default option override. Null DefaultOptionId = use option group default.</summary>
+    public List<DefaultOptionOverrideDto>? DefaultOptionOverrides { get; set; }
 }
 
 public class UpdateMenuItemDto
@@ -324,4 +453,77 @@ public class UpdateMenuItemDto
     [Required] [StringLength(256)] public string Name { get; set; } = string.Empty;
     [Range(0, double.MaxValue)] public decimal Price { get; set; }
     public bool IsAvailable { get; set; }
+    public List<Guid>? AssignedOptionGroupIds { get; set; }
+    public List<OptionPriceOverrideDto>? OptionPriceOverrides { get; set; }
+    public List<DefaultOptionOverrideDto>? DefaultOptionOverrides { get; set; }
+}
+
+// ── Price adjustments (effective date) ─────────────────────────────────────
+
+public class MenuItemPriceAdjustmentListDto : EntityDto<Guid>
+{
+    public Guid MenuItemId { get; set; }
+    public string MenuItemName { get; set; } = string.Empty;
+    public string CategoryName { get; set; } = string.Empty;
+    public decimal NewPrice { get; set; }
+    public DateTime EffectiveDate { get; set; }
+}
+
+public class MenuItemPriceAdjustmentDto : EntityDto<Guid>
+{
+    public Guid MenuItemId { get; set; }
+    public string MenuItemName { get; set; } = string.Empty;
+    public decimal NewPrice { get; set; }
+    public DateTime EffectiveDate { get; set; }
+}
+
+public class CreateMenuItemPriceAdjustmentDto
+{
+    [Required] public Guid MenuItemId { get; set; }
+    [Range(0, double.MaxValue)] public decimal NewPrice { get; set; }
+    [Required] public DateTime EffectiveDate { get; set; }
+}
+
+public class UpdateMenuItemPriceAdjustmentDto
+{
+    [Range(0, double.MaxValue)] public decimal NewPrice { get; set; }
+    [Required] public DateTime EffectiveDate { get; set; }
+}
+
+// ── Promos (date range + percentage discount + items) ──────────────────────
+
+public class MenuItemPromoListDto : EntityDto<Guid>
+{
+    public string PromoName { get; set; } = string.Empty;
+    public DateTime DateFrom { get; set; }
+    public DateTime DateTo { get; set; }
+    public decimal PercentageDiscount { get; set; }
+    public int MenuItemCount { get; set; }
+}
+
+public class MenuItemPromoDto : EntityDto<Guid>
+{
+    public string PromoName { get; set; } = string.Empty;
+    public DateTime DateFrom { get; set; }
+    public DateTime DateTo { get; set; }
+    public decimal PercentageDiscount { get; set; }
+    public List<Guid> MenuItemIds { get; set; } = [];
+}
+
+public class CreateMenuItemPromoDto
+{
+    [Required] [StringLength(128)] public string PromoName { get; set; } = string.Empty;
+    [Required] public DateTime DateFrom { get; set; }
+    [Required] public DateTime DateTo { get; set; }
+    [Range(0, 100)] public decimal PercentageDiscount { get; set; }
+    public List<Guid> MenuItemIds { get; set; } = [];
+}
+
+public class UpdateMenuItemPromoDto
+{
+    [Required] [StringLength(128)] public string PromoName { get; set; } = string.Empty;
+    [Required] public DateTime DateFrom { get; set; }
+    [Required] public DateTime DateTo { get; set; }
+    [Range(0, 100)] public decimal PercentageDiscount { get; set; }
+    public List<Guid> MenuItemIds { get; set; } = [];
 }

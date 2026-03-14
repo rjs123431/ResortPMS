@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { POSLayout } from '@components/layout/POSLayout';
 import { POSSidebar } from '@components/layout/POSSidebar';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { posService } from '@services/pos.service';
-import type { MenuItemListDto, MenuCategoryListDto } from '@/types/pos.types';
+import type { MenuItemListDto, MenuCategoryListDto, OptionGroupDto } from '@/types/pos.types';
 import {
   MenuItemDialogForm,
   defaultMenuItemForm,
+  type MenuItemFormState,
 } from './MenuItemDialogForm';
 import {
   MenuCategoryDialogForm,
@@ -28,11 +29,17 @@ export const PosMenuPage = () => {
 
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [menuItemForm, setMenuItemForm] = useState(defaultMenuItemForm());
+  const [menuItemForm, setMenuItemForm] = useState<MenuItemFormState>(defaultMenuItemForm());
+  const [assignedGroupDetails, setAssignedGroupDetails] = useState<OptionGroupDto[]>([]);
 
   const { data: categories = [] } = useQuery({
     queryKey: categoriesQueryKey,
     queryFn: () => posService.getSettingsMenuCategories(),
+  });
+
+  const { data: optionGroups = [] } = useQuery({
+    queryKey: ['pos-settings-option-groups'],
+    queryFn: () => posService.getOptionGroups(),
   });
 
   const { data: menuItems = [] } = useQuery({
@@ -88,15 +95,76 @@ export const PosMenuPage = () => {
 
   const openEditItem = async (row: MenuItemListDto) => {
     const dto = await posService.getSettingsMenuItem(row.id);
+    const groups = dto.optionGroups ?? [];
+    const optionPriceOverrides: Record<string, number> = {};
+    const defaultOptionOverrides: Record<string, string | null> = {};
+    for (const g of groups) {
+      for (const opt of g.options) {
+        optionPriceOverrides[opt.id] = opt.priceAdjustment;
+      }
+      defaultOptionOverrides[g.id] = g.defaultOptionIdOverride ?? null;
+    }
     setMenuItemForm({
       categoryId: dto.categoryId,
       name: dto.name,
       price: dto.price,
       isAvailable: dto.isAvailable,
+      assignedOptionGroupIds: groups.map((g) => g.id),
+      optionPriceOverrides,
+      defaultOptionOverrides,
     });
+    setAssignedGroupDetails(groups);
     setEditingItemId(row.id);
     setShowItemDialog(true);
   };
+
+  // When user assigns/unassigns option groups, sync assignedGroupDetails and default overrides for new options.
+  useEffect(() => {
+    if (!showItemDialog) return;
+    const ids = menuItemForm.assignedOptionGroupIds ?? [];
+    setAssignedGroupDetails((prev) => {
+      const next = prev.filter((g) => ids.includes(g.id));
+      const missingIds = ids.filter((id) => !next.some((g) => g.id === id));
+      if (missingIds.length === 0) return next;
+      // Fetch missing groups and merge in a separate effect/flow so we don't set state during render.
+      return next;
+    });
+    if (ids.length === 0) return;
+    const missingIds = ids.filter(
+      (id) => !assignedGroupDetails.some((g) => g.id === id),
+    );
+    if (missingIds.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      const fetched: OptionGroupDto[] = [];
+      for (const id of missingIds) {
+        const g = await posService.getOptionGroup(id);
+        if (!cancelled) fetched.push(g);
+      }
+      if (cancelled || fetched.length === 0) return;
+      setAssignedGroupDetails((prev) => {
+        const kept = prev.filter((g) => ids.includes(g.id));
+        const order = ids.map((id) => kept.find((x) => x.id === id) ?? fetched.find((x) => x.id === id)).filter(Boolean) as OptionGroupDto[];
+        return order;
+      });
+      setMenuItemForm((prev) => {
+        const overrides = { ...(prev.optionPriceOverrides ?? {}) };
+        const defaultOverrides = { ...(prev.defaultOptionOverrides ?? {}) };
+        for (const g of fetched) {
+          for (const opt of g.options) {
+            if (overrides[opt.id] === undefined) {
+              overrides[opt.id] = opt.basePriceAdjustment ?? opt.priceAdjustment;
+            }
+          }
+          if (defaultOverrides[g.id] === undefined) defaultOverrides[g.id] = null;
+        }
+        return { ...prev, optionPriceOverrides: overrides, defaultOptionOverrides: defaultOverrides };
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showItemDialog, menuItemForm.assignedOptionGroupIds]);
 
   return (
     <POSLayout sidebar={<POSSidebar />}>
@@ -190,6 +258,7 @@ export const PosMenuPage = () => {
                     ...defaultMenuItemForm(),
                     categoryId: selectedCategoryId || (categories[0]?.id ?? ''),
                   });
+                  setAssignedGroupDetails([]);
                   setEditingItemId(null);
                   setShowItemDialog(true);
                 }}
@@ -257,17 +326,39 @@ export const PosMenuPage = () => {
         editingId={editingItemId}
         form={menuItemForm}
         categories={categories}
+        optionGroups={optionGroups}
+        assignedGroupDetails={assignedGroupDetails}
         isSaving={createItemMutation.isPending || updateItemMutation.isPending}
         onClose={() => {
           setShowItemDialog(false);
           setEditingItemId(null);
+          setAssignedGroupDetails([]);
         }}
         onFormChange={setMenuItemForm}
         onSave={() => {
+          const overrides = assignedGroupDetails.flatMap((g) =>
+            g.options.map((o) => ({
+              optionId: o.id,
+              priceAdjustment: menuItemForm.optionPriceOverrides?.[o.id] ?? o.basePriceAdjustment ?? o.priceAdjustment,
+            })),
+          );
+          const defaultOverrides = assignedGroupDetails.map((g) => ({
+            optionGroupId: g.id,
+            defaultOptionId: menuItemForm.defaultOptionOverrides?.[g.id] ?? null,
+          }));
+          const base = {
+            categoryId: menuItemForm.categoryId,
+            name: menuItemForm.name,
+            price: menuItemForm.price,
+            isAvailable: menuItemForm.isAvailable,
+            assignedOptionGroupIds: menuItemForm.assignedOptionGroupIds,
+            optionPriceOverrides: overrides,
+            defaultOptionOverrides: defaultOverrides,
+          };
           if (editingItemId) {
-            updateItemMutation.mutate({ id: editingItemId, input: menuItemForm });
+            updateItemMutation.mutate({ id: editingItemId, input: base });
           } else {
-            createItemMutation.mutate(menuItemForm);
+            createItemMutation.mutate(base);
           }
         }}
       />

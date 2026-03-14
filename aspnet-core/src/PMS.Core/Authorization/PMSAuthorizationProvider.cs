@@ -46,6 +46,11 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         roomTypes.CreateChildPermission(PermissionNames.Pages_RoomTypes_Create, L("Create"));
         roomTypes.CreateChildPermission(PermissionNames.Pages_RoomTypes_Edit, L("Edit"));
 
+        // SETUP — Room Rate Plans
+        var roomRatePlans = setup.CreateChildPermission(PermissionNames.Pages_RoomRatePlans, L("RoomRatePlans"), multiTenancySides: MultiTenancySides.Tenant);
+        roomRatePlans.CreateChildPermission(PermissionNames.Pages_RoomRatePlans_Create, L("Create"));
+        roomRatePlans.CreateChildPermission(PermissionNames.Pages_RoomRatePlans_Edit, L("Edit"));
+
         // SETUP — Rooms
         var rooms = setup.CreateChildPermission(PermissionNames.Pages_Rooms, L("Rooms"), multiTenancySides: MultiTenancySides.Tenant);
         rooms.CreateChildPermission(PermissionNames.Pages_Rooms_Create, L("Create"));

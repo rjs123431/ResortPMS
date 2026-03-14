@@ -213,6 +213,67 @@ export interface RoomTypeDto extends CreateRoomTypeDto {
   isActive: boolean;
 }
 
+// Room rate plan pricing (0 = Sunday, 6 = Saturday)
+export interface RoomRatePlanDayDto {
+  id?: string;
+  roomRatePlanId: string;
+  dayOfWeek: number;
+  basePrice: number;
+}
+
+export interface RatePlanDateOverrideDto {
+  id?: string;
+  roomRatePlanId: string;
+  rateDate: string;
+  overridePrice: number;
+  description?: string;
+}
+
+export interface RoomRatePlanDto {
+  id: string;
+  roomTypeId: string;
+  roomTypeName: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  priority: number;
+  isDefault: boolean;
+  isActive: boolean;
+  dayRates: RoomRatePlanDayDto[];
+  dateOverrides: RatePlanDateOverrideDto[];
+}
+
+export interface RoomRatePlanListDto {
+  id: string;
+  roomTypeId: string;
+  roomTypeName: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  priority: number;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface CreateRoomRatePlanDto {
+  roomTypeId: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  priority: number;
+  isDefault: boolean;
+  isActive: boolean;
+  dayRates: RoomRatePlanDayDto[];
+  dateOverrides: RatePlanDateOverrideDto[];
+}
+
+export interface UpdateRoomRatePlanDto extends CreateRoomRatePlanDto {
+  id: string;
+}
+
 export interface CreateExtraBedTypeDto {
   name: string;
   basePrice: number;

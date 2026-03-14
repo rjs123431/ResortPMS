@@ -35,6 +35,7 @@ public interface IPosOrderAppService : IApplicationService
     Task SendToKitchenAsync(SendToKitchenDto input);
     Task CloseOrderAsync(Guid orderId);
     Task CancelOrderAsync(CancelOrderDto input);
+    Task UpdateOrderDiscountsAsync(Guid orderId, UpdateOrderDiscountsDto input);
     Task AddPaymentAsync(AddOrderPaymentDto input);
     Task<VerifyStayForRoomChargeDto> VerifyStayByRoomNumberAsync(string roomNumber);
     Task ChargeToRoomAsync(ChargeToRoomDto input);
@@ -44,16 +45,22 @@ public interface IPosOrderAppService : IApplicationService
 public class PosOrderAppService(
     IRepository<PosOrder, Guid> orderRepository,
     IRepository<PosOrderItem, Guid> posOrderItemRepository,
+    IRepository<PosOrderItemOption, Guid> posOrderItemOptionRepository,
     IRepository<PosOrderPayment, Guid> posOrderPaymentRepository,
     IRepository<PosOutlet, Guid> outletRepository,
     IRepository<PosTable, Guid> tableRepository,
     IRepository<MenuCategory, Guid> menuCategoryRepository,
     IRepository<MenuItem, Guid> menuItemRepository,
+    IRepository<MenuItemOptionGroup, Guid> menuItemOptionGroupRepository,
+    IRepository<MenuItemOptionPriceOverride, Guid> menuItemOptionPriceOverrideRepository,
+    IRepository<OptionGroup, Guid> optionGroupRepository,
+    IRepository<Option, Guid> optionRepository,
     IRepository<Folio, Guid> folioRepository,
     IRepository<FolioTransaction, Guid> folioTransactionRepository,
     IRepository<Stay, Guid> stayRepository,
     IRepository<ChargeType, Guid> chargeTypeRepository,
-    IDocumentNumberService documentNumberService
+    IDocumentNumberService documentNumberService,
+    IMenuItemPriceManager menuItemPriceManager
 ) : PMSAppServiceBase, IPosOrderAppService
 {
     private const string RestaurantChargeTypeName = "Restaurant";
@@ -112,22 +119,98 @@ public class PosOrderAppService(
     {
         var query = menuItemRepository.GetAll()
             .Include(m => m.Category)
+            .Include(m => m.MenuItemOptionGroups)
             .Where(m => m.IsAvailable);
         if (categoryId.HasValue && categoryId.Value != Guid.Empty)
             query = query.Where(m => m.CategoryId == categoryId.Value);
-        var list = await query
+        var items = await query
             .OrderBy(m => m.Category.DisplayOrder).ThenBy(m => m.Name)
-            .Select(m => new MenuItemListDto
+            .ToListAsync();
+        var itemIds = items.Select(m => m.Id).ToList();
+        var groupIds = items.SelectMany(m => m.MenuItemOptionGroups.Select(j => j.OptionGroupId)).Distinct().ToList();
+        if (groupIds.Count == 0)
+        {
+            var list = items.Select(m => new MenuItemListDto
             {
                 Id = m.Id,
                 CategoryId = m.CategoryId,
                 CategoryName = m.Category.Name,
                 Name = m.Name,
+                OriginalPrice = m.Price,
                 Price = m.Price,
-                IsAvailable = m.IsAvailable
-            })
+                IsAvailable = m.IsAvailable,
+                OptionGroups = []
+            }).ToList();
+            var today = Clock.Now;
+            foreach (var dto in list)
+            {
+                dto.OriginalPrice = await menuItemPriceManager.GetBasePriceAsync(dto.Id, today);
+                dto.Price = await menuItemPriceManager.GetBestPriceAsync(dto.Id, today);
+            }
+            return list;
+        }
+        var groups = await optionGroupRepository.GetAll()
+            .Where(g => groupIds.Contains(g.Id))
+            .Include(g => g.Options)
             .ToListAsync();
-        return list;
+        var allOverrides = await menuItemOptionPriceOverrideRepository.GetAll()
+            .Where(x => itemIds.Contains(x.MenuItemId))
+            .ToListAsync();
+        var overrideByItemAndOption = allOverrides.GroupBy(x => x.MenuItemId).ToDictionary(g => g.Key, g => g.ToDictionary(x => x.OptionId, x => x.PriceAdjustment));
+        var junctionByItem = items.ToDictionary(m => m.Id, m => m.MenuItemOptionGroups.OrderBy(j => j.DisplayOrder).ThenBy(j => j.OptionGroupId).Select(j => j.OptionGroupId).ToList());
+        var defaultByItemAndGroup = items.SelectMany(m => m.MenuItemOptionGroups.Select(j => (m.Id, j.OptionGroupId, j.DefaultOptionId)))
+            .GroupBy(x => x.Id)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.OptionGroupId, x => x.DefaultOptionId));
+        var menuItemDtos = items.Select(m =>
+        {
+            var itemOverrides = overrideByItemAndOption.GetValueOrDefault(m.Id, new Dictionary<Guid, decimal>());
+            var itemDefaultByGroup = defaultByItemAndGroup.GetValueOrDefault(m.Id, new Dictionary<Guid, Guid?>());
+            var ogIds = junctionByItem.GetValueOrDefault(m.Id, []);
+            var optionGroups = ogIds
+                .Select(ogId => groups.FirstOrDefault(g => g.Id == ogId))
+                .Where(g => g != null)
+                .Select(g =>
+                {
+                    var effectiveDefaultId = itemDefaultByGroup.TryGetValue(g!.Id, out var over) && over.HasValue
+                        ? over.Value
+                        : g.Options.FirstOrDefault(o => o.IsDefault)?.Id;
+                    return new OptionGroupDto
+                    {
+                        Id = g.Id,
+                        Name = g.Name,
+                        DisplayOrder = 0,
+                        MinSelections = g.MinSelections,
+                        MaxSelections = g.MaxSelections,
+                        Options = g.Options.OrderBy(o => o.DisplayOrder).ThenBy(o => o.Name).Select(o => new OptionDto
+                        {
+                            Id = o.Id,
+                            Name = o.Name,
+                            BasePriceAdjustment = o.PriceAdjustment,
+                            PriceAdjustment = itemOverrides.TryGetValue(o.Id, out var ov) ? ov : o.PriceAdjustment,
+                            DisplayOrder = o.DisplayOrder,
+                            IsDefault = o.Id == effectiveDefaultId
+                        }).ToList()
+                    };
+                }).ToList();
+            return new MenuItemListDto
+            {
+                Id = m.Id,
+                CategoryId = m.CategoryId,
+                CategoryName = m.Category.Name,
+                Name = m.Name,
+                OriginalPrice = m.Price,
+                Price = m.Price,
+                IsAvailable = m.IsAvailable,
+                OptionGroups = optionGroups
+            };
+        }).ToList();
+        var asOfDate = Clock.Now;
+        foreach (var dto in menuItemDtos)
+        {
+            dto.OriginalPrice = await menuItemPriceManager.GetBasePriceAsync(dto.Id, asOfDate);
+            dto.Price = await menuItemPriceManager.GetBestPriceAsync(dto.Id, asOfDate);
+        }
+        return menuItemDtos;
     }
 
     public async Task<PosOrderDto> GetOrderAsync(Guid orderId)
@@ -137,6 +220,7 @@ public class PosOrderAppService(
             .Include(o => o.Table)
             .Include(o => o.ServerStaff)
             .Include(o => o.Items).ThenInclude(i => i.MenuItem)
+            .Include(o => o.Items).ThenInclude(i => i.SelectedOptions).ThenInclude(s => s.Option).ThenInclude(o => o.OptionGroup)
             .Include(o => o.Payments).ThenInclude(p => p.PaymentMethod)
             .FirstOrDefaultAsync(o => o.Id == orderId);
         if (order == null) throw new UserFriendlyException(L("EntityNotFound"));
@@ -152,6 +236,7 @@ public class PosOrderAppService(
             .Include(o => o.Table)
             .Include(o => o.ServerStaff)
             .Include(o => o.Items).ThenInclude(i => i.MenuItem)
+            .Include(o => o.Items).ThenInclude(i => i.SelectedOptions).ThenInclude(s => s.Option).ThenInclude(o => o.OptionGroup)
             .Include(o => o.Payments).ThenInclude(p => p.PaymentMethod)
             .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber.Trim());
         if (order == null) throw new UserFriendlyException("Order not found.");
@@ -204,6 +289,7 @@ public class PosOrderAppService(
             ServerStaffId = input.ServerStaffId,
             OpenedAt = Clock.Now
         };
+        CopyChargeSettingsFromOutlet(order, outlet);
         var id = await orderRepository.InsertAndGetIdAsync(order);
         if (input.TableId.HasValue)
         {
@@ -232,6 +318,7 @@ public class PosOrderAppService(
             ServerStaffId = input.ServerStaffId,
             OpenedAt = Clock.Now
         };
+        CopyChargeSettingsFromOutlet(order, outlet);
         var orderId = await orderRepository.InsertAndGetIdAsync(order);
         if (input.TableId.HasValue)
         {
@@ -241,15 +328,20 @@ public class PosOrderAppService(
         }
         foreach (var line in input.Items ?? [])
         {
-            await posOrderItemRepository.InsertAsync(new PosOrderItem
+            var (price, _) = await ValidateAndComputePriceAsync(line.MenuItemId, line.SelectedOptionIds, order.OpenedAt);
+            var originalPrice = await menuItemPriceManager.GetBasePriceAsync(line.MenuItemId, order.OpenedAt);
+            var item = new PosOrderItem
             {
                 PosOrderId = orderId,
                 MenuItemId = line.MenuItemId,
                 Quantity = line.Quantity,
-                Price = line.Price,
+                Price = price,
+                OriginalPrice = originalPrice,
                 Status = OrderItemStatus.Pending,
                 Notes = line.Notes ?? ""
-            });
+            };
+            await posOrderItemRepository.InsertAsync(item);
+            await InsertSelectedOptionsAsync(item.Id, line.SelectedOptionIds);
         }
         return orderId;
     }
@@ -260,16 +352,21 @@ public class PosOrderAppService(
         var order = await orderRepository.GetAsync(input.OrderId);
         if (order.Status != PosOrderStatus.Open && order.Status != PosOrderStatus.SentToKitchen && order.Status != PosOrderStatus.Preparing)
             throw new UserFriendlyException("Cannot add items to this order.");
-        var menuItem = await menuItemRepository.GetAsync(input.MenuItemId);
-        await posOrderItemRepository.InsertAsync(new PosOrderItem
+        var (price, _) = await ValidateAndComputePriceAsync(input.MenuItemId, input.SelectedOptionIds, order.OpenedAt);
+        var originalPrice = await menuItemPriceManager.GetBasePriceAsync(input.MenuItemId, order.OpenedAt);
+        var item = new PosOrderItem
         {
             PosOrderId = input.OrderId,
             MenuItemId = input.MenuItemId,
             Quantity = input.Quantity,
-            Price = input.Price,
+            Price = price,
+            OriginalPrice = originalPrice,
             Status = OrderItemStatus.Pending,
             Notes = input.Notes ?? ""
-        });
+        };
+        await posOrderItemRepository.InsertAsync(item);
+        await InsertSelectedOptionsAsync(item.Id, input.SelectedOptionIds);
+        await RefreshOrderChargeSettingsAsync(order);
     }
 
     [UnitOfWork]
@@ -282,17 +379,22 @@ public class PosOrderAppService(
             throw new UserFriendlyException("Cannot add items to this order.");
         foreach (var line in input.Items)
         {
-            await menuItemRepository.GetAsync(line.MenuItemId);
-            await posOrderItemRepository.InsertAsync(new PosOrderItem
+            var (price, _) = await ValidateAndComputePriceAsync(line.MenuItemId, line.SelectedOptionIds, order.OpenedAt);
+            var originalPrice = await menuItemPriceManager.GetBasePriceAsync(line.MenuItemId, order.OpenedAt);
+            var item = new PosOrderItem
             {
                 PosOrderId = input.OrderId,
                 MenuItemId = line.MenuItemId,
                 Quantity = line.Quantity,
-                Price = line.Price,
+                Price = price,
+                OriginalPrice = originalPrice,
                 Status = OrderItemStatus.Pending,
                 Notes = line.Notes ?? ""
-            });
+            };
+            await posOrderItemRepository.InsertAsync(item);
+            await InsertSelectedOptionsAsync(item.Id, line.SelectedOptionIds);
         }
+        await RefreshOrderChargeSettingsAsync(order);
     }
 
     [UnitOfWork]
@@ -312,25 +414,98 @@ public class PosOrderAppService(
         if (order.Status == PosOrderStatus.Closed || order.Status == PosOrderStatus.Cancelled)
             throw new UserFriendlyException("Cannot send closed or cancelled order to kitchen.");
 
-        var newItemIds = new List<Guid>();
         foreach (var line in input.Items)
         {
-            await menuItemRepository.GetAsync(line.MenuItemId);
-            var entity = new PosOrderItem
+            var (price, _) = await ValidateAndComputePriceAsync(line.MenuItemId, line.SelectedOptionIds, order.OpenedAt);
+            var originalPrice = await menuItemPriceManager.GetBasePriceAsync(line.MenuItemId, order.OpenedAt);
+            var item = new PosOrderItem
             {
                 PosOrderId = input.OrderId,
                 MenuItemId = line.MenuItemId,
                 Quantity = line.Quantity,
-                Price = line.Price,
+                Price = price,
+                OriginalPrice = originalPrice,
                 Status = OrderItemStatus.SentToKitchen,
                 Notes = line.Notes ?? ""
             };
-            await posOrderItemRepository.InsertAsync(entity);
-            newItemIds.Add(entity.Id);
+            await posOrderItemRepository.InsertAsync(item);
+            await InsertSelectedOptionsAsync(item.Id, line.SelectedOptionIds);
         }
         if (order.Status == PosOrderStatus.Open)
             order.Status = PosOrderStatus.SentToKitchen;
+        CopyChargeSettingsFromOutlet(order, order.Outlet);
         await orderRepository.UpdateAsync(order);
+    }
+
+    private async Task<(decimal Price, List<Guid> ValidOptionIds)> ValidateAndComputePriceAsync(Guid menuItemId, List<Guid>? selectedOptionIds, DateTime asOfDate)
+    {
+        var menuItem = await menuItemRepository.GetAsync(menuItemId);
+        var basePrice = await menuItemPriceManager.GetBestPriceAsync(menuItemId, asOfDate);
+        var assignedJunctions = await menuItemOptionGroupRepository.GetAll()
+            .Where(j => j.MenuItemId == menuItemId)
+            .ToListAsync();
+        var assignedGroupIds = assignedJunctions.Select(j => j.OptionGroupId).ToHashSet();
+        if (assignedGroupIds.Count == 0)
+        {
+            if (selectedOptionIds is { Count: > 0 })
+                throw new UserFriendlyException("This menu item has no option groups. Do not send selected options.");
+            return (basePrice, []);
+        }
+        var optionIds = (selectedOptionIds ?? []).Where(id => id != Guid.Empty).Distinct().ToList();
+        if (optionIds.Count == 0)
+        {
+            foreach (var j in assignedJunctions)
+            {
+                var grp = await optionGroupRepository.GetAll().Include(g => g.Options).FirstOrDefaultAsync(g => g.Id == j.OptionGroupId);
+                if (grp != null && grp.MinSelections > 0)
+                    throw new UserFriendlyException($"Option group \"{grp.Name}\" requires at least {grp.MinSelections} selection(s).");
+            }
+            return (basePrice, []);
+        }
+        var options = await optionRepository.GetAll()
+            .Include(o => o.OptionGroup)
+            .Where(o => optionIds.Contains(o.Id))
+            .ToListAsync();
+        var optionIdsSet = options.Select(o => o.Id).ToHashSet();
+        foreach (var id in optionIds)
+        {
+            if (!optionIdsSet.Contains(id))
+                throw new UserFriendlyException("One or more selected option IDs are invalid.");
+        }
+        var byGroup = options.GroupBy(o => o.OptionGroupId).ToDictionary(g => g.Key, g => g.ToList());
+        foreach (var grpId in assignedGroupIds)
+        {
+            var grp = await optionGroupRepository.GetAsync(grpId);
+            var selectedInGroup = byGroup.GetValueOrDefault(grpId, []);
+            if (selectedInGroup.Count < grp.MinSelections)
+                throw new UserFriendlyException($"Option group \"{grp.Name}\" requires at least {grp.MinSelections} selection(s).");
+            if (selectedInGroup.Count > grp.MaxSelections)
+                throw new UserFriendlyException($"Option group \"{grp.Name}\" allows at most {grp.MaxSelections} selection(s).");
+        }
+        foreach (var opt in options)
+        {
+            if (!assignedGroupIds.Contains(opt.OptionGroupId))
+                throw new UserFriendlyException($"Option \"{opt.Name}\" does not belong to an option group assigned to this menu item.");
+        }
+        var overrides = await menuItemOptionPriceOverrideRepository.GetAll()
+            .Where(x => x.MenuItemId == menuItemId && optionIds.Contains(x.OptionId))
+            .ToListAsync();
+        var overrideByOption = overrides.ToDictionary(x => x.OptionId, x => x.PriceAdjustment);
+        var totalAdjustment = options.Sum(o => overrideByOption.TryGetValue(o.Id, out var ov) ? ov : o.PriceAdjustment);
+        return (basePrice + totalAdjustment, optionIds);
+    }
+
+    private async Task InsertSelectedOptionsAsync(Guid posOrderItemId, List<Guid>? selectedOptionIds)
+    {
+        if (selectedOptionIds == null) return;
+        foreach (var optionId in selectedOptionIds.Where(id => id != Guid.Empty).Distinct())
+        {
+            await posOrderItemOptionRepository.InsertAsync(new PosOrderItemOption
+            {
+                PosOrderItemId = posOrderItemId,
+                OptionId = optionId
+            });
+        }
     }
 
     [UnitOfWork]
@@ -347,6 +522,7 @@ public class PosOrderAppService(
         item.Quantity = input.Quantity;
         item.Notes = input.Notes ?? "";
         await posOrderItemRepository.UpdateAsync(item);
+        await RefreshOrderChargeSettingsAsync(item.Order);
     }
 
     [UnitOfWork]
@@ -362,6 +538,7 @@ public class PosOrderAppService(
         item.CancelReasonType = (OrderItemCancelReasonType)input.ReasonType;
         item.CancelReason = input.Reason ?? string.Empty;
         await posOrderItemRepository.UpdateAsync(item);
+        await RefreshOrderChargeSettingsAsync(item.Order);
     }
 
     [UnitOfWork]
@@ -414,8 +591,13 @@ public class PosOrderAppService(
         if (order == null) throw new UserFriendlyException("Order not found.");
         if (order.Status == PosOrderStatus.Closed) throw new UserFriendlyException("Order is already closed.");
         var itemsTotal = order.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity * i.Price);
+        var discountFromPercent = itemsTotal * order.DiscountPercent / 100m;
+        var totalAfterDiscount = itemsTotal - discountFromPercent - order.DiscountAmount - order.SeniorCitizenDiscount;
+        if (totalAfterDiscount < 0) totalAfterDiscount = 0;
+        var (serviceChargeAmount, roomServiceChargeAmount) = ComputeServiceChargesFromOrder(order, totalAfterDiscount);
+        var orderTotal = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
         var paymentsTotal = order.Payments.Sum(p => p.Amount);
-        if (itemsTotal > 0 && paymentsTotal < itemsTotal)
+        if (orderTotal > 0 && paymentsTotal < orderTotal)
             throw new UserFriendlyException("Cannot close order with unpaid balance. Add payment or charge to room.");
         order.Status = PosOrderStatus.Closed;
         order.ClosedAt = Clock.Now;
@@ -495,7 +677,12 @@ public class PosOrderAppService(
             .FirstOrDefaultAsync(o => o.Id == input.OrderId);
         if (order == null) throw new UserFriendlyException("Order not found.");
         if (order.Status == PosOrderStatus.Closed) throw new UserFriendlyException("Order is already closed.");
-        var total = order.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity * i.Price);
+        var itemsTotal = order.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity * i.Price);
+        var discountFromPercent = itemsTotal * order.DiscountPercent / 100m;
+        var totalAfterDiscount = itemsTotal - discountFromPercent - order.DiscountAmount - order.SeniorCitizenDiscount;
+        if (totalAfterDiscount < 0) totalAfterDiscount = 0;
+        var (serviceChargeAmount, roomServiceChargeAmount) = ComputeServiceChargesFromOrder(order, totalAfterDiscount);
+        var total = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
         if (total <= 0) throw new UserFriendlyException("Order has no chargeable amount.");
         var stay = await stayRepository.GetAll()
             .FirstOrDefaultAsync(s => (s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn) && s.RoomNumber == input.RoomNumber.Trim());
@@ -547,6 +734,45 @@ public class PosOrderAppService(
         folio.Status = folio.Balance <= 0 ? FolioStatus.Open : FolioStatus.PartiallyPaid;
     }
 
+    /// <summary>Compute service charge and room service charge from order's stored config and total-after-discount. Recomputed whenever order content changes.</summary>
+    private static (decimal ServiceChargeAmount, decimal RoomServiceChargeAmount) ComputeServiceChargesFromOrder(PosOrder order, decimal totalAfterDiscount)
+    {
+        decimal serviceCharge = order.ServiceChargeType switch
+        {
+            ServiceChargeType.Percent => totalAfterDiscount * order.ServiceChargePercent / 100m,
+            ServiceChargeType.FixedAmount => order.ServiceChargeAmount,
+            _ => 0m
+        };
+        decimal roomServiceCharge = 0m;
+        if (order.OrderType == PosOrderType.RoomService)
+            roomServiceCharge = order.RoomServiceChargeType switch
+            {
+                RoomServiceChargeType.Percent => totalAfterDiscount * order.RoomServiceChargePercent / 100m,
+                RoomServiceChargeType.FixedAmount => order.RoomServiceChargeAmount,
+                _ => 0m
+            };
+        return (serviceCharge, roomServiceCharge);
+    }
+
+    /// <summary>Copy outlet charge settings onto an order entity (for new orders or when order is updated).</summary>
+    private static void CopyChargeSettingsFromOutlet(PosOrder order, PosOutlet outlet)
+    {
+        order.RoomServiceChargeType = outlet.RoomServiceChargeType;
+        order.RoomServiceChargePercent = outlet.RoomServiceChargePercent;
+        order.RoomServiceChargeAmount = outlet.RoomServiceChargeAmount;
+        order.ServiceChargeType = outlet.ServiceChargeType;
+        order.ServiceChargePercent = outlet.ServiceChargePercent;
+        order.ServiceChargeAmount = outlet.ServiceChargeFixedAmount;
+    }
+
+    /// <summary>Refresh order's charge settings from its outlet and save. Call whenever order content changes so charges are recomputed from current outlet config.</summary>
+    private async Task RefreshOrderChargeSettingsAsync(PosOrder order)
+    {
+        var outlet = await outletRepository.GetAsync(order.OutletId);
+        CopyChargeSettingsFromOutlet(order, outlet);
+        await orderRepository.UpdateAsync(order);
+    }
+
     private static PosOrderDto MapToOrderDto(PosOrder order)
     {
         var items = order.Items.Select(i => new OrderItemDto
@@ -557,9 +783,19 @@ public class PosOrderAppService(
             MenuItemName = i.MenuItem?.Name ?? "",
             Quantity = i.Quantity,
             Price = i.Price,
+            OriginalPrice = i.OriginalPrice ?? i.Price,
+            Amount = i.Quantity * i.Price,
             LineTotal = i.Quantity * i.Price,
             Status = (int)i.Status,
-            Notes = i.Notes ?? ""
+            Notes = i.Notes ?? "",
+            SelectedOptions = (i.SelectedOptions ?? [])
+                .Select(s => new SelectedOptionDto
+                {
+                    GroupName = s.Option?.OptionGroup?.Name ?? "",
+                    OptionName = s.Option?.Name ?? ""
+                })
+                .Where(s => !string.IsNullOrEmpty(s.GroupName) || !string.IsNullOrEmpty(s.OptionName))
+                .ToList()
         }).ToList();
         var payments = order.Payments.Select(p => new OrderPaymentDto
         {
@@ -573,6 +809,12 @@ public class PosOrderAppService(
         }).ToList();
         var itemsTotal = items.Where(i => i.Status != (int)OrderItemStatus.Cancelled).Sum(i => i.LineTotal);
         var paymentsTotal = payments.Sum(p => p.Amount);
+        var discountFromPercent = itemsTotal * order.DiscountPercent / 100m;
+        var totalAfterDiscount = itemsTotal - discountFromPercent - order.DiscountAmount - order.SeniorCitizenDiscount;
+        if (totalAfterDiscount < 0) totalAfterDiscount = 0;
+        var (serviceChargeAmount, roomServiceChargeAmount) = ComputeServiceChargesFromOrder(order, totalAfterDiscount);
+        var orderTotal = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
+        var balanceDue = orderTotal - paymentsTotal;
         return new PosOrderDto
         {
             Id = order.Id,
@@ -598,7 +840,23 @@ public class PosOrderAppService(
             Payments = payments,
             ItemsTotal = itemsTotal,
             PaymentsTotal = paymentsTotal,
-            BalanceDue = itemsTotal - paymentsTotal
+            TotalAfterDiscount = totalAfterDiscount,
+            ServiceChargeAmount = serviceChargeAmount,
+            RoomServiceChargeAmount = roomServiceChargeAmount,
+            OrderTotal = orderTotal,
+            BalanceDue = balanceDue
         };
+    }
+
+    [UnitOfWork]
+    public async Task UpdateOrderDiscountsAsync(Guid orderId, UpdateOrderDiscountsDto input)
+    {
+        var order = await orderRepository.GetAsync(orderId);
+        if (order.Status == PosOrderStatus.Closed || order.Status == PosOrderStatus.Cancelled)
+            throw new UserFriendlyException("Cannot update discounts on a closed or cancelled order.");
+        order.DiscountPercent = input.DiscountPercent;
+        order.DiscountAmount = input.DiscountAmount;
+        order.SeniorCitizenDiscount = input.SeniorCitizenDiscount;
+        await RefreshOrderChargeSettingsAsync(order);
     }
 }

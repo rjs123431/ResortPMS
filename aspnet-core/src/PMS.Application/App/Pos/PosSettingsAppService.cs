@@ -33,10 +33,11 @@ public interface IPosSettingsAppService : IApplicationService
     Task<Guid> CreateMenuCategoryAsync(CreateMenuCategoryDto input);
     Task UpdateMenuCategoryAsync(Guid id, UpdateMenuCategoryDto input);
 
-    Task<List<MenuItemListDto>> GetMenuItemsAsync(Guid? categoryId = null);
-    Task<MenuItemListDto> GetMenuItemAsync(Guid id);
-    Task<Guid> CreateMenuItemAsync(CreateMenuItemDto input);
-    Task UpdateMenuItemAsync(Guid id, UpdateMenuItemDto input);
+    Task<List<OptionGroupListDto>> GetOptionGroupsAsync();
+    Task<OptionGroupDto> GetOptionGroupAsync(Guid id);
+    Task<Guid> CreateOptionGroupAsync(CreateOptionGroupDto input);
+    Task UpdateOptionGroupAsync(Guid id, UpdateOptionGroupDto input);
+    Task DeleteOptionGroupAsync(Guid id);
 }
 
 [AbpAuthorize(PermissionNames.Pages_POS)]
@@ -45,7 +46,9 @@ public class PosSettingsAppService(
     IRepository<PosOutletTerminal, Guid> terminalRepository,
     IRepository<PosTable, Guid> tableRepository,
     IRepository<MenuCategory, Guid> menuCategoryRepository,
-    IRepository<MenuItem, Guid> menuItemRepository
+    IRepository<OptionGroup, Guid> optionGroupRepository,
+    IRepository<Option, Guid> optionRepository,
+    IRepository<MenuItemOptionGroup, Guid> menuItemOptionGroupRepository
 ) : PMSAppServiceBase, IPosSettingsAppService
 {
     public async Task<List<PosOutletListDto>> GetOutletsAsync()
@@ -74,7 +77,13 @@ public class PosSettingsAppService(
             Location = entity.Location,
             IsActive = entity.IsActive,
             HasKitchen = entity.HasKitchen,
-            ChargeTypeId = entity.ChargeTypeId
+            ChargeTypeId = entity.ChargeTypeId,
+            RoomServiceChargeType = (int)entity.RoomServiceChargeType,
+            RoomServiceChargePercent = entity.RoomServiceChargePercent,
+            RoomServiceChargeAmount = entity.RoomServiceChargeAmount,
+            ServiceChargeType = (int)entity.ServiceChargeType,
+            ServiceChargePercent = entity.ServiceChargePercent,
+            ServiceChargeFixedAmount = entity.ServiceChargeFixedAmount
         };
     }
 
@@ -86,7 +95,13 @@ public class PosSettingsAppService(
             Location = input.Location?.Trim() ?? string.Empty,
             IsActive = input.IsActive,
             HasKitchen = input.HasKitchen,
-            ChargeTypeId = input.ChargeTypeId
+            ChargeTypeId = input.ChargeTypeId,
+            RoomServiceChargeType = (RoomServiceChargeType)input.RoomServiceChargeType,
+            RoomServiceChargePercent = input.RoomServiceChargePercent,
+            RoomServiceChargeAmount = input.RoomServiceChargeAmount,
+            ServiceChargeType = (ServiceChargeType)input.ServiceChargeType,
+            ServiceChargePercent = input.ServiceChargePercent,
+            ServiceChargeFixedAmount = input.ServiceChargeFixedAmount
         };
         await outletRepository.InsertAsync(entity);
         return entity.Id;
@@ -100,6 +115,12 @@ public class PosSettingsAppService(
         entity.IsActive = input.IsActive;
         entity.HasKitchen = input.HasKitchen;
         entity.ChargeTypeId = input.ChargeTypeId;
+        entity.RoomServiceChargeType = (RoomServiceChargeType)input.RoomServiceChargeType;
+        entity.RoomServiceChargePercent = input.RoomServiceChargePercent;
+        entity.RoomServiceChargeAmount = input.RoomServiceChargeAmount;
+        entity.ServiceChargeType = (ServiceChargeType)input.ServiceChargeType;
+        entity.ServiceChargePercent = input.ServiceChargePercent;
+        entity.ServiceChargeFixedAmount = input.ServiceChargeFixedAmount;
         await outletRepository.UpdateAsync(entity);
     }
 
@@ -249,68 +270,125 @@ public class PosSettingsAppService(
         await menuCategoryRepository.UpdateAsync(entity);
     }
 
-    public async Task<List<MenuItemListDto>> GetMenuItemsAsync(Guid? categoryId = null)
+    public async Task<List<OptionGroupListDto>> GetOptionGroupsAsync()
     {
-        var query = menuItemRepository.GetAll()
-            .Include(m => m.Category)
-            .AsQueryable();
-        if (categoryId.HasValue && categoryId.Value != Guid.Empty)
-            query = query.Where(m => m.CategoryId == categoryId.Value);
-        var list = await query
-            .OrderBy(m => m.Category.DisplayOrder).ThenBy(m => m.Name)
-            .Select(m => new MenuItemListDto
+        var list = await optionGroupRepository.GetAll()
+            .OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name)
+            .Select(g => new OptionGroupListDto
             {
-                Id = m.Id,
-                CategoryId = m.CategoryId,
-                CategoryName = m.Category.Name,
-                Name = m.Name,
-                Price = m.Price,
-                IsAvailable = m.IsAvailable
+                Id = g.Id,
+                Name = g.Name,
+                DisplayOrder = g.DisplayOrder,
+                MinSelections = g.MinSelections,
+                MaxSelections = g.MaxSelections,
+                OptionCount = g.Options.Count
             })
             .ToListAsync();
         return list;
     }
 
-    public async Task<MenuItemListDto> GetMenuItemAsync(Guid id)
+    public async Task<OptionGroupDto> GetOptionGroupAsync(Guid id)
     {
-        var entity = await menuItemRepository.GetAll()
-            .Include(m => m.Category)
-            .FirstOrDefaultAsync(m => m.Id == id);
+        var entity = await optionGroupRepository.GetAll()
+            .Include(g => g.Options.OrderBy(o => o.DisplayOrder).ThenBy(o => o.Name))
+            .FirstOrDefaultAsync(g => g.Id == id);
         if (entity == null)
-            throw new UserFriendlyException(L("MenuItem not found."));
-        return new MenuItemListDto
+            throw new UserFriendlyException(L("Option group not found."));
+        return new OptionGroupDto
         {
             Id = entity.Id,
-            CategoryId = entity.CategoryId,
-            CategoryName = entity.Category.Name,
             Name = entity.Name,
-            Price = entity.Price,
-            IsAvailable = entity.IsAvailable
+            DisplayOrder = entity.DisplayOrder,
+            MinSelections = entity.MinSelections,
+            MaxSelections = entity.MaxSelections,
+            Options = entity.Options.Select(o => new OptionDto
+            {
+                Id = o.Id,
+                Name = o.Name,
+                BasePriceAdjustment = o.PriceAdjustment,
+                PriceAdjustment = o.PriceAdjustment,
+                DisplayOrder = o.DisplayOrder,
+                IsDefault = o.IsDefault
+            }).ToList()
         };
     }
 
-    public async Task<Guid> CreateMenuItemAsync(CreateMenuItemDto input)
+    public async Task<Guid> CreateOptionGroupAsync(CreateOptionGroupDto input)
     {
-        await menuCategoryRepository.GetAsync(input.CategoryId);
-        var entity = new MenuItem
+        var entity = new OptionGroup
         {
-            CategoryId = input.CategoryId,
             Name = input.Name.Trim(),
-            Price = input.Price,
-            IsAvailable = input.IsAvailable
+            DisplayOrder = input.DisplayOrder,
+            MinSelections = input.MinSelections,
+            MaxSelections = input.MaxSelections
         };
-        await menuItemRepository.InsertAsync(entity);
+        await optionGroupRepository.InsertAsync(entity);
+        var optionsList = input.Options ?? [];
+        NormalizeDefaultOption(optionsList);
+        foreach (var opt in optionsList)
+        {
+            await optionRepository.InsertAsync(new Option
+            {
+                OptionGroupId = entity.Id,
+                Name = opt.Name.Trim(),
+                PriceAdjustment = opt.PriceAdjustment,
+                DisplayOrder = opt.DisplayOrder,
+                IsDefault = opt.IsDefault
+            });
+        }
         return entity.Id;
     }
 
-    public async Task UpdateMenuItemAsync(Guid id, UpdateMenuItemDto input)
+    public async Task UpdateOptionGroupAsync(Guid id, UpdateOptionGroupDto input)
     {
-        await menuCategoryRepository.GetAsync(input.CategoryId);
-        var entity = await menuItemRepository.GetAsync(id);
-        entity.CategoryId = input.CategoryId;
+        var entity = await optionGroupRepository.GetAll()
+            .Include(g => g.Options)
+            .FirstOrDefaultAsync(g => g.Id == id);
+        if (entity == null)
+            throw new UserFriendlyException(L("Option group not found."));
         entity.Name = input.Name.Trim();
-        entity.Price = input.Price;
-        entity.IsAvailable = input.IsAvailable;
-        await menuItemRepository.UpdateAsync(entity);
+        entity.DisplayOrder = input.DisplayOrder;
+        entity.MinSelections = input.MinSelections;
+        entity.MaxSelections = input.MaxSelections;
+        await optionGroupRepository.UpdateAsync(entity);
+        foreach (var existingOpt in entity.Options)
+            await optionRepository.DeleteAsync(existingOpt);
+        var optionsList = input.Options ?? [];
+        NormalizeDefaultOption(optionsList);
+        foreach (var opt in optionsList)
+        {
+            await optionRepository.InsertAsync(new Option
+            {
+                OptionGroupId = entity.Id,
+                Name = opt.Name.Trim(),
+                PriceAdjustment = opt.PriceAdjustment,
+                DisplayOrder = opt.DisplayOrder,
+                IsDefault = opt.IsDefault
+            });
+        }
+    }
+
+    /// <summary>Ensure at most one option per group has IsDefault true. First one wins.</summary>
+    private static void NormalizeDefaultOption(List<OptionInputDto> options)
+    {
+        var firstDefaultIndex = options.FindIndex(o => o.IsDefault);
+        for (var i = 0; i < options.Count; i++)
+            options[i].IsDefault = i == (firstDefaultIndex >= 0 ? firstDefaultIndex : 0);
+    }
+
+    public async Task DeleteOptionGroupAsync(Guid id)
+    {
+        var entity = await optionGroupRepository.GetAll()
+            .Include(g => g.Options)
+            .Include(g => g.MenuItemOptionGroups)
+            .FirstOrDefaultAsync(g => g.Id == id);
+        if (entity == null)
+            throw new UserFriendlyException(L("Option group not found."));
+        var assignedCount = await menuItemOptionGroupRepository.CountAsync(m => m.OptionGroupId == id);
+        if (assignedCount > 0)
+            throw new UserFriendlyException(L("Cannot delete option group that is assigned to one or more menu items. Remove the assignment first."));
+        foreach (var opt in entity.Options)
+            await optionRepository.DeleteAsync(opt);
+        await optionGroupRepository.DeleteAsync(entity);
     }
 }

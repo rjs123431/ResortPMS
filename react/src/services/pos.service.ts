@@ -28,8 +28,21 @@ import type {
   UpdatePosTerminalDto,
   CreateMenuCategoryDto,
   UpdateMenuCategoryDto,
+  OptionGroupListDto,
+  OptionGroupDto,
+  CreateOptionGroupDto,
+  UpdateOptionGroupDto,
   CreateMenuItemDto,
   UpdateMenuItemDto,
+  MenuItemPriceAdjustmentListDto,
+  MenuItemPriceAdjustmentDto,
+  CreateMenuItemPriceAdjustmentDto,
+  UpdateMenuItemPriceAdjustmentDto,
+  MenuItemPromoListDto,
+  MenuItemPromoDto,
+  CreateMenuItemPromoDto,
+  UpdateMenuItemPromoDto,
+  UpdateOrderDiscountsDto,
 } from '@/types/pos.types';
 
 export const posService = {
@@ -128,6 +141,12 @@ export const posService = {
       orderId: input.orderId,
       reasonType: input.reasonType,
       reason: input.reason,
+    });
+  },
+
+  updateOrderDiscounts: async (orderId: string, input: UpdateOrderDiscountsDto) => {
+    await api.put('/api/services/app/PosOrder/UpdateOrderDiscounts', input, {
+      params: { orderId },
     });
   },
 
@@ -254,6 +273,44 @@ export const posService = {
     return response.data.result ?? [];
   },
 
+  getOptionGroups: async (): Promise<OptionGroupListDto[]> => {
+    const response = await api.get<ApiResponse<OptionGroupListDto[]>>(
+      '/api/services/app/PosSettings/GetOptionGroups'
+    );
+    return response.data.result ?? [];
+  },
+
+  getOptionGroup: async (id: string): Promise<OptionGroupDto> => {
+    const response = await api.get<ApiResponse<OptionGroupDto>>(
+      '/api/services/app/PosSettings/GetOptionGroup',
+      { params: { id } }
+    );
+    return response.data.result!;
+  },
+
+  createOptionGroup: async (input: CreateOptionGroupDto): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosSettings/CreateOptionGroup',
+      input
+    );
+    return response.data.result!;
+  },
+
+  updateOptionGroup: async (
+    id: string,
+    input: UpdateOptionGroupDto
+  ): Promise<void> => {
+    await api.put('/api/services/app/PosSettings/UpdateOptionGroup', input, {
+      params: { id },
+    });
+  },
+
+  deleteOptionGroup: async (id: string): Promise<void> => {
+    await api.delete('/api/services/app/PosSettings/DeleteOptionGroup', {
+      params: { id },
+    });
+  },
+
   getSettingsMenuCategory: async (id: string): Promise<MenuCategoryListDto> => {
     const response = await api.get<ApiResponse<MenuCategoryListDto>>(
       '/api/services/app/PosSettings/GetMenuCategory',
@@ -283,7 +340,7 @@ export const posService = {
     categoryId?: string | null
   ): Promise<MenuItemListDto[]> => {
     const response = await api.get<ApiResponse<MenuItemListDto[]>>(
-      '/api/services/app/PosSettings/GetMenuItems',
+      '/api/services/app/PosMenuItem/GetMenuItems',
       { params: categoryId ? { categoryId } : {} }
     );
     return response.data.result ?? [];
@@ -291,7 +348,7 @@ export const posService = {
 
   getSettingsMenuItem: async (id: string): Promise<MenuItemListDto> => {
     const response = await api.get<ApiResponse<MenuItemListDto>>(
-      '/api/services/app/PosSettings/GetMenuItem',
+      '/api/services/app/PosMenuItem/GetMenuItem',
       { params: { id } }
     );
     return response.data.result;
@@ -299,7 +356,7 @@ export const posService = {
 
   createMenuItem: async (input: CreateMenuItemDto): Promise<string> => {
     const response = await api.post<ApiResponse<string>>(
-      '/api/services/app/PosSettings/CreateMenuItem',
+      '/api/services/app/PosMenuItem/CreateMenuItem',
       input
     );
     return response.data.result;
@@ -309,7 +366,90 @@ export const posService = {
     id: string,
     input: UpdateMenuItemDto
   ): Promise<void> => {
-    await api.put('/api/services/app/PosSettings/UpdateMenuItem', input, {
+    await api.put('/api/services/app/PosMenuItem/UpdateMenuItem', input, {
+      params: { id },
+    });
+  },
+
+  // ── Price adjustments & promos ───────────────────────────────────────────
+
+  getPriceAdjustments: async (
+    menuItemId?: string | null
+  ): Promise<MenuItemPriceAdjustmentListDto[]> => {
+    const response = await api.get<ApiResponse<MenuItemPriceAdjustmentListDto[]>>(
+      '/api/services/app/PosPricing/GetPriceAdjustments',
+      { params: menuItemId ? { menuItemId } : {} }
+    );
+    return response.data.result ?? [];
+  },
+
+  getPriceAdjustment: async (id: string): Promise<MenuItemPriceAdjustmentDto> => {
+    const response = await api.get<ApiResponse<MenuItemPriceAdjustmentDto>>(
+      '/api/services/app/PosPricing/GetPriceAdjustment',
+      { params: { id } }
+    );
+    return response.data.result!;
+  },
+
+  createPriceAdjustment: async (
+    input: CreateMenuItemPriceAdjustmentDto
+  ): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosPricing/CreatePriceAdjustment',
+      input
+    );
+    return response.data.result!;
+  },
+
+  updatePriceAdjustment: async (
+    id: string,
+    input: UpdateMenuItemPriceAdjustmentDto
+  ): Promise<void> => {
+    await api.put('/api/services/app/PosPricing/UpdatePriceAdjustment', input, {
+      params: { id },
+    });
+  },
+
+  deletePriceAdjustment: async (id: string): Promise<void> => {
+    await api.delete('/api/services/app/PosPricing/DeletePriceAdjustment', {
+      params: { id },
+    });
+  },
+
+  getPromos: async (): Promise<MenuItemPromoListDto[]> => {
+    const response = await api.get<ApiResponse<MenuItemPromoListDto[]>>(
+      '/api/services/app/PosPricing/GetPromos'
+    );
+    return response.data.result ?? [];
+  },
+
+  getPromo: async (id: string): Promise<MenuItemPromoDto> => {
+    const response = await api.get<ApiResponse<MenuItemPromoDto>>(
+      '/api/services/app/PosPricing/GetPromo',
+      { params: { id } }
+    );
+    return response.data.result!;
+  },
+
+  createPromo: async (input: CreateMenuItemPromoDto): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosPricing/CreatePromo',
+      input
+    );
+    return response.data.result!;
+  },
+
+  updatePromo: async (
+    id: string,
+    input: UpdateMenuItemPromoDto
+  ): Promise<void> => {
+    await api.put('/api/services/app/PosPricing/UpdatePromo', input, {
+      params: { id },
+    });
+  },
+
+  deletePromo: async (id: string): Promise<void> => {
+    await api.delete('/api/services/app/PosPricing/DeletePromo', {
       params: { id },
     });
   },

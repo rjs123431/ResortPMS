@@ -11,6 +11,12 @@ internal class PosOutletConfiguration : IEntityTypeConfiguration<PosOutlet>
         entity.ToTable("PosOutlet");
         entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
         entity.Property(e => e.Location).HasMaxLength(256);
+        entity.Property(e => e.RoomServiceChargeType).HasConversion<int>();
+        entity.Property(e => e.RoomServiceChargePercent).HasPrecision(18, 4);
+        entity.Property(e => e.RoomServiceChargeAmount).HasPrecision(18, 4);
+        entity.Property(e => e.ServiceChargeType).HasConversion<int>();
+        entity.Property(e => e.ServiceChargePercent).HasPrecision(18, 4);
+        entity.Property(e => e.ServiceChargeFixedAmount).HasPrecision(18, 4);
         entity.HasIndex(e => e.Name);
         entity.HasIndex(e => e.ChargeTypeId);
         entity.HasOne(e => e.ChargeType)
@@ -60,6 +66,70 @@ internal class MenuCategoryConfiguration : IEntityTypeConfiguration<MenuCategory
     }
 }
 
+internal class OptionGroupConfiguration : IEntityTypeConfiguration<OptionGroup>
+{
+    public void Configure(EntityTypeBuilder<OptionGroup> entity)
+    {
+        entity.ToTable("OptionGroup");
+        entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
+        entity.HasIndex(e => e.DisplayOrder);
+    }
+}
+
+internal class OptionConfiguration : IEntityTypeConfiguration<Option>
+{
+    public void Configure(EntityTypeBuilder<Option> entity)
+    {
+        entity.ToTable("PosOption");
+        entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
+        entity.Property(e => e.PriceAdjustment).HasPrecision(18, 4);
+        entity.HasIndex(e => e.OptionGroupId);
+        entity.HasOne(e => e.OptionGroup)
+            .WithMany(g => g.Options)
+            .HasForeignKey(e => e.OptionGroupId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class MenuItemOptionGroupConfiguration : IEntityTypeConfiguration<MenuItemOptionGroup>
+{
+    public void Configure(EntityTypeBuilder<MenuItemOptionGroup> entity)
+    {
+        entity.ToTable("MenuItemOptionGroup");
+        entity.HasIndex(e => new { e.MenuItemId, e.OptionGroupId }).IsUnique();
+        entity.HasOne(e => e.MenuItem)
+            .WithMany(m => m.MenuItemOptionGroups)
+            .HasForeignKey(e => e.MenuItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne(e => e.OptionGroup)
+            .WithMany(g => g.MenuItemOptionGroups)
+            .HasForeignKey(e => e.OptionGroupId)
+            .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(e => e.DefaultOption)
+            .WithMany()
+            .HasForeignKey(e => e.DefaultOptionId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class MenuItemOptionPriceOverrideConfiguration : IEntityTypeConfiguration<MenuItemOptionPriceOverride>
+{
+    public void Configure(EntityTypeBuilder<MenuItemOptionPriceOverride> entity)
+    {
+        entity.ToTable("MenuItemOptionPriceOverride");
+        entity.Property(e => e.PriceAdjustment).HasPrecision(18, 4);
+        entity.HasIndex(e => new { e.MenuItemId, e.OptionId }).IsUnique();
+        entity.HasOne(e => e.MenuItem)
+            .WithMany(m => m.OptionPriceOverrides)
+            .HasForeignKey(e => e.MenuItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne(e => e.Option)
+            .WithMany()
+            .HasForeignKey(e => e.OptionId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
 {
     public void Configure(EntityTypeBuilder<MenuItem> entity)
@@ -71,6 +141,51 @@ internal class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
         entity.HasOne(e => e.Category)
             .WithMany(c => c.Items)
             .HasForeignKey(e => e.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class MenuItemPriceAdjustmentConfiguration : IEntityTypeConfiguration<MenuItemPriceAdjustment>
+{
+    public void Configure(EntityTypeBuilder<MenuItemPriceAdjustment> entity)
+    {
+        entity.ToTable("MenuItemPriceAdjustment");
+        entity.Property(e => e.NewPrice).HasPrecision(18, 4);
+        entity.Property(e => e.EffectiveDate).HasColumnType("date");
+        entity.HasIndex(e => new { e.MenuItemId, e.EffectiveDate });
+        entity.HasOne(e => e.MenuItem)
+            .WithMany(m => m.PriceAdjustments)
+            .HasForeignKey(e => e.MenuItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal class MenuItemPromoConfiguration : IEntityTypeConfiguration<MenuItemPromo>
+{
+    public void Configure(EntityTypeBuilder<MenuItemPromo> entity)
+    {
+        entity.ToTable("MenuItemPromo");
+        entity.Property(e => e.PromoName).HasMaxLength(128).IsRequired();
+        entity.Property(e => e.DateFrom).HasColumnType("date");
+        entity.Property(e => e.DateTo).HasColumnType("date");
+        entity.Property(e => e.PercentageDiscount).HasPrecision(18, 4);
+        entity.HasIndex(e => new { e.DateFrom, e.DateTo });
+    }
+}
+
+internal class MenuItemPromoItemConfiguration : IEntityTypeConfiguration<MenuItemPromoItem>
+{
+    public void Configure(EntityTypeBuilder<MenuItemPromoItem> entity)
+    {
+        entity.ToTable("MenuItemPromoItem");
+        entity.HasIndex(e => new { e.MenuItemPromoId, e.MenuItemId }).IsUnique();
+        entity.HasOne(e => e.MenuItemPromo)
+            .WithMany(p => p.Items)
+            .HasForeignKey(e => e.MenuItemPromoId)
+            .OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne(e => e.MenuItem)
+            .WithMany()
+            .HasForeignKey(e => e.MenuItemId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -100,6 +215,12 @@ internal class PosOrderConfiguration : IEntityTypeConfiguration<PosOrder>
         entity.Property(e => e.DiscountPercent).HasPrecision(18, 4);
         entity.Property(e => e.DiscountAmount).HasPrecision(18, 4);
         entity.Property(e => e.SeniorCitizenDiscount).HasPrecision(18, 4);
+        entity.Property(e => e.RoomServiceChargeType).HasConversion<int>();
+        entity.Property(e => e.RoomServiceChargePercent).HasPrecision(18, 4);
+        entity.Property(e => e.RoomServiceChargeAmount).HasPrecision(18, 4);
+        entity.Property(e => e.ServiceChargeType).HasConversion<int>();
+        entity.Property(e => e.ServiceChargePercent).HasPrecision(18, 4);
+        entity.Property(e => e.ServiceChargeAmount).HasPrecision(18, 4);
         entity.Property(e => e.OrderType).HasConversion<int>();
         entity.Property(e => e.Status).HasConversion<int>();
         entity.Property(e => e.CancelReasonType).HasConversion<int>();
@@ -140,6 +261,7 @@ internal class PosOrderItemConfiguration : IEntityTypeConfiguration<PosOrderItem
     {
         entity.ToTable("PosOrderItem");
         entity.Property(e => e.Price).HasPrecision(18, 4);
+        entity.Property(e => e.OriginalPrice).HasPrecision(18, 4);
         entity.Property(e => e.Status).HasConversion<int>();
         entity.Property(e => e.Notes).HasMaxLength(512);
         entity.Property(e => e.CancelReasonType).HasConversion<int>();
@@ -151,6 +273,22 @@ internal class PosOrderItemConfiguration : IEntityTypeConfiguration<PosOrderItem
         entity.HasOne(e => e.MenuItem)
             .WithMany()
             .HasForeignKey(e => e.MenuItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class PosOrderItemOptionConfiguration : IEntityTypeConfiguration<PosOrderItemOption>
+{
+    public void Configure(EntityTypeBuilder<PosOrderItemOption> entity)
+    {
+        entity.ToTable("PosOrderItemOption");
+        entity.HasOne(e => e.PosOrderItem)
+            .WithMany(i => i.SelectedOptions)
+            .HasForeignKey(e => e.PosOrderItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne(e => e.Option)
+            .WithMany()
+            .HasForeignKey(e => e.OptionId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

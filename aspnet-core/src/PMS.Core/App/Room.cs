@@ -16,6 +16,44 @@ public class RoomType : AuditedEntity<Guid>, IPassivable
     public bool IsActive { get; set; } = true;
 
     public virtual ICollection<Room> Rooms { get; set; } = [];
+    public virtual ICollection<RoomRatePlan> RatePlans { get; set; } = [];
+}
+
+// ── Room rate plan pricing ─────────────────────────────────────────────────
+
+public class RoomRatePlan : AuditedEntity<Guid>, IPassivable
+{
+    public Guid RoomTypeId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public int Priority { get; set; }
+    public bool IsDefault { get; set; }
+    public bool IsActive { get; set; } = true;
+
+    public virtual RoomType RoomType { get; set; }
+    public virtual ICollection<RoomRatePlanDay> DayRates { get; set; } = [];
+    public virtual ICollection<RatePlanDateOverride> DateOverrides { get; set; } = [];
+}
+
+public class RoomRatePlanDay : AuditedEntity<Guid>
+{
+    public Guid RoomRatePlanId { get; set; }
+    public DayOfWeek DayOfWeek { get; set; }
+    public decimal BasePrice { get; set; }
+
+    public virtual RoomRatePlan RoomRatePlan { get; set; }
+}
+
+public class RatePlanDateOverride : AuditedEntity<Guid>
+{
+    public Guid RoomRatePlanId { get; set; }
+    public DateTime RateDate { get; set; }
+    public decimal OverridePrice { get; set; }
+    public string Description { get; set; } = string.Empty;
+
+    public virtual RoomRatePlan RoomRatePlan { get; set; }
 }
 
 public class Room : AuditedEntity<Guid>, IPassivable

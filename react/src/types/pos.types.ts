@@ -62,13 +62,77 @@ export interface MenuCategoryListDto {
   displayOrder: number;
 }
 
+// Option groups (global, assigned to menu items)
+export interface OptionDto {
+  id: string;
+  name: string;
+  /** Base price adjustment from the option definition. */
+  basePriceAdjustment?: number;
+  priceAdjustment: number;
+  displayOrder: number;
+  /** True when this option is the (effective) default for its group. */
+  isDefault?: boolean;
+}
+
+export interface OptionGroupDto {
+  id: string;
+  name: string;
+  displayOrder: number;
+  minSelections: number;
+  maxSelections: number;
+  options: OptionDto[];
+  /** When in menu-item context: override which option is default. Null = use group default. */
+  defaultOptionIdOverride?: string | null;
+}
+
+export interface OptionGroupListDto {
+  id: string;
+  name: string;
+  displayOrder: number;
+  minSelections: number;
+  maxSelections: number;
+  optionCount: number;
+}
+
+export interface OptionInputDto {
+  name: string;
+  priceAdjustment: number;
+  displayOrder: number;
+  isDefault: boolean;
+}
+
+export interface CreateOptionGroupDto {
+  name: string;
+  displayOrder: number;
+  minSelections: number;
+  maxSelections: number;
+  options: OptionInputDto[];
+}
+
+export interface UpdateOptionGroupDto {
+  name: string;
+  displayOrder: number;
+  minSelections: number;
+  maxSelections: number;
+  options: OptionInputDto[];
+}
+
 export interface MenuItemListDto {
   id: string;
   categoryId: string;
   categoryName: string;
   name: string;
+  /** Base or adjusted price (no promo). */
+  originalPrice: number;
+  /** Best price (promo price when a promo applies, otherwise same as originalPrice). */
   price: number;
   isAvailable: boolean;
+  optionGroups?: OptionGroupDto[];
+}
+
+export interface SelectedOptionDto {
+  groupName: string;
+  optionName: string;
 }
 
 export interface OrderItemDto {
@@ -78,9 +142,14 @@ export interface OrderItemDto {
   menuItemName: string;
   quantity: number;
   price: number;
+  /** Base/adjusted price at time of order (before promo). */
+  originalPrice: number;
+  /** Quantity × price (line total). */
+  amount: number;
   lineTotal: number;
   status: number;
   notes: string;
+  selectedOptions?: SelectedOptionDto[];
 }
 
 export interface OrderPaymentDto {
@@ -113,6 +182,20 @@ export interface GetPosOrdersInput {
   maxResultCount?: number;
 }
 
+/** Charge type for outlet: None, Percent, or FixedAmount. */
+export enum RoomServiceChargeType {
+  None = 0,
+  Percent = 1,
+  FixedAmount = 2,
+}
+
+/** Charge type for outlet general service charge. */
+export enum ServiceChargeType {
+  None = 0,
+  Percent = 1,
+  FixedAmount = 2,
+}
+
 export interface PosOrderDto {
   id: string;
   outletId: string;
@@ -137,7 +220,21 @@ export interface PosOrderDto {
   payments: OrderPaymentDto[];
   itemsTotal: number;
   paymentsTotal: number;
+  /** Items total after discount %, discount amount, and SC discount. */
+  totalAfterDiscount: number;
+  /** General service charge amount (from outlet). */
+  serviceChargeAmount: number;
+  /** Room service charge amount (from outlet; only when order type is Room Service). */
+  roomServiceChargeAmount: number;
+  /** Total after discounts + service charge + room service charge. */
+  orderTotal: number;
   balanceDue: number;
+}
+
+export interface UpdateOrderDiscountsDto {
+  discountPercent: number;
+  discountAmount: number;
+  seniorCitizenDiscount: number;
 }
 
 export interface CreatePosOrderDto {
@@ -154,6 +251,7 @@ export interface CreatePosOrderLineDto {
   quantity: number;
   price: number;
   notes?: string;
+  selectedOptionIds?: string[];
 }
 
 export interface CreatePosOrderWithItemsDto {
@@ -172,6 +270,7 @@ export interface AddOrderItemDto {
   quantity: number;
   price: number;
   notes?: string;
+  selectedOptionIds?: string[];
 }
 
 export interface AddOrderItemsDto {
@@ -244,6 +343,12 @@ export interface PosOutletDto {
   isActive: boolean;
   hasKitchen: boolean;
   chargeTypeId: string | null;
+  roomServiceChargeType: number;
+  roomServiceChargePercent: number;
+  roomServiceChargeAmount: number;
+  serviceChargeType: number;
+  serviceChargePercent: number;
+  serviceChargeFixedAmount: number;
 }
 
 export interface CreatePosOutletDto {
@@ -252,6 +357,12 @@ export interface CreatePosOutletDto {
   isActive: boolean;
   hasKitchen: boolean;
   chargeTypeId: string | null;
+  roomServiceChargeType: number;
+  roomServiceChargePercent: number;
+  roomServiceChargeAmount: number;
+  serviceChargeType: number;
+  serviceChargePercent: number;
+  serviceChargeFixedAmount: number;
 }
 
 export interface UpdatePosOutletDto {
@@ -260,6 +371,12 @@ export interface UpdatePosOutletDto {
   isActive: boolean;
   hasKitchen: boolean;
   chargeTypeId: string | null;
+  roomServiceChargeType: number;
+  roomServiceChargePercent: number;
+  roomServiceChargeAmount: number;
+  serviceChargeType: number;
+  serviceChargePercent: number;
+  serviceChargeFixedAmount: number;
 }
 
 export interface CreatePosTableDto {
@@ -305,11 +422,24 @@ export interface UpdateMenuCategoryDto {
   displayOrder: number;
 }
 
+export interface OptionPriceOverrideDto {
+  optionId: string;
+  priceAdjustment: number;
+}
+
+export interface DefaultOptionOverrideDto {
+  optionGroupId: string;
+  defaultOptionId: string | null;
+}
+
 export interface CreateMenuItemDto {
   categoryId: string;
   name: string;
   price: number;
   isAvailable: boolean;
+  assignedOptionGroupIds?: string[];
+  optionPriceOverrides?: OptionPriceOverrideDto[];
+  defaultOptionOverrides?: DefaultOptionOverrideDto[];
 }
 
 export interface UpdateMenuItemDto {
@@ -317,4 +447,73 @@ export interface UpdateMenuItemDto {
   name: string;
   price: number;
   isAvailable: boolean;
+  assignedOptionGroupIds?: string[];
+  optionPriceOverrides?: OptionPriceOverrideDto[];
+  defaultOptionOverrides?: DefaultOptionOverrideDto[];
+}
+
+// ── Price adjustments (effective date) ─────────────────────────────────────
+
+export interface MenuItemPriceAdjustmentListDto {
+  id: string;
+  menuItemId: string;
+  menuItemName: string;
+  categoryName: string;
+  newPrice: number;
+  effectiveDate: string;
+}
+
+export interface MenuItemPriceAdjustmentDto {
+  id: string;
+  menuItemId: string;
+  menuItemName: string;
+  newPrice: number;
+  effectiveDate: string;
+}
+
+export interface CreateMenuItemPriceAdjustmentDto {
+  menuItemId: string;
+  newPrice: number;
+  effectiveDate: string;
+}
+
+export interface UpdateMenuItemPriceAdjustmentDto {
+  newPrice: number;
+  effectiveDate: string;
+}
+
+// ── Promos ────────────────────────────────────────────────────────────────
+
+export interface MenuItemPromoListDto {
+  id: string;
+  promoName: string;
+  dateFrom: string;
+  dateTo: string;
+  percentageDiscount: number;
+  menuItemCount: number;
+}
+
+export interface MenuItemPromoDto {
+  id: string;
+  promoName: string;
+  dateFrom: string;
+  dateTo: string;
+  percentageDiscount: number;
+  menuItemIds: string[];
+}
+
+export interface CreateMenuItemPromoDto {
+  promoName: string;
+  dateFrom: string;
+  dateTo: string;
+  percentageDiscount: number;
+  menuItemIds: string[];
+}
+
+export interface UpdateMenuItemPromoDto {
+  promoName: string;
+  dateFrom: string;
+  dateTo: string;
+  percentageDiscount: number;
+  menuItemIds: string[];
 }

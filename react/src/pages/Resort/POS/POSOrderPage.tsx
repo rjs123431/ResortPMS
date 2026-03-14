@@ -21,6 +21,7 @@ import { usePOSSession } from '@contexts/POSSessionContext';
 import { RemoveItemDialog } from './RemoveItemDialog';
 import type { StayListDto } from '@/types/resort.types';
 import { AddEditOrderItemDialog } from './AddEditOrderItemDialog';
+import { AddItemWithOptionsDialog } from './AddItemWithOptionsDialog';
 import { POSPaymentModal } from './POSPaymentModal';
 import { POSRoomChargeModal } from './POSRoomChargeModal';
 import { POSRetrieveOrderModal } from './POSRetrieveOrderModal';
@@ -49,7 +50,17 @@ const ORDER_STATUS_LABELS: Record<number, string> = {
 
 const PENDING_STATUSES = [PosOrderStatus.Open, PosOrderStatus.SentToKitchen, PosOrderStatus.Preparing, PosOrderStatus.Served];
 
-type LocalCartItem = { menuItemId: string; menuItemName: string; price: number; quantity: number; notes?: string };
+type LocalCartItem = {
+  menuItemId: string;
+  menuItemName: string;
+  price: number;
+  originalPrice?: number;
+  quantity: number;
+  amount?: number;
+  notes?: string;
+  selectedOptionIds?: string[];
+  selectedOptionNames?: string[];
+};
 type LocalCart = {
   outletId: string;
   outletName: string;
@@ -102,8 +113,12 @@ export const POSOrderPage = () => {
     | { mode: 'edit-saved'; orderItem: OrderItemDto }
     | null
   >(null);
+  const [addWithOptionsMenuItem, setAddWithOptionsMenuItem] = useState<MenuItemListDto | null>(null);
   const [removeItemDialog, setRemoveItemDialog] = useState<OrderItemDto | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [discountPercent, setDiscountPercent] = useState<string>('');
+  const [discountAmount, setDiscountAmount] = useState<string>('');
+  const [seniorCitizenDiscount, setSeniorCitizenDiscount] = useState<string>('');
 
   const { data: outlets = [] } = useQuery({
     queryKey: ['pos-outlets'],
@@ -192,6 +207,14 @@ export const POSOrderPage = () => {
     enabled: !!effectiveOrderId && effectiveOrderId !== 'new',
   });
 
+  useEffect(() => {
+    if (currentOrder) {
+      setDiscountPercent(currentOrder.discountPercent != null ? String(currentOrder.discountPercent) : '');
+      setDiscountAmount(currentOrder.discountAmount != null ? String(currentOrder.discountAmount) : '');
+      setSeniorCitizenDiscount(currentOrder.seniorCitizenDiscount != null ? String(currentOrder.seniorCitizenDiscount) : '');
+    }
+  }, [currentOrder?.id, currentOrder?.discountPercent, currentOrder?.discountAmount, currentOrder?.seniorCitizenDiscount]);
+
   const { data: retrieveOrders = [], isFetching: isFetchingRetrieveOrders } = useQuery({
     queryKey: ['pos-orders-retrieve', retrieveStatusFilter],
     queryFn: () =>
@@ -270,6 +293,21 @@ export const POSOrderPage = () => {
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to close order.' }),
   });
 
+  const updateOrderDiscountsMutation = useMutation({
+    mutationFn: (input: { orderId: string; discountPercent: number; discountAmount: number; seniorCitizenDiscount: number }) =>
+      posService.updateOrderDiscounts(input.orderId, {
+        discountPercent: input.discountPercent,
+        discountAmount: input.discountAmount,
+        seniorCitizenDiscount: input.seniorCitizenDiscount,
+      }),
+    onSuccess: () => {
+      void refetchOrder();
+      void queryClient.invalidateQueries({ queryKey: ['pos-order', effectiveOrderId] });
+      setMessage({ type: 'success', text: 'Discounts updated.' });
+    },
+    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to update discounts.' }),
+  });
+
   const cancelItemMutation = useMutation({
     mutationFn: (input: { orderItemId: string; reasonType: number; reason: string }) =>
       posService.cancelOrderItem(input),
@@ -304,48 +342,88 @@ export const POSOrderPage = () => {
 
 
   const openAddItemDialog = useCallback((menuItem: MenuItemListDto) => {
-    setAddEditDialog({ mode: 'add', menuItem });
+    const hasOptions = (menuItem.optionGroups?.length ?? 0) > 0;
+    if (hasOptions) {
+      setAddWithOptionsMenuItem(menuItem);
+    } else {
+      setAddEditDialog({ mode: 'add', menuItem });
+    }
   }, []);
 
-  const addToCartFromDialog = useCallback((menuItem: MenuItemListDto, quantity: number, notes: string) => {
-    setLocalCart((prev) => {
-      if (!prev) return prev;
-      return {
+  const addToCartFromDialog = useCallback(
+    (
+      menuItem: MenuItemListDto,
+      quantity: number,
+      notes: string,
+      price?: number,
+      selectedOptionIds?: string[],
+      selectedOptionNames?: string[]
+    ) => {
+      const unitPrice = price ?? menuItem.price;
+      const orig = menuItem.originalPrice ?? menuItem.price;
+      setLocalCart((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: [
+            ...prev.items,
+            {
+              menuItemId: menuItem.id,
+              menuItemName: menuItem.name,
+              price: unitPrice,
+              originalPrice: orig,
+              quantity,
+              amount: unitPrice * quantity,
+              notes: notes || undefined,
+              selectedOptionIds,
+              selectedOptionNames,
+            },
+          ],
+        };
+      });
+      setAddEditDialog(null);
+      setAddWithOptionsMenuItem(null);
+    },
+    []
+  );
+
+  const addToPendingOrderItems = useCallback(
+    (
+      menuItem: MenuItemListDto,
+      quantity: number,
+      notes: string,
+      price?: number,
+      selectedOptionIds?: string[],
+      selectedOptionNames?: string[]
+    ) => {
+      const unitPrice = price ?? menuItem.price;
+      const orig = menuItem.originalPrice ?? menuItem.price;
+      setPendingOrderItems((prev) => [
         ...prev,
-        items: [
-          ...prev.items,
-          {
-            menuItemId: menuItem.id,
-            menuItemName: menuItem.name,
-            price: menuItem.price,
-            quantity,
-            notes: notes || undefined,
-          },
-        ],
-      };
-    });
-    setAddEditDialog(null);
-  }, []);
-
-  const addToPendingOrderItems = useCallback((menuItem: MenuItemListDto, quantity: number, notes: string) => {
-    setPendingOrderItems((prev) => [
-      ...prev,
-      {
-        menuItemId: menuItem.id,
-        menuItemName: menuItem.name,
-        price: menuItem.price,
-        quantity,
-        notes: notes || undefined,
-      },
-    ]);
-    setAddEditDialog(null);
-  }, []);
+        {
+          menuItemId: menuItem.id,
+          menuItemName: menuItem.name,
+          price: unitPrice,
+          originalPrice: orig,
+          quantity,
+          amount: unitPrice * quantity,
+          notes: notes || undefined,
+          selectedOptionIds,
+          selectedOptionNames,
+        },
+      ]);
+      setAddEditDialog(null);
+      setAddWithOptionsMenuItem(null);
+    },
+    []
+  );
 
   const updatePendingOrderItemByIndex = useCallback((index: number, quantity: number, notes: string) => {
     setPendingOrderItems((prev) => {
       if (quantity <= 0) return prev.filter((_, i) => i !== index);
       const next = [...prev];
-      next[index] = { ...next[index], quantity, notes: notes || undefined };
+      const it = next[index];
+      next[index] = { ...it, quantity, amount: it.price * quantity, notes: notes || undefined };
       return next;
     });
     setAddEditDialog(null);
@@ -364,6 +442,7 @@ export const POSOrderPage = () => {
           quantity: line.quantity,
           price: line.price,
           notes: line.notes ?? '',
+          selectedOptionIds: line.selectedOptionIds ?? undefined,
         })),
       }),
     onSuccess: (_, { orderId }) => {
@@ -390,6 +469,7 @@ export const POSOrderPage = () => {
           quantity: line.quantity,
           price: line.price,
           notes: line.notes ?? '',
+          selectedOptionIds: line.selectedOptionIds ?? undefined,
         })),
       }),
     onSuccess: () => {
@@ -413,7 +493,9 @@ export const POSOrderPage = () => {
       const next =
         quantity > 0
           ? prev.items.map((item, i) =>
-              i === index ? { ...item, quantity, notes: notes || undefined } : item
+              i === index
+                ? { ...item, quantity, amount: item.price * quantity, notes: notes || undefined }
+                : item
             )
           : prev.items.filter((_, i) => i !== index);
       return { ...prev, items: next };
@@ -456,6 +538,7 @@ export const POSOrderPage = () => {
           quantity: line.quantity,
           price: line.price,
           notes: line.notes ?? '',
+          selectedOptionIds: line.selectedOptionIds ?? undefined,
         })),
       });
       setLocalCart(null);
@@ -507,7 +590,7 @@ export const POSOrderPage = () => {
   const activeSavedItems = currentOrder?.items.filter((i) => i.status !== OrderItemStatus.Cancelled) ?? [];
   const pendingItemsForKitchen = currentOrder?.items.filter((i) => i.status === OrderItemStatus.Pending) ?? [];
   const cartItems = localCart?.items ?? [];
-  const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const cartTotal = cartItems.reduce((sum, i) => sum + (i.amount ?? i.price * i.quantity), 0);
   const canAddItems = isCartMode || (isSavedOrderMode && canModifyOrder);
 
   const orderItemsListRef = useRef<HTMLDivElement>(null);
@@ -627,7 +710,17 @@ export const POSOrderPage = () => {
                         </div>
                         <div className="flex flex-1 flex-col justify-end p-2 text-center">
                           <span className="block truncate font-medium text-gray-900 dark:text-white">{item.name}</span>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">₱{formatMoney(item.price)}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {item.originalPrice != null && item.originalPrice !== item.price ? (
+                              <>
+                                <span className="line-through">₱{formatMoney(item.originalPrice)}</span>
+                                {' '}
+                                ₱{formatMoney(item.price)}
+                              </>
+                            ) : (
+                              <>₱{formatMoney(item.price)}</>
+                            )}
+                          </span>
                         </div>
                       </button>
                     ))}
@@ -853,8 +946,18 @@ export const POSOrderPage = () => {
                     <li key={`cart-${index}`} className="border-b border-gray-100 pb-3 dark:border-gray-700">
                       <div className="flex justify-between gap-2">
                         <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">{item.menuItemName}</span>
-                        <span className="shrink-0 font-medium text-gray-900 dark:text-white">₱{formatMoney(item.price * item.quantity)}</span>
+                        <span className="shrink-0 text-right font-medium text-gray-900 dark:text-white">
+                          {item.originalPrice != null && item.originalPrice !== item.price ? (
+                            <span className="mr-1 text-xs font-normal text-gray-500 line-through dark:text-gray-400">
+                              ₱{formatMoney((item.originalPrice ?? item.price) * item.quantity)}
+                            </span>
+                          ) : null}
+                          ₱{formatMoney(item.amount ?? item.price * item.quantity)}
+                        </span>
                       </div>
+                      {item.selectedOptionNames?.length ? (
+                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{item.selectedOptionNames.join(' · ')}</p>
+                      ) : null}
                       <div className="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                         <span>× {item.quantity}</span>
                         <button
@@ -898,8 +1001,20 @@ export const POSOrderPage = () => {
                               </span>
                             )}
                           </span>
-                          <span className="shrink-0 font-medium text-gray-900 dark:text-white">₱{formatMoney(item.lineTotal)}</span>
+                          <span className="shrink-0 text-right font-medium text-gray-900 dark:text-white">
+                            {item.originalPrice != null && item.originalPrice !== item.price ? (
+                              <span className="mr-1 text-xs font-normal text-gray-500 line-through dark:text-gray-400">
+                                ₱{formatMoney(item.originalPrice * item.quantity)}
+                              </span>
+                            ) : null}
+                            ₱{formatMoney(item.amount ?? item.lineTotal)}
+                          </span>
                         </div>
+                        {item.selectedOptions?.length ? (
+                          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                            {item.selectedOptions.map((s) => `${s.groupName}: ${s.optionName}`).join(' · ')}
+                          </p>
+                        ) : null}
                         <div className="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>× {item.quantity}</span>
                           {canModifyOrder && (
@@ -939,8 +1054,18 @@ export const POSOrderPage = () => {
                           <li key={`pending-${index}`} className="border-b border-gray-100 pb-3 dark:border-gray-700">
                             <div className="flex justify-between gap-2">
                               <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">{item.menuItemName}</span>
-                              <span className="shrink-0 font-medium text-gray-900 dark:text-white">₱{formatMoney(item.price * item.quantity)}</span>
+                              <span className="shrink-0 text-right font-medium text-gray-900 dark:text-white">
+                                {item.originalPrice != null && item.originalPrice !== item.price ? (
+                                  <span className="mr-1 text-xs font-normal text-gray-500 line-through dark:text-gray-400">
+                                    ₱{formatMoney((item.originalPrice ?? item.price) * item.quantity)}
+                                  </span>
+                                ) : null}
+                                ₱{formatMoney(item.amount ?? item.price * item.quantity)}
+                              </span>
                             </div>
+                            {item.selectedOptionNames?.length ? (
+                              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{item.selectedOptionNames.join(' · ')}</p>
+                            ) : null}
                             <div className="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                               <span>× {item.quantity}</span>
                               <button
@@ -1020,10 +1145,89 @@ export const POSOrderPage = () => {
             )}
             {currentOrder && (
               <>
+                {canModifyOrder && (
+                  <div className="mt-3 shrink-0 border-t border-gray-200 pt-3 dark:border-gray-700">
+                    <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Discounts</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400">Discount %</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={discountPercent}
+                          onChange={(e) => setDiscountPercent(e.target.value)}
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400">Discount ₱</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={discountAmount}
+                          onChange={(e) => setDiscountAmount(e.target.value)}
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400">SC Discount ₱</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={seniorCitizenDiscount}
+                          onChange={(e) => setSeniorCitizenDiscount(e.target.value)}
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!effectiveOrderId) return;
+                        updateOrderDiscountsMutation.mutate({
+                          orderId: effectiveOrderId,
+                          discountPercent: parseFloat(discountPercent) || 0,
+                          discountAmount: parseFloat(discountAmount) || 0,
+                          seniorCitizenDiscount: parseFloat(seniorCitizenDiscount) || 0,
+                        });
+                      }}
+                      disabled={updateOrderDiscountsMutation.isPending}
+                      className="mt-2 w-full rounded bg-slate-600 px-2 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      {updateOrderDiscountsMutation.isPending ? 'Updating…' : 'Apply Discounts'}
+                    </button>
+                  </div>
+                )}
                 <div className="mt-3 shrink-0 border-t border-gray-200 pt-3 dark:border-gray-700">
-                  <div className="flex justify-between text-lg font-semibold text-gray-900 dark:text-white">
-                    <span>Total</span>
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                    <span>Subtotal</span>
                     <span>₱{formatMoney(currentOrder.itemsTotal)}</span>
+                  </div>
+                  {(currentOrder.discountPercent > 0 || currentOrder.discountAmount > 0 || currentOrder.seniorCitizenDiscount > 0) && (
+                    <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                      <span>After discounts</span>
+                      <span>₱{formatMoney(currentOrder.totalAfterDiscount ?? currentOrder.itemsTotal)}</span>
+                    </div>
+                  )}
+                  {(currentOrder.serviceChargeAmount ?? 0) > 0 && (
+                    <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                      <span>Service charge</span>
+                      <span>₱{formatMoney(currentOrder.serviceChargeAmount ?? 0)}</span>
+                    </div>
+                  )}
+                  {(currentOrder.roomServiceChargeAmount ?? 0) > 0 && (
+                    <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                      <span>Room service charge</span>
+                      <span>₱{formatMoney(currentOrder.roomServiceChargeAmount ?? 0)}</span>
+                    </div>
+                  )}
+                  <div className="mt-1 flex justify-between text-lg font-semibold text-gray-900 dark:text-white">
+                    <span>Total</span>
+                    <span>₱{formatMoney(currentOrder.orderTotal ?? currentOrder.totalAfterDiscount ?? currentOrder.itemsTotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
                     <span>Paid</span>
@@ -1113,6 +1317,27 @@ export const POSOrderPage = () => {
         onLoadOrder={handleLoadOrder}
         isFetching={isFetchingRetrieveOrders}
       />
+
+      {/* Add item with options (when menu item has option groups) */}
+      {addWithOptionsMenuItem && (
+        <AddItemWithOptionsDialog
+          open={true}
+          onClose={() => setAddWithOptionsMenuItem(null)}
+          menuItem={addWithOptionsMenuItem}
+          onConfirm={(quantity, notes, selectedOptionIds, totalPrice) => {
+            const selectedOptionNames =
+              addWithOptionsMenuItem.optionGroups?.flatMap((g) => {
+                const opt = g.options.find((o) => selectedOptionIds.includes(o.id));
+                return opt ? [`${g.name}: ${opt.name}`] : [];
+              }) ?? [];
+            if (isCartMode) {
+              addToCartFromDialog(addWithOptionsMenuItem, quantity, notes, totalPrice, selectedOptionIds, selectedOptionNames);
+            } else {
+              addToPendingOrderItems(addWithOptionsMenuItem, quantity, notes, totalPrice, selectedOptionIds, selectedOptionNames);
+            }
+          }}
+        />
+      )}
 
       {/* Add / Edit Order Item Dialog */}
       {addEditDialog?.mode === 'add' && (

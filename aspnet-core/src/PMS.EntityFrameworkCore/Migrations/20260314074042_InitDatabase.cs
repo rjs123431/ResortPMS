@@ -115,6 +115,25 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OptionGroup",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    MinSelections = table.Column<int>(type: "int", nullable: false),
+                    MaxSelections = table.Column<int>(type: "int", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OptionGroup", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PaymentMethod",
                 columns: table => new
                 {
@@ -807,6 +826,32 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PosOption",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OptionGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    PriceAdjustment = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOption", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOption_OptionGroup_OptionGroupId",
+                        column: x => x.OptionGroupId,
+                        principalTable: "OptionGroup",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Room",
                 columns: table => new
                 {
@@ -1440,6 +1485,73 @@ namespace PMS.Migrations
                         name: "FK_MenuModifier_MenuItem_MenuItemId",
                         column: x => x.MenuItemId,
                         principalTable: "MenuItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MenuItemOptionGroup",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MenuItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OptionGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    DefaultOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItemOptionGroup", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MenuItemOptionGroup_MenuItem_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MenuItemOptionGroup_OptionGroup_OptionGroupId",
+                        column: x => x.OptionGroupId,
+                        principalTable: "OptionGroup",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_MenuItemOptionGroup_PosOption_DefaultOptionId",
+                        column: x => x.DefaultOptionId,
+                        principalTable: "PosOption",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MenuItemOptionPriceOverride",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MenuItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PriceAdjustment = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItemOptionPriceOverride", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MenuItemOptionPriceOverride_MenuItem_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MenuItemOptionPriceOverride_PosOption_OptionId",
+                        column: x => x.OptionId,
+                        principalTable: "PosOption",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -2601,6 +2713,38 @@ namespace PMS.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "PosOrderItemOption",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PosOrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOrderItemOption", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOrderItemOption_PosOption_OptionId",
+                        column: x => x.OptionId,
+                        principalTable: "PosOption",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PosOrderItemOption_PosOrderItem_PosOrderItemId",
+                        column: x => x.PosOrderItemId,
+                        principalTable: "PosOrderItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_ChargeType_Name",
                 table: "ChargeType",
@@ -2734,15 +2878,52 @@ namespace PMS.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MenuItemOptionGroup_DefaultOptionId",
+                table: "MenuItemOptionGroup",
+                column: "DefaultOptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemOptionGroup_MenuItemId_OptionGroupId",
+                table: "MenuItemOptionGroup",
+                columns: new[] { "MenuItemId", "OptionGroupId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemOptionGroup_OptionGroupId",
+                table: "MenuItemOptionGroup",
+                column: "OptionGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemOptionPriceOverride_MenuItemId_OptionId",
+                table: "MenuItemOptionPriceOverride",
+                columns: new[] { "MenuItemId", "OptionId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemOptionPriceOverride_OptionId",
+                table: "MenuItemOptionPriceOverride",
+                column: "OptionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MenuModifier_MenuItemId",
                 table: "MenuModifier",
                 column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OptionGroup_DisplayOrder",
+                table: "OptionGroup",
+                column: "DisplayOrder");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentMethod_Name",
                 table: "PaymentMethod",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOption_OptionGroupId",
+                table: "PosOption",
+                column: "OptionGroupId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PosOrder_OrderNumber",
@@ -2784,6 +2965,16 @@ namespace PMS.Migrations
                 name: "IX_PosOrderItem_PosOrderId",
                 table: "PosOrderItem",
                 column: "PosOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrderItemOption_OptionId",
+                table: "PosOrderItemOption",
+                column: "OptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrderItemOption_PosOrderItemId",
+                table: "PosOrderItemOption",
+                column: "PosOrderItemId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PosOrderPayment_PaymentMethodId",
@@ -3588,10 +3779,16 @@ namespace PMS.Migrations
                 name: "Incident");
 
             migrationBuilder.DropTable(
+                name: "MenuItemOptionGroup");
+
+            migrationBuilder.DropTable(
+                name: "MenuItemOptionPriceOverride");
+
+            migrationBuilder.DropTable(
                 name: "MenuModifier");
 
             migrationBuilder.DropTable(
-                name: "PosOrderItem");
+                name: "PosOrderItemOption");
 
             migrationBuilder.DropTable(
                 name: "PosOrderPayment");
@@ -3741,10 +3938,10 @@ namespace PMS.Migrations
                 name: "HousekeepingTask");
 
             migrationBuilder.DropTable(
-                name: "MenuItem");
+                name: "PosOption");
 
             migrationBuilder.DropTable(
-                name: "PosOrder");
+                name: "PosOrderItem");
 
             migrationBuilder.DropTable(
                 name: "PreCheckIn");
@@ -3786,6 +3983,24 @@ namespace PMS.Migrations
                 name: "GuestRequest");
 
             migrationBuilder.DropTable(
+                name: "OptionGroup");
+
+            migrationBuilder.DropTable(
+                name: "MenuItem");
+
+            migrationBuilder.DropTable(
+                name: "PosOrder");
+
+            migrationBuilder.DropTable(
+                name: "ZzzDynamicProperties");
+
+            migrationBuilder.DropTable(
+                name: "ZzzEntityChangeSets");
+
+            migrationBuilder.DropTable(
+                name: "ZzzUsers");
+
+            migrationBuilder.DropTable(
                 name: "MenuCategory");
 
             migrationBuilder.DropTable(
@@ -3796,15 +4011,6 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Staff");
-
-            migrationBuilder.DropTable(
-                name: "ZzzDynamicProperties");
-
-            migrationBuilder.DropTable(
-                name: "ZzzEntityChangeSets");
-
-            migrationBuilder.DropTable(
-                name: "ZzzUsers");
 
             migrationBuilder.DropTable(
                 name: "Stay");

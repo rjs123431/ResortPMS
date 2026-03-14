@@ -27,6 +27,9 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<Room> Rooms { get; set; }
     public DbSet<RoomStatusLog> RoomStatusLogs { get; set; }
     public DbSet<HousekeepingTask> HousekeepingTasks { get; set; }
+    public DbSet<RoomRatePlan> RoomRatePlans { get; set; }
+    public DbSet<RoomRatePlanDay> RoomRatePlanDays { get; set; }
+    public DbSet<RatePlanDateOverride> RatePlanDateOverrides { get; set; }
 
     // Lookup tables
     public DbSet<ChargeType> ChargeTypes { get; set; }
@@ -82,10 +85,18 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<PosOutletTerminal> PosOutletTerminals { get; set; }
     public DbSet<PosTable> PosTables { get; set; }
     public DbSet<MenuCategory> MenuCategories { get; set; }
+    public DbSet<OptionGroup> OptionGroups { get; set; }
+    public DbSet<Option> Options { get; set; }
     public DbSet<MenuItem> MenuItems { get; set; }
+    public DbSet<MenuItemOptionGroup> MenuItemOptionGroups { get; set; }
+    public DbSet<MenuItemOptionPriceOverride> MenuItemOptionPriceOverrides { get; set; }
+    public DbSet<MenuItemPriceAdjustment> MenuItemPriceAdjustments { get; set; }
+    public DbSet<MenuItemPromo> MenuItemPromos { get; set; }
+    public DbSet<MenuItemPromoItem> MenuItemPromoItems { get; set; }
     public DbSet<MenuModifier> MenuModifiers { get; set; }
     public DbSet<PosOrder> PosOrders { get; set; }
     public DbSet<PosOrderItem> PosOrderItems { get; set; }
+    public DbSet<PosOrderItemOption> PosOrderItemOptions { get; set; }
     public DbSet<PosOrderPayment> PosOrderPayments { get; set; }
     public DbSet<PosSession> PosSessions { get; set; }
 
@@ -110,6 +121,9 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new RoomConfiguration());
         modelBuilder.ApplyConfiguration(new RoomStatusLogConfiguration());
         modelBuilder.ApplyConfiguration(new HousekeepingTaskConfiguration());
+        modelBuilder.ApplyConfiguration(new RoomRatePlanConfiguration());
+        modelBuilder.ApplyConfiguration(new RoomRatePlanDayConfiguration());
+        modelBuilder.ApplyConfiguration(new RatePlanDateOverrideConfiguration());
 
         // Lookups
         modelBuilder.ApplyConfiguration(new ChargeTypeConfiguration());
@@ -165,10 +179,18 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new PosOutletTerminalConfiguration());
         modelBuilder.ApplyConfiguration(new PosTableConfiguration());
         modelBuilder.ApplyConfiguration(new MenuCategoryConfiguration());
+        modelBuilder.ApplyConfiguration(new OptionGroupConfiguration());
+        modelBuilder.ApplyConfiguration(new OptionConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuItemOptionGroupConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuItemOptionPriceOverrideConfiguration());
         modelBuilder.ApplyConfiguration(new MenuItemConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuItemPriceAdjustmentConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuItemPromoConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuItemPromoItemConfiguration());
         modelBuilder.ApplyConfiguration(new MenuModifierConfiguration());
         modelBuilder.ApplyConfiguration(new PosOrderConfiguration());
         modelBuilder.ApplyConfiguration(new PosOrderItemConfiguration());
+        modelBuilder.ApplyConfiguration(new PosOrderItemOptionConfiguration());
         modelBuilder.ApplyConfiguration(new PosOrderPaymentConfiguration());
         modelBuilder.ApplyConfiguration(new PosSessionConfiguration());
     }
