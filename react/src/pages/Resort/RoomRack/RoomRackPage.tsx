@@ -3,10 +3,17 @@ import { useQuery } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { MainLayout } from '@components/layout/MainLayout';
-import { ReservationStatus, RoomOperationalStatus, HousekeepingStatus } from '@/types/resort.types';
+import { ReservationStatus, RoomOperationalStatus } from '@/types/resort.types';
+import type { RoomListDto } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
 
-type StatusKey = 'occupied' | 'reservedArrivalToday' | 'vacantDirty' | 'vacantClean' | 'outOfOrder';
+type StatusKey = 'occupied' | 'reservedArrivalToday' | 'vacant' | 'outOfOrder';
+
+/** Read ops status from room; API may return camelCase or PascalCase. */
+function getOperationalStatus(room: RoomListDto | Record<string, unknown>): RoomOperationalStatus {
+  const ops = (room as RoomListDto).operationalStatus ?? (room as Record<string, unknown>).OperationalStatus;
+  return typeof ops === 'number' ? (ops as RoomOperationalStatus) : RoomOperationalStatus.Vacant;
+}
 
 interface RoomRackRow {
   roomId: string;
@@ -20,8 +27,7 @@ interface RoomRackRow {
 const STATUS_FILTERS: { key: StatusKey; label: string }[] = [
   { key: 'occupied', label: 'Occupied' },
   { key: 'reservedArrivalToday', label: 'Reserved (Arrival Today)' },
-  { key: 'vacantDirty', label: 'Vacant Dirty' },
-  { key: 'vacantClean', label: 'Vacant Clean' },
+  { key: 'vacant', label: 'Vacant' },
   { key: 'outOfOrder', label: 'Out of Order / Out of Service' },
 ];
 
@@ -34,11 +40,7 @@ const STATUS_STYLES: Record<StatusKey, { badgeClass: string; cardClass: string }
     badgeClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
     cardClass: 'border-l-4 border-l-indigo-500',
   },
-  vacantDirty: {
-    badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-    cardClass: 'border-l-4 border-l-amber-500',
-  },
-  vacantClean: {
+  vacant: {
     badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
     cardClass: 'border-l-4 border-l-emerald-500',
   },
@@ -143,25 +145,28 @@ export const RoomRackPage = () => {
 
     const rows: RoomRackRow[] = rooms
       .map((room): RoomRackRow => {
+        const operationalStatus = getOperationalStatus(room);
         const occupiedGuest = inHouseByRoom.get(room.roomNumber);
 
-        if (occupiedGuest) {
-          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'occupied', label: `Occupied (${occupiedGuest})`, statusSortOrder: 0 };
+        if (occupiedGuest || operationalStatus === RoomOperationalStatus.Occupied) {
+          const label = occupiedGuest ? `Occupied (${occupiedGuest})` : 'Occupied';
+          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'occupied', label, statusSortOrder: 0 };
         }
 
-        if (room.operationalStatus === RoomOperationalStatus.OutOfOrder || room.operationalStatus === RoomOperationalStatus.OutOfService) {
-          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'outOfOrder', label: RoomOperationalStatus[room.operationalStatus], statusSortOrder: 4 };
+        if (operationalStatus === RoomOperationalStatus.OutOfOrder || operationalStatus === RoomOperationalStatus.OutOfService) {
+          const label = operationalStatus === RoomOperationalStatus.OutOfOrder ? 'Out of Order' : 'Out of Service';
+          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'outOfOrder', label, statusSortOrder: 3 };
         }
 
         if (reservedRoomNumbers.has(room.roomNumber)) {
           return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'reservedArrivalToday', label: 'Reserved (Arrival Today)', statusSortOrder: 1 };
         }
 
-        if (room.housekeepingStatus === HousekeepingStatus.Dirty) {
-          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'vacantDirty', label: 'Vacant Dirty', statusSortOrder: 2 };
+        if (operationalStatus === RoomOperationalStatus.Reserved) {
+          return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'reservedArrivalToday', label: 'Reserved', statusSortOrder: 1 };
         }
 
-        return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'vacantClean', label: 'Vacant Clean', statusSortOrder: 3 };
+        return { roomId: room.id, roomNumber: room.roomNumber, roomTypeName: room.roomTypeName || 'Unknown', statusKey: 'vacant', label: 'Vacant', statusSortOrder: 2 };
       })
       .filter((row) => activeStatuses.includes(row.statusKey))
       .filter((row) => activeRoomTypes.includes(row.roomTypeName))
