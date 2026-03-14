@@ -26,4 +26,9 @@ export const PermissionNames = {
   Pages_CheckIn: 'Pages.CheckIn',
   Pages_Stays: 'Pages.Stays',
   Pages_CheckOut: 'Pages.CheckOut',
+  Pages_POS: 'Pages.POS',
+  Pages_POS_Orders: 'Pages.POS.Orders',
+  Pages_POS_RoomCharge: 'Pages.POS.RoomCharge',
+  Pages_POS_Outlets: 'Pages.POS.Outlets',
+  Pages_POS_Menu: 'Pages.POS.Menu',
 } as const;

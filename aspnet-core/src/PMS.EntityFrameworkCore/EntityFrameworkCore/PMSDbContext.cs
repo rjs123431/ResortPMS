@@ -77,6 +77,16 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<HousekeepingLog> HousekeepingLogs { get; set; }
     public DbSet<Staff> Staffs { get; set; }
 
+    // POS
+    public DbSet<PosOutlet> PosOutlets { get; set; }
+    public DbSet<PosTable> PosTables { get; set; }
+    public DbSet<MenuCategory> MenuCategories { get; set; }
+    public DbSet<MenuItem> MenuItems { get; set; }
+    public DbSet<MenuModifier> MenuModifiers { get; set; }
+    public DbSet<PosOrder> PosOrders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
+    public DbSet<OrderPayment> OrderPayments { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -148,6 +158,15 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new HousekeepingLogConfiguration());
         modelBuilder.ApplyConfiguration(new StaffConfiguration());
 
+        // POS
+        modelBuilder.ApplyConfiguration(new PosOutletConfiguration());
+        modelBuilder.ApplyConfiguration(new PosTableConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuCategoryConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuItemConfiguration());
+        modelBuilder.ApplyConfiguration(new MenuModifierConfiguration());
+        modelBuilder.ApplyConfiguration(new PosOrderConfiguration());
+        modelBuilder.ApplyConfiguration(new OrderItemConfiguration());
+        modelBuilder.ApplyConfiguration(new OrderPaymentConfiguration());
     }
 
     public PMSDbContext(DbContextOptions<PMSDbContext> options)

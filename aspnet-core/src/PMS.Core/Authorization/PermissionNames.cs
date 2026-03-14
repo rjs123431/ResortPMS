@@ -146,8 +146,12 @@ namespace PMS.Authorization
         public const string Pages_CheckOut_WriteOff = "Pages.CheckOut.WriteOff";
         public const string Pages_CheckOut_Print = "Pages.CheckOut.Print";
 
-        // App
-
+        // POS (F&B)
+        public const string Pages_POS = "Pages.POS";
+        public const string Pages_POS_Orders = "Pages.POS.Orders";
+        public const string Pages_POS_RoomCharge = "Pages.POS.RoomCharge";
+        public const string Pages_POS_Outlets = "Pages.POS.Outlets";
+        public const string Pages_POS_Menu = "Pages.POS.Menu";
     }
 }
 

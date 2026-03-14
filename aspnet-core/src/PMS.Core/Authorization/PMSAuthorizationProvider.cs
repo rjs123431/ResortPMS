@@ -152,6 +152,13 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         checkOut.CreateChildPermission(PermissionNames.Pages_CheckOut_WriteOff, L("WriteOff"));
         checkOut.CreateChildPermission(PermissionNames.Pages_CheckOut_Print, L("Print"));
 
+        // POS (F&B)
+        var pos = webApp.CreateChildPermission(PermissionNames.Pages_POS, L("POS"), multiTenancySides: MultiTenancySides.Tenant);
+        pos.CreateChildPermission(PermissionNames.Pages_POS_Orders, L("Orders"));
+        pos.CreateChildPermission(PermissionNames.Pages_POS_RoomCharge, L("RoomCharge"));
+        pos.CreateChildPermission(PermissionNames.Pages_POS_Outlets, L("Outlets"));
+        pos.CreateChildPermission(PermissionNames.Pages_POS_Menu, L("Menu"));
+
         context.CreatePermission(PermissionNames.Pages_HangfireDasboard, L("BackgroundJobs"), multiTenancySides: PMSConsts.MultiTenancyEnabled ? MultiTenancySides.Host : MultiTenancySides.Tenant);
     }
 

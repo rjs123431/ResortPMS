@@ -19,19 +19,21 @@ public class ResortSetupDataCreator
 
     public void Create()
     {
-        if (HasExistingSeedData())
+        if (!HasExistingSeedData())
         {
-            return;
+            var roomTypes = EnsureRoomTypes();
+            EnsureRooms(roomTypes);
+            EnsureChargeTypes();
+            EnsureExtraBedTypes();
+            EnsurePaymentMethods();
+            EnsureStaff();
+            EnsureGuests();
+            EnsureDocumentSequences();
         }
 
-        var roomTypes = EnsureRoomTypes();
-        EnsureRooms(roomTypes);
-        EnsureChargeTypes();
-        EnsureExtraBedTypes();
-        EnsurePaymentMethods();
-        EnsureStaff();
-        EnsureGuests();
-        EnsureDocumentSequences();
+        // Always ensure POS data and POS_ORDER sequence for existing tenants (e.g. after migration)
+        EnsurePosData();
+        EnsurePosDocumentSequence();
     }
 
     private bool HasExistingSeedData()
@@ -269,6 +271,7 @@ public class ResortSetupDataCreator
             (Type: "STAY", Prefix: "STY-"),
             (Type: "FOLIO", Prefix: "FOL-"),
             (Type: "RECEIPT", Prefix: "RCT-"),
+            (Type: "POS_ORDER", Prefix: "ORD"),
         };
 
         foreach (var def in definitions)
@@ -283,6 +286,76 @@ public class ResortSetupDataCreator
             });
         }
 
+        _context.SaveChanges();
+    }
+
+    private void EnsurePosDocumentSequence()
+    {
+        var year = Clock.Now.Year;
+        if (_context.DocumentSequences.Any(x => x.DocumentType == "POS_ORDER" && x.Year == year && x.TenantId == _tenantId))
+            return;
+        _context.DocumentSequences.Add(new DocumentSequence
+        {
+            DocumentType = "POS_ORDER",
+            Prefix = "ORD",
+            CurrentNumber = 0,
+            Year = year,
+            TenantId = _tenantId,
+        });
+        _context.SaveChanges();
+    }
+
+    private void EnsurePosData()
+    {
+        if (_context.PosOutlets.Any()) return;
+
+        var mainOutlet = new PosOutlet
+        {
+            Name = "Main Restaurant",
+            Location = "Lobby Level",
+            IsActive = true,
+        };
+        _context.PosOutlets.Add(mainOutlet);
+        _context.SaveChanges();
+
+        for (var i = 1; i <= 8; i++)
+        {
+            _context.PosTables.Add(new PosTable
+            {
+                OutletId = mainOutlet.Id,
+                TableNumber = i.ToString(),
+                Capacity = 4,
+                Status = PosTableStatus.Available,
+            });
+        }
+        _context.SaveChanges();
+
+        var categories = new[]
+        {
+            new MenuCategory { Name = "Beverages", DisplayOrder = 0 },
+            new MenuCategory { Name = "Main Course", DisplayOrder = 1 },
+            new MenuCategory { Name = "Desserts", DisplayOrder = 2 },
+        };
+        _context.MenuCategories.AddRange(categories);
+        _context.SaveChanges();
+
+        var beverages = categories[0];
+        var mainCourse = categories[1];
+        var desserts = categories[2];
+        var menuItems = new List<MenuItem>
+        {
+            new() { CategoryId = beverages.Id, Name = "Coffee", Price = 120m, IsAvailable = true },
+            new() { CategoryId = beverages.Id, Name = "Iced Tea", Price = 95m, IsAvailable = true },
+            new() { CategoryId = beverages.Id, Name = "Beer", Price = 180m, IsAvailable = true },
+            new() { CategoryId = beverages.Id, Name = "Fresh Juice", Price = 150m, IsAvailable = true },
+            new() { CategoryId = mainCourse.Id, Name = "Grilled Salmon", Price = 450m, IsAvailable = true },
+            new() { CategoryId = mainCourse.Id, Name = "Steak", Price = 550m, IsAvailable = true },
+            new() { CategoryId = mainCourse.Id, Name = "Pasta", Price = 320m, IsAvailable = true },
+            new() { CategoryId = mainCourse.Id, Name = "Caesar Salad", Price = 280m, IsAvailable = true },
+            new() { CategoryId = desserts.Id, Name = "Ice Cream", Price = 150m, IsAvailable = true },
+            new() { CategoryId = desserts.Id, Name = "Chocolate Cake", Price = 200m, IsAvailable = true },
+        };
+        _context.MenuItems.AddRange(menuItems);
         _context.SaveChanges();
     }
 }

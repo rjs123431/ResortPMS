@@ -47,6 +47,7 @@ const RoomRackPage = lazy(() => import('@pages/Resort/RoomRack/RoomRackPage').th
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
+const POSPage = lazy(() => import('@pages/Resort/POS/POSPage').then((m) => ({ default: m.POSPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -418,6 +419,16 @@ const App: React.FC = () => {
                         <PageTitle title="Housekeeping Tasks">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
                             <HousekeepingTasksPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos"
+                      element={
+                        <PageTitle title="POS (F&B)">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <POSPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
