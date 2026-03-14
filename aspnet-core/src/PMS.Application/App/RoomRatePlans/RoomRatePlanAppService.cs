@@ -94,6 +94,8 @@ public class RoomRatePlanAppService(
             Priority = input.Priority,
             IsDefault = input.IsDefault,
             IsActive = input.IsActive,
+            CheckInTime = input.CheckInTime,
+            CheckOutTime = input.CheckOutTime,
         };
         await ratePlanRepository.InsertAsync(plan);
         await CurrentUnitOfWork.SaveChangesAsync();
@@ -130,6 +132,8 @@ public class RoomRatePlanAppService(
         plan.Priority = input.Priority;
         plan.IsDefault = input.IsDefault;
         plan.IsActive = input.IsActive;
+        plan.CheckInTime = input.CheckInTime;
+        plan.CheckOutTime = input.CheckOutTime;
         await ratePlanRepository.UpdateAsync(plan);
 
         await SaveDayRatesAsync(plan.Id, input.DayRates);

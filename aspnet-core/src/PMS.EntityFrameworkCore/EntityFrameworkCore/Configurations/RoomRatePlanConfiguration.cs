@@ -1,3 +1,4 @@
+using System;
 using PMS.App;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -14,6 +15,8 @@ internal class RoomRatePlanConfiguration : IEntityTypeConfiguration<RoomRatePlan
         entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
         entity.Property(e => e.StartDate).HasColumnType("date");
         entity.Property(e => e.EndDate).HasColumnType("date");
+        entity.Property(e => e.CheckInTime).HasDefaultValue(new TimeSpan(14, 0, 0));
+        entity.Property(e => e.CheckOutTime).HasDefaultValue(new TimeSpan(12, 0, 0));
 
         entity.HasIndex(e => new { e.RoomTypeId, e.Code }).IsUnique();
 

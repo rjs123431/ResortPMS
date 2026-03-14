@@ -47,6 +47,7 @@ const CheckOutListPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutListP
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
 const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutConfirmationPage').then((m) => ({ default: m.CheckOutConfirmationPage })));
 const RoomRackPage = lazy(() => import('@pages/Resort/RoomRack/RoomRackPage').then((m) => ({ default: m.RoomRackPage })));
+const FrontDeskGridPage = lazy(() => import('@pages/Resort/FrontDesk/FrontDeskGridPage').then((m) => ({ default: m.FrontDeskGridPage })));
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
@@ -411,6 +412,16 @@ const App: React.FC = () => {
                         <PageTitle title="Room Rack">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
                             <RoomRackPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/front-desk/grid"
+                      element={
+                        <PageTitle title="Front Desk Grid">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
+                            <FrontDeskGridPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

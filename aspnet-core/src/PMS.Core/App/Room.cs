@@ -31,6 +31,10 @@ public class RoomRatePlan : AuditedEntity<Guid>, IPassivable
     public int Priority { get; set; }
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>Check-in time (e.g. 14:00 = 2 PM). Used when saving reservations and stays.</summary>
+    public TimeSpan CheckInTime { get; set; } = new TimeSpan(14, 0, 0);
+    /// <summary>Check-out time (e.g. 12:00 = 12 noon). Used when saving reservations and stays.</summary>
+    public TimeSpan CheckOutTime { get; set; } = new TimeSpan(12, 0, 0);
 
     public virtual RoomType RoomType { get; set; }
     public virtual ICollection<RoomRatePlanDay> DayRates { get; set; } = [];

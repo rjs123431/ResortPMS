@@ -8,6 +8,7 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Reservations.Dto;
+using PMS.Application.App.PropertyTimes;
 using PMS.Application.App.Services;
 using PMS.Authorization;
 using System;
@@ -44,7 +45,8 @@ public class ReservationAppService(
     IRepository<Guest, Guid> guestRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
-    IDocumentNumberService documentNumberService
+    IDocumentNumberService documentNumberService,
+    IPropertyTimesProvider propertyTimesProvider
 ) : PMSAppServiceBase, IReservationAppService
 {
     [AbpAuthorize(PermissionNames.Pages_Reservations_Create)]
@@ -63,6 +65,8 @@ public class ReservationAppService(
         if (input.ArrivalDate.Date < Clock.Now.Date)
             throw new UserFriendlyException(L("ArrivalDateMustBeFutureOrToday"));
 
+        var (checkInTime, checkOutTime) = await propertyTimesProvider.GetDefaultCheckInCheckOutTimesAsync();
+
         var reservationNo = await documentNumberService.GenerateNextDocumentNumberAsync("RESERVATION", "RES-");
         var firstName = string.IsNullOrWhiteSpace(input.FirstName) ? guest.FirstName : input.FirstName.Trim();
         var lastName = string.IsNullOrWhiteSpace(input.LastName) ? guest.LastName : input.LastName.Trim();
@@ -79,8 +83,8 @@ public class ReservationAppService(
             Phone = phone,
             Email = email,
             ReservationDate = Clock.Now,
-            ArrivalDate = input.ArrivalDate.Date,
-            DepartureDate = input.DepartureDate.Date,
+            ArrivalDate = input.ArrivalDate.Date.Add(checkInTime),
+            DepartureDate = input.DepartureDate.Date.Add(checkOutTime),
             Nights = (int)(input.DepartureDate.Date - input.ArrivalDate.Date).TotalDays,
             Adults = input.Adults,
             Children = input.Children,
@@ -140,8 +144,8 @@ public class ReservationAppService(
             {
                 RoomTypeId = room.RoomTypeId,
                 RoomId = room.RoomId,
-                ArrivalDate = input.ArrivalDate.Date,
-                DepartureDate = input.DepartureDate.Date,
+                ArrivalDate = input.ArrivalDate.Date.Add(checkInTime),
+                DepartureDate = input.DepartureDate.Date.Add(checkOutTime),
                 RatePerNight = room.RatePerNight,
                 NumberOfNights = numberOfNights,
                 Amount = amount,
@@ -158,8 +162,8 @@ public class ReservationAppService(
         foreach (var extraBed in input.ExtraBeds ?? [])
         {
             var quantity = Math.Max(1, extraBed.Quantity);
-            var arrivalDate = extraBed.ArrivalDate?.Date ?? input.ArrivalDate.Date;
-            var departureDate = extraBed.DepartureDate?.Date ?? input.DepartureDate.Date;
+            var arrivalDate = extraBed.ArrivalDate.HasValue ? extraBed.ArrivalDate.Value.Date.Add(checkInTime) : input.ArrivalDate.Date.Add(checkInTime);
+            var departureDate = extraBed.DepartureDate.HasValue ? extraBed.DepartureDate.Value.Date.Add(checkOutTime) : input.DepartureDate.Date.Add(checkOutTime);
             var numberOfNights = extraBed.NumberOfNights > 0 ? extraBed.NumberOfNights : reservation.Nights;
             var amount = extraBed.Amount > 0 ? extraBed.Amount : extraBed.RatePerNight * numberOfNights * quantity;
             var discountPercent = extraBed.DiscountPercent;
@@ -213,8 +217,9 @@ public class ReservationAppService(
         if (input.ArrivalDate.Date >= input.DepartureDate.Date)
             throw new UserFriendlyException(L("InvalidArrivalDepartureDate"));
 
-        reservation.ArrivalDate = input.ArrivalDate.Date;
-        reservation.DepartureDate = input.DepartureDate.Date;
+        var (checkInTime, checkOutTime) = await propertyTimesProvider.GetDefaultCheckInCheckOutTimesAsync();
+        reservation.ArrivalDate = input.ArrivalDate.Date.Add(checkInTime);
+        reservation.DepartureDate = input.DepartureDate.Date.Add(checkOutTime);
         reservation.Nights = (int)(input.DepartureDate.Date - input.ArrivalDate.Date).TotalDays;
         reservation.Adults = input.Adults;
         reservation.Children = input.Children;

@@ -7,6 +7,7 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.CheckIn.Dto;
+using PMS.Application.App.PropertyTimes;
 using PMS.Application.App.Services;
 using PMS.Authorization;
 using System;
@@ -38,7 +39,8 @@ public class CheckInAppService(
     IRepository<Guest, Guid> guestRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
-    IDocumentNumberService documentNumberService
+    IDocumentNumberService documentNumberService,
+    IPropertyTimesProvider propertyTimesProvider
 ) : PMSAppServiceBase, ICheckInAppService
 {
     [AbpAuthorize(PermissionNames.Pages_CheckIn_FromReservation)]
@@ -448,6 +450,7 @@ public class CheckInAppService(
             .Select(g => g.First())
             .ToList();
 
+        var (_, checkOutTime) = await propertyTimesProvider.GetDefaultCheckInCheckOutTimesAsync();
         var stay = new Stay
         {
             StayNo = stayNo,
@@ -455,7 +458,7 @@ public class CheckInAppService(
             GuestId = guest.Id,
             GuestName = $"{guest.FirstName} {guest.LastName}".Trim(),
             CheckInDateTime = Clock.Now,
-            ExpectedCheckOutDateTime = expectedCheckOut.Date.AddHours(12),
+            ExpectedCheckOutDateTime = expectedCheckOut.Date.Add(checkOutTime),
             Status = StayStatus.InHouse,
             AssignedRoom = primaryRoom,
             RoomNumber = string.Join(", ", effectiveRooms.Select(r => r.RoomNumber))
