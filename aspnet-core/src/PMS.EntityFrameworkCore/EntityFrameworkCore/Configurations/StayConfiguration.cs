@@ -12,7 +12,10 @@ internal class StayConfiguration : IEntityTypeConfiguration<Stay>
 
         entity.Property(e => e.StayNo).HasMaxLength(32).IsUnicode(false).IsRequired();
         entity.Property(e => e.GuestName).HasMaxLength(256);
-        entity.Property(e => e.RoomNumber).HasMaxLength(16).IsUnicode(false);
+        entity.Property(e => e.FirstName).HasMaxLength(128);
+        entity.Property(e => e.LastName).HasMaxLength(128);
+        entity.Property(e => e.Phone).HasMaxLength(64).IsUnicode(false);
+        entity.Property(e => e.Email).HasMaxLength(256);
 
         entity.HasIndex(e => e.StayNo).IsUnique();
         entity.HasIndex(e => e.Status);
@@ -21,6 +24,7 @@ internal class StayConfiguration : IEntityTypeConfiguration<Stay>
         entity.HasOne(e => e.Guest)
             .WithMany()
             .HasForeignKey(e => e.GuestId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         entity.HasOne(e => e.Reservation)

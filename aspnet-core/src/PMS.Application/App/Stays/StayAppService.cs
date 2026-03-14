@@ -23,6 +23,7 @@ public interface IStayAppService : IApplicationService
     Task<List<GuestRequestListDto>> GetGuestRequestsAsync(Guid stayId);
     Task<GuestRequestCompletionContextDto> GetGuestRequestCompletionContextAsync(Guid guestRequestId);
     Task<PagedResultDto<StayListDto>> GetInHouseAsync(GetStaysInput input);
+    Task<PagedResultDto<StayListDto>> GetInHouseWithRoomsAsync(GetInHouseWithRoomsInput input);
     Task TransferRoomAsync(TransferRoomDto input);
     Task ExtendStayAsync(ExtendStayDto input);
     Task<Guid> AddGuestRequestAsync(AddGuestRequestDto input);
@@ -63,10 +64,14 @@ public class StayAppService(
             .Include(s => s.Guest)
             .Include(s => s.AssignedRoom).ThenInclude(r => r.RoomType)
             .Include(s => s.Guests).ThenInclude(sg => sg.Guest)
+            .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
             .FirstOrDefaultAsync(s => s.Id == stayId);
 
         if (stay == null) throw new UserFriendlyException(L("StayNotFound"));
-        return ObjectMapper.Map<StayDto>(stay);
+        var dto = ObjectMapper.Map<StayDto>(stay);
+        if (stay.Rooms != null && stay.Rooms.Count > 0)
+            dto.RoomNumber = string.Join(", ", stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)));
+        return dto;
     }
 
     public async Task<PagedResultDto<StayListDto>> GetInHouseAsync(GetStaysInput input)
@@ -74,15 +79,52 @@ public class StayAppService(
         var query = stayRepository.GetAll()
             .Include(s => s.Guest)
             .Include(s => s.AssignedRoom)
+            .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
             .Where(s => s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn)
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
                 s => s.StayNo.Contains(input.Filter) ||
                      s.GuestName.Contains(input.Filter) ||
-                     s.RoomNumber.Contains(input.Filter));
+                     (s.Rooms != null && s.Rooms.Any(sr => sr.Room != null && sr.Room.RoomNumber.Contains(input.Filter))));
 
         var total = await query.CountAsync();
         var items = await query.OrderBy(input.Sorting ?? "CheckInDateTime desc").PageBy(input).ToListAsync();
-        return new PagedResultDto<StayListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<StayListDto>>(items));
+        var dtos = items.Select(stay =>
+        {
+            var dto = ObjectMapper.Map<StayListDto>(stay);
+            if (stay.Rooms != null && stay.Rooms.Count > 0)
+                dto.RoomNumber = string.Join(",", stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)));
+            return dto;
+        }).ToList();
+        return new PagedResultDto<StayListDto>(total, dtos);
+    }
+
+    public async Task<PagedResultDto<StayListDto>> GetInHouseWithRoomsAsync(GetInHouseWithRoomsInput input)
+    {
+        var query = stayRepository.GetAll()
+            .Include(s => s.Guest)
+            .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
+            .Where(s => s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn)
+            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
+                s => s.StayNo.Contains(input.Filter) ||
+                     s.GuestName.Contains(input.Filter) ||
+                     (s.Rooms != null && s.Rooms.Any(sr => sr.Room != null && sr.Room.RoomNumber.Contains(input.Filter))))
+            .WhereIf(input.RoomDateFrom.HasValue && input.RoomDateTo.HasValue,
+                s => s.Rooms.Any(sr =>
+                    sr.AssignedAt < input.RoomDateTo.Value.Date &&
+                    (sr.ReleasedAt ?? s.ExpectedCheckOutDateTime).Date >= input.RoomDateFrom.Value.Date))
+            .WhereIf(input.RoomIds != null && input.RoomIds.Count > 0,
+                s => s.Rooms.Any(sr => input.RoomIds.Contains(sr.RoomId)));
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(input.Sorting ?? "CheckInDateTime desc").PageBy(input).ToListAsync();
+        var dtos = items.Select(stay =>
+        {
+            var dto = ObjectMapper.Map<StayListDto>(stay);
+            if (stay.Rooms != null && stay.Rooms.Count > 0)
+                dto.RoomNumber = string.Join(",", stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)));
+            return dto;
+        }).ToList();
+        return new PagedResultDto<StayListDto>(total, dtos);
     }
 
     public async Task<List<GuestRequestListDto>> GetGuestRequestsAsync(Guid stayId)
@@ -214,7 +256,6 @@ public class StayAppService(
         });
 
         // Update stay snapshot
-        stay.RoomNumber = toRoom.RoomNumber;
         await stayRepository.UpdateAsync(stay);
 
         // Create RoomChangeRequest for audit trail (with all fields set upfront)

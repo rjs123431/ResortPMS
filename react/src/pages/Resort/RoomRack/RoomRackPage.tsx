@@ -10,13 +10,22 @@ import type { RoomListDto, StayListDto, ReservationDetailDto, ReservationRoomDet
 import { ReservationStatus } from '@/types/resort.types';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 
-const toDateKey = (d: Date | string | undefined): string => {
+/** Normalize to YYYY-MM-DD for grid comparison. Prefer date part from ISO strings to avoid timezone shift. */
+const toDateKey = (d: Date | string | undefined | null): string => {
   if (d == null) return '';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  if (Number.isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  if (typeof d === 'string') {
+    const trimmed = d.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+    const date = new Date(trimmed);
+    if (Number.isNaN(date.getTime())) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 };
 
@@ -34,16 +43,36 @@ function getDateIndexFromPosition(pct: number, n: number): number | null {
   return dateIndex;
 }
 
-type StayRow = StayListDto & { CheckInDateTime?: string; ExpectedCheckOutDateTime?: string; RoomNumber?: string; StayNo?: string; GuestName?: string; Id?: string };
+type StayRow = StayListDto & {
+  CheckInDateTime?: string;
+  ExpectedCheckOutDateTime?: string;
+  ActualCheckOutDateTime?: string;
+  RoomNumber?: string;
+  StayNo?: string;
+  GuestName?: string;
+  Id?: string;
+};
 
-/** Stay occupies date if checkIn <= date < expectedCheckOut (checkout day exclusive). Supports camelCase and PascalCase from API. */
+/** Effective checkout: actual if set, otherwise expected. */
+const getStayCheckOutKey = (stay: StayRow): string => {
+  const raw = stay.actualCheckOutDateTime ?? stay.ActualCheckOutDateTime ?? stay.expectedCheckOutDateTime ?? stay.ExpectedCheckOutDateTime;
+  return toDateKey(raw);
+};
+
+/** Stay occupies date if checkIn <= date <= checkout (checkout day inclusive so bar shows on departure day). Uses actualCheckOut when present. */
 const stayCoversDate = (stay: StayRow, dateKey: string): boolean => {
-  const checkInRaw = stay.checkInDateTime ?? stay.CheckInDateTime;
-  const checkOutRaw = stay.expectedCheckOutDateTime ?? stay.ExpectedCheckOutDateTime;
-  const checkIn = toDateKey(checkInRaw);
-  const checkOut = toDateKey(checkOutRaw);
+  const checkIn = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
+  const checkOut = getStayCheckOutKey(stay);
   if (!checkIn || !checkOut) return false;
   return dateKey >= checkIn && dateKey < checkOut;
+};
+
+/** True if grid start date is within or touches stay period [checkIn, checkOut] (inclusive), so stays that checkout on start date are shown. */
+const stayContainsStartDate = (stay: StayRow, startKey: string): boolean => {
+  const checkIn = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
+  const checkOut = getStayCheckOutKey(stay);
+  if (!checkIn || !checkOut) return false;
+  return startKey >= checkIn && startKey <= checkOut;
 };
 
 /** Extract room number(s) from stay; API may return one or comma-separated, camelCase or PascalCase. */
@@ -63,14 +92,28 @@ type CellInfo = { type: 'stay'; stayNo: string; guestName: string; stayId: strin
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
+/** Number of calendar days (inclusive) between start and end. */
+const spanDays = (start: Date, end: Date): number => {
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+  return Math.round((endDay - startDay) / (24 * 60 * 60 * 1000)) + 1;
+};
+
 export const RoomRackPage = () => {
   const navigate = useNavigate();
-  const [startDate, setStartDate] = useState<Date>(() => new Date());
-  const [endDate, setEndDate] = useState<Date>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 13);
-    return d;
+  
+
+  const [stayRange, setStayRange] = useState<[Date, Date]>(() => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 14);
+    return [today, end];
   });
+
+  const [startDate, endDate] = stayRange;
+  const setStartDate = (d: Date) => setStayRange(([, end]) => [d, end]);
+  const setEndDate = (d: Date) => setStayRange(([start]) => [start, d]);
 
   const startKey = useMemo(() => toDateKey(startDate), [startDate]);
   const endKey = useMemo(() => toDateKey(endDate), [endDate]);
@@ -135,34 +178,40 @@ export const RoomRackPage = () => {
     queryFn: () => resortService.getRooms('', 0, 500),
   });
 
+  const roomIds = useMemo(
+    () => (roomsData?.items ?? []).map((r: { id: string }) => r.id),
+    [roomsData?.items]
+  );
+
   const { data: staysData } = useQuery({
-    queryKey: ['frontdesk-grid-stays'],
-    queryFn: () => resortService.getInHouseStays('', 0, 500),
+    queryKey: ['frontdesk-grid-stays-with-rooms', startKey, endKey, roomIds],
+    queryFn: () =>
+      resortService.getInHouseWithRooms({
+        roomDateFrom: startKey,
+        roomDateTo: endKey,
+        roomIds: roomIds.length > 0 ? roomIds : undefined,
+        maxResultCount: 500,
+      }),
   });
 
-  const { data: reservationsListData } = useQuery({
-    queryKey: ['frontdesk-grid-reservations-list'],
-    queryFn: () => resortService.getReservations('', 0, 300),
+  const { data: reservationsWithRoomsData } = useQuery({
+    queryKey: ['frontdesk-grid-reservations-with-rooms', startKey, endKey, roomIds],
+    queryFn: () =>
+      resortService.getReservationsWithRooms({
+        overlapStartDate: startKey,
+        overlapEndDate: endKey,
+        roomIds: roomIds.length > 0 ? roomIds : undefined,
+        maxResultCount: 300,
+      }),
   });
 
-  const overlappingReservationIds = useMemo(() => {
-    const list = reservationsListData?.items ?? [];
-    return list
-      .filter(
-        (r) =>
-          (r.status === ReservationStatus.Pending || r.status === ReservationStatus.Confirmed) &&
-          toDateKey(r.departureDate) >= startKey &&
-          toDateKey(r.arrivalDate) <= endKey
-      )
-      .map((r) => r.id)
-      .slice(0, 80);
-  }, [reservationsListData, startKey, endKey]);
-
-  const { data: reservationDetails } = useQuery({
-    queryKey: ['frontdesk-grid-reservation-details', overlappingReservationIds],
-    enabled: overlappingReservationIds.length > 0,
-    queryFn: async () => Promise.all(overlappingReservationIds.map((id) => resortService.getReservation(id))),
-  });
+  /** Reservations with rooms (pending/confirmed only) for the grid. */
+  const reservationDetails = useMemo(() => {
+    const items = reservationsWithRoomsData?.items ?? [];
+    return items.filter(
+      (r) => r.status === ReservationStatus.Pending || r.status === ReservationStatus.Confirmed
+    );
+  }, [reservationsWithRoomsData?.items]);
 
   const roomsByType = useMemo(() => {
     const rooms = (roomsData?.items ?? []) as RoomListDto[];
@@ -178,7 +227,8 @@ export const RoomRackPage = () => {
   }, [roomsData]);
 
   const getCellInfo = useMemo((): ((roomNumber: string, dateKey: string) => CellInfo) => {
-    const stays = staysData?.items ?? [];
+    const allStays = (staysData?.items ?? []) as StayRow[];
+    const stays = allStays.filter((stay) => stayContainsStartDate(stay, startKey));
     const details = reservationDetails ?? [];
     const resByRoomDate = new Map<string, CellInfo>();
 
@@ -217,7 +267,7 @@ export const RoomRackPage = () => {
     });
 
     return (roomNumber: string, dateKey: string) => resByRoomDate.get(`${roomNumber.trim()}|${dateKey}`) ?? null;
-  }, [staysData, reservationDetails, dateColumns]);
+  }, [staysData, reservationDetails, dateColumns, startKey]);
 
   const isDateOccupied = useCallback(
     (roomNumber: string, dateIndex: number) => {
@@ -306,7 +356,8 @@ export const RoomRackPage = () => {
       countBy.set(k, (countBy.get(k) ?? 0) + 1);
     };
 
-    (staysData?.items ?? []).forEach((stay: StayRow) => {
+    const staysForRange = ((staysData?.items ?? []) as StayRow[]).filter((stay) => stayContainsStartDate(stay, startKey));
+    staysForRange.forEach((stay: StayRow) => {
       const roomNumbers = getStayRoomNumbers(stay);
       dateColumns.forEach((dateKey) => {
         if (!stayCoversDate(stay, dateKey)) return;
@@ -320,8 +371,7 @@ export const RoomRackPage = () => {
     (reservationDetails ?? []).forEach((res: ReservationDetailDto) => {
       if (res.status === ReservationStatus.CheckedIn) return;
       (res.rooms ?? []).forEach((room: ReservationRoomDetailDto) => {
-        if (room.roomId || (room.roomNumber?.trim() ?? '')) return;
-        const typeName = room.roomTypeName?.trim() ?? '';
+        const typeName = (room.roomNumber?.trim() ? roomNumberToType.get(room.roomNumber.trim()) : null) ?? room.roomTypeName?.trim() ?? '';
         if (!typeName) return;
         dateColumns.forEach((dateKey) => {
           if (reservationRoomCoversDate(room, dateKey)) add(typeName, dateKey);
@@ -330,69 +380,89 @@ export const RoomRackPage = () => {
     });
 
     return (roomTypeName: string, dateKey: string) => countBy.get(`${roomTypeName}|${dateKey}`) ?? 0;
-  }, [staysData, reservationDetails, dateColumns, roomNumberToType]);
+  }, [staysData, reservationDetails, dateColumns, roomNumberToType, startKey]);
 
   return (
     <MainLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Front Desk Grid</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Rack</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Room occupancy by date. Rows = rooms (by type), columns = dates.</p>
           </div>
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const d1 = new Date(startDate);
-                const d2 = new Date(endDate);
-                d1.setDate(d1.getDate() - 1);
-                d2.setDate(d2.getDate() - 1);
-                setStartDate(d1);
-                setEndDate(d2);
-              }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-              title="Previous day"
-            >
-              <ChevronLeftIcon className="h-5 w-5" />
-            </button>
-            <div className="flex items-center gap-2 rounded border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center pl-2 text-gray-500 dark:text-gray-400">
+          <div className="mb-4 flex flex-wrap items-center gap-0">
+            <div className="flex h-9 items-center gap-0 rounded border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400">
                 <CalendarIcon className="h-5 w-5" />
               </span>
               <DatePicker
                 selected={startDate}
-                onChange={(d: Date | null) => setStartDate(d ?? new Date())}
-                dateFormat="yyyy-MM-dd"
-                className="min-w-[120px] border-0 bg-transparent py-2 pr-2 focus:ring-0 dark:bg-transparent"
+                onChange={(d: Date | null) => setStartDate(d ?? startDate)}
+                dateFormat="MMM dd"
+                className="h-9 w-[7ch] min-w-0 border-0 bg-transparent py-0 pr-2 text-center focus:ring-0 dark:bg-transparent"
                 popperClassName="!z-[100]"
               />
               <span className="text-gray-400 dark:text-gray-500">–</span>
               <DatePicker
                 selected={endDate}
-                onChange={(d: Date | null) => setEndDate(d ?? new Date())}
-                dateFormat="yyyy-MM-dd"
-                className="min-w-[120px] border-0 bg-transparent py-2 pr-2 focus:ring-0 dark:bg-transparent"
+                onChange={(d: Date | null) => setEndDate(d ?? endDate)}
+                minDate={startDate}
+                dateFormat="MMM dd, yyyy"
+                className="h-9 w-[14ch] min-w-0 border-0 bg-transparent py-0 pr-2 text-center focus:ring-0 dark:bg-transparent"
                 popperClassName="!z-[100]"
               />
             </div>
+
             <button
               type="button"
               onClick={() => {
+                const days = spanDays(startDate, endDate);
                 const d1 = new Date(startDate);
                 const d2 = new Date(endDate);
-                d1.setDate(d1.getDate() + 1);
-                d2.setDate(d2.getDate() + 1);
+                d1.setDate(d1.getDate() - days);
+                d2.setDate(d2.getDate() - days);
                 setStartDate(d1);
                 setEndDate(d2);
               }}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-              title="Next day"
+              title="Previous period"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const days = spanDays(startDate, endDate);
+                const d1 = new Date(startDate);
+                const d2 = new Date(endDate);
+                d1.setDate(d1.getDate() + days);
+                d2.setDate(d2.getDate() + days);
+                setStartDate(d1);
+                setEndDate(d2);
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              title="Next period"
             >
               <ChevronRightIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const days = spanDays(startDate, endDate);
+                const today = new Date();
+                today.setHours(12, 0, 0, 0);
+                const end = new Date(today);
+                end.setDate(end.getDate() + days - 1);
+                setStartDate(today);
+                setEndDate(end);
+              }}
+              className="flex h-9 shrink-0 items-center justify-center rounded border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              title="Go to today"
+            >
+              Today
             </button>
           </div>
 
@@ -434,7 +504,8 @@ export const RoomRackPage = () => {
                     {rooms.map((room) => {
                       const roomNum = room.roomNumber;
                       const n = dateColumns.length;
-                      const segments: { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string }[] = [];
+                      type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; lastDayHalf?: boolean };
+                      const segments: SegmentItem[] = [];
                       let i = 0;
                       while (i < dateColumns.length) {
                         const cell = getCellInfo(roomNum, dateColumns[i]);
@@ -453,9 +524,41 @@ export const RoomRackPage = () => {
                         }
                         const guestName = cell.type === 'stay' ? cell.guestName : cell.guestName;
                         const navPath = cell.type === 'stay' ? `/stays/${cell.stayId}` : `/reservations/${cell.reservationId}`;
-                        const bgClass = cell.type === 'stay' ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-green-100 dark:bg-green-900/30';
-                        const textClass = cell.type === 'stay' ? 'text-blue-900 hover:underline dark:text-blue-100' : 'text-green-900 hover:underline dark:text-green-100';
-                        segments.push({ id: `${cellId}-${startIndex}`, guestName: guestName || '—', navPath, startIndex, endIndex, bgClass, textClass });
+                        let bgClass: string;
+                        let textClass: string;
+                        if (cell.type === 'stay') {
+                          bgClass = 'bg-blue-100 dark:bg-blue-900/30';
+                          textClass = 'text-blue-900 hover:underline dark:text-blue-100';
+                        } else {
+                          const res = (reservationDetails ?? []).find((r) => r.id === cell.reservationId);
+                          const isPending = res?.status === ReservationStatus.Pending;
+                          bgClass = isPending ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-green-100 dark:bg-green-900/30';
+                          textClass = isPending ? 'text-yellow-900 hover:underline dark:text-yellow-100' : 'text-green-900 hover:underline dark:text-green-100';
+                        }
+                        let extendsBefore = false;
+                        let extendsAfter = false;
+                        let lastDayHalf = false;
+                        if (cell.type === 'stay') {
+                          const stay = (staysData?.items ?? []).find((s: StayRow) => s.id === cell.stayId || (s as { Id?: string }).Id === cell.stayId) as StayRow | undefined;
+                          if (stay) {
+                            const recordStart = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
+                            const recordEnd = getStayCheckOutKey(stay);
+                            extendsBefore = recordStart !== '' && recordStart < startKey;
+                            extendsAfter = recordEnd !== '' && recordEnd > endKey;
+                            const lastDateKey = dateColumns[endIndex - 1];
+                            if (recordEnd !== '' && lastDateKey === recordEnd) lastDayHalf = true;
+                          }
+                        } else {
+                          const res = (reservationDetails ?? []).find((r) => r.id === cell.reservationId);
+                          const roomDetail = res?.rooms?.find((rm) => (rm.roomNumber ?? '').trim() === roomNum.trim());
+                          if (roomDetail) {
+                            const recordStart = toDateKey(roomDetail.arrivalDate);
+                            const recordEnd = toDateKey(roomDetail.departureDate);
+                            extendsBefore = recordStart !== '' && recordStart < startKey;
+                            extendsAfter = recordEnd !== '' && recordEnd > endKey;
+                          }
+                        }
+                        segments.push({ id: `${cellId}-${startIndex}`, guestName: guestName || '—', navPath, startIndex, endIndex, bgClass, textClass, extendsBefore, extendsAfter, lastDayHalf: lastDayHalf || undefined });
                         i = endIndex;
                       }
                       return (
@@ -520,9 +623,18 @@ export const RoomRackPage = () => {
                                 />
                               )}
                               {segments.map((seg) => {
-                                const leftPct = ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
-                                const rightPct = ((seg.endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
+                                const leftPct = seg.extendsBefore ? 0 : ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                const rightPct = seg.extendsAfter ? 100 : seg.lastDayHalf ? ((seg.endIndex - 0.5) / n) * 100 : ((seg.endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
                                 const widthPct = rightPct - leftPct;
+                                const bothExtend = seg.extendsBefore && seg.extendsAfter;
+                                const onlyLeftExtends = seg.extendsBefore && !seg.extendsAfter;
+                                const onlyRightExtends = !seg.extendsBefore && seg.extendsAfter;
+                                const useFullSkew = !seg.extendsBefore && !seg.extendsAfter;
+                                const clipPath = onlyLeftExtends
+                                  ? 'polygon(0 0, 100% 0, 97% 100%, 0 100%)'
+                                  : onlyRightExtends
+                                    ? 'polygon(3% 0, 100% 0, 100% 100%, 0 100%)'
+                                    : undefined;
                                 return (
                                   <div
                                     key={seg.id}
@@ -530,14 +642,13 @@ export const RoomRackPage = () => {
                                     style={{
                                       left: `${leftPct}%`,
                                       width: `${widthPct}%`,
-                                      transform: 'skewX(-12deg)',
-                                      transformOrigin: 'bottom left',
+                                      ...(bothExtend ? {} : useFullSkew ? { transform: 'skewX(-12deg)', transformOrigin: 'bottom left' } : { clipPath }),
                                     }}
                                   >
                                     <button
                                       type="button"
                                       className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
-                                      style={{ transform: 'skewX(12deg)' }}
+                                      style={bothExtend ? undefined : useFullSkew ? { transform: 'skewX(12deg)' } : undefined}
                                       onClick={() => navigate(seg.navPath)}
                                       title={seg.guestName}
                                     >

@@ -22,6 +22,7 @@ public interface IReservationAppService : IApplicationService
 {
     Task<ReservationDto> GetAsync(Guid id);
     Task<PagedResultDto<ReservationListDto>> GetAllAsync(GetReservationsInput input);
+    Task<PagedResultDto<ReservationDto>> GetReservationsWithRoomsAsync(GetReservationsInput input);
     Task<Guid> CreateAsync(CreateReservationDto input);
     Task UpdateAsync(UpdateReservationDto input);
     Task CancelAsync(CancelReservationDto input);
@@ -53,10 +54,18 @@ public class ReservationAppService(
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateReservationDto input)
     {
-        // Validate guest exists
-        var guest = await guestRepository.FirstOrDefaultAsync(input.GuestId);
-        if (guest == null)
-            throw new UserFriendlyException(L("GuestNotFound"));
+        Guest? guest = null;
+        if (input.GuestId.HasValue && input.GuestId.Value != Guid.Empty)
+        {
+            guest = await guestRepository.FirstOrDefaultAsync(input.GuestId.Value);
+            if (guest == null)
+                throw new UserFriendlyException(L("GuestNotFound"));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(input.FirstName) || string.IsNullOrWhiteSpace(input.LastName) || string.IsNullOrWhiteSpace(input.Phone))
+                throw new UserFriendlyException(L("FirstNameLastNameAndPhoneRequiredWhenNoGuest"));
+        }
 
         // Validate dates
         if (input.ArrivalDate.Date >= input.DepartureDate.Date)
@@ -68,10 +77,10 @@ public class ReservationAppService(
         var (checkInTime, checkOutTime) = await propertyTimesProvider.GetDefaultCheckInCheckOutTimesAsync();
 
         var reservationNo = await documentNumberService.GenerateNextDocumentNumberAsync("RESERVATION", "RES-");
-        var firstName = string.IsNullOrWhiteSpace(input.FirstName) ? guest.FirstName : input.FirstName.Trim();
-        var lastName = string.IsNullOrWhiteSpace(input.LastName) ? guest.LastName : input.LastName.Trim();
-        var phone = string.IsNullOrWhiteSpace(input.Phone) ? (guest.Phone ?? string.Empty) : input.Phone.Trim();
-        var email = string.IsNullOrWhiteSpace(input.Email) ? (guest.Email ?? string.Empty) : input.Email.Trim();
+        var firstName = guest != null && string.IsNullOrWhiteSpace(input.FirstName) ? guest.FirstName : (input.FirstName ?? string.Empty).Trim();
+        var lastName = guest != null && string.IsNullOrWhiteSpace(input.LastName) ? guest.LastName : (input.LastName ?? string.Empty).Trim();
+        var phone = guest != null && string.IsNullOrWhiteSpace(input.Phone) ? (guest.Phone ?? string.Empty) : (input.Phone ?? string.Empty).Trim();
+        var email = guest != null && string.IsNullOrWhiteSpace(input.Email) ? (guest.Email ?? string.Empty) : (input.Email ?? string.Empty).Trim();
 
         var reservation = new Reservation
         {
@@ -104,9 +113,14 @@ public class ReservationAppService(
             if (roomType == null)
                 throw new UserFriendlyException(L("RoomTypeNotFound"));
 
+            string roomNumber = string.Empty;
             if (room.RoomId.HasValue)
             {
                 var roomId = room.RoomId.Value;
+                var roomEntity = await roomRepository.FirstOrDefaultAsync(roomId);
+                if (roomEntity != null)
+                    roomNumber = roomEntity.RoomNumber ?? string.Empty;
+
                 var hasReservationConflict = await reservationRoomRepository.GetAll()
                     .Include(rr => rr.Reservation)
                     .Where(rr => rr.RoomId == roomId)
@@ -155,7 +169,8 @@ public class ReservationAppService(
                 SeniorCitizenPercent = seniorCitizenPercent,
                 SeniorCitizenDiscountAmount = seniorCitizenDiscountAmount,
                 NetAmount = netAmount,
-                RoomTypeName = roomType.Name
+                RoomTypeName = roomType.Name,
+                RoomNumber = roomNumber
             });
         }
 
@@ -193,15 +208,21 @@ public class ReservationAppService(
             });
         }
 
-        // Attach additional guests
-        reservation.Guests.Add(new ReservationGuest { GuestId = input.GuestId, Age = 0, IsPrimary = true });
-        foreach (var guestId in input.AdditionalGuestIds ?? [])
+        // Attach primary and additional guests only when a guest is linked
+        if (input.GuestId.HasValue && input.GuestId.Value != Guid.Empty)
         {
-            reservation.Guests.Add(new ReservationGuest { GuestId = guestId, Age = 0, IsPrimary = false });
+            reservation.Guests.Add(new ReservationGuest { GuestId = input.GuestId.Value, Age = 0, IsPrimary = true });
+            foreach (var guestId in input.AdditionalGuestIds ?? [])
+            {
+                reservation.Guests.Add(new ReservationGuest { GuestId = guestId, Age = 0, IsPrimary = false });
+            }
         }
 
         var id = await reservationRepository.InsertAndGetIdAsync(reservation);
-        Logger.Info($"Reservation {reservationNo} created for guest {guest.GuestCode}.");
+        if (guest != null)
+            Logger.Info($"Reservation {reservationNo} created for guest {guest.GuestCode}.");
+        else
+            Logger.Info($"Reservation {reservationNo} created (walk-in: {reservation.GuestName}).");
         return id;
     }
 
@@ -531,10 +552,35 @@ public class ReservationAppService(
                      r.GuestName.Contains(input.Filter))
             .WhereIf(input.Status.HasValue, r => r.Status == input.Status)
             .WhereIf(input.ArrivalDateFrom.HasValue, r => r.ArrivalDate >= input.ArrivalDateFrom.Value.Date)
-            .WhereIf(input.ArrivalDateTo.HasValue, r => r.ArrivalDate <= input.ArrivalDateTo.Value.Date);
+            .WhereIf(input.ArrivalDateTo.HasValue, r => r.ArrivalDate <= input.ArrivalDateTo.Value.Date)
+            .WhereIf(input.OverlapStartDate.HasValue && input.OverlapEndDate.HasValue,
+                r => r.ArrivalDate < input.OverlapEndDate.Value.Date && r.DepartureDate > input.OverlapStartDate.Value.Date)
+            .WhereIf(input.RoomIds != null && input.RoomIds.Count > 0,
+                r => r.Rooms.Any(rr => rr.RoomId.HasValue && input.RoomIds.Contains(rr.RoomId.Value)));
 
         var total = await query.CountAsync();
         var items = await query.OrderBy(input.Sorting ?? "ArrivalDate desc").PageBy(input).ToListAsync();
         return new PagedResultDto<ReservationListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<ReservationListDto>>(items));
+    }
+
+    public async Task<PagedResultDto<ReservationDto>> GetReservationsWithRoomsAsync(GetReservationsInput input)
+    {
+        var query = reservationRepository.GetAll()
+            .Include(r => r.Guest)
+            .Include(r => r.Rooms).ThenInclude(rr => rr.RoomType)
+            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
+                r => r.ReservationNo.Contains(input.Filter) ||
+                     r.GuestName.Contains(input.Filter))
+            .WhereIf(input.Status.HasValue, r => r.Status == input.Status)
+            .WhereIf(input.ArrivalDateFrom.HasValue, r => r.ArrivalDate >= input.ArrivalDateFrom.Value.Date)
+            .WhereIf(input.ArrivalDateTo.HasValue, r => r.ArrivalDate <= input.ArrivalDateTo.Value.Date)
+            .WhereIf(input.OverlapStartDate.HasValue && input.OverlapEndDate.HasValue,
+                r => r.Rooms.Any(rr => rr.ArrivalDate < input.OverlapEndDate.Value.Date && rr.DepartureDate >= input.OverlapStartDate.Value.Date))
+            .WhereIf(input.RoomIds != null && input.RoomIds.Count > 0,
+                r => r.Rooms.Any(rr => rr.RoomId.HasValue && input.RoomIds.Contains(rr.RoomId.Value)));
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(input.Sorting ?? "ArrivalDate desc").PageBy(input).ToListAsync();
+        return new PagedResultDto<ReservationDto>(total, ObjectMapper.Map<System.Collections.Generic.List<ReservationDto>>(items));
     }
 }

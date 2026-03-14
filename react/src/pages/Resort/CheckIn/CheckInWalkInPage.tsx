@@ -797,8 +797,10 @@ export const CheckInWalkInPage = () => {
       if (!searchCriteria) {
         throw new Error('Missing reservation search criteria.');
       }
-      if (!selectedGuest?.id) {
-        throw new Error('Please search and select a guest before confirming.');
+      const hasGuest = !!selectedGuest?.id;
+      const hasSnapshot = !!(guestInfoForm.firstName?.trim() && guestInfoForm.lastName?.trim() && guestInfoForm.phone?.trim());
+      if (!hasGuest && !hasSnapshot) {
+        throw new Error('Please search and select a guest, or enter first name, last name, and phone.');
       }
       if (reservationDetailLines.length === 0) {
         throw new Error('No room selections found for this reservation.');
@@ -848,7 +850,11 @@ export const CheckInWalkInPage = () => {
       );
 
       const checkInResult = await resortService.checkInWalkIn({
-        guestId: selectedGuest.id,
+        guestId: selectedGuest?.id,
+        firstName: guestInfoForm.firstName?.trim() || undefined,
+        lastName: guestInfoForm.lastName?.trim() || undefined,
+        phone: guestInfoForm.phone?.trim() || undefined,
+        email: guestInfoForm.email?.trim() || undefined,
         roomId: reservationRooms[0].roomId,
         expectedCheckOutDate: searchCriteria.departureDate,
         reservationRooms,
@@ -1753,7 +1759,7 @@ export const CheckInWalkInPage = () => {
                 disabled={
                   completeCheckInMutation.isPending ||
                   !searchCriteria ||
-                  !selectedGuest?.id ||
+                  (!selectedGuest?.id && !(guestInfoForm.firstName?.trim() && guestInfoForm.lastName?.trim() && guestInfoForm.phone?.trim())) ||
                   reservationDetailLines.length === 0 ||
                   hasUnassignedRooms ||
                   hasDirtyRoomsAssigned ||

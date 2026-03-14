@@ -115,6 +115,25 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MenuItemPromo",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PromoName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    DateFrom = table.Column<DateTime>(type: "date", nullable: false),
+                    DateTo = table.Column<DateTime>(type: "date", nullable: false),
+                    PercentageDiscount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItemPromo", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "OptionGroup",
                 columns: table => new
                 {
@@ -673,6 +692,12 @@ namespace PMS.Migrations
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     HasKitchen = table.Column<bool>(type: "bit", nullable: false),
                     ChargeTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RoomServiceChargeType = table.Column<int>(type: "int", nullable: false),
+                    RoomServiceChargePercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    RoomServiceChargeAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ServiceChargeType = table.Column<int>(type: "int", nullable: false),
+                    ServiceChargePercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ServiceChargeFixedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
                     LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -761,7 +786,7 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ReservationNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
-                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ReservationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ArrivalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DepartureDate = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -872,6 +897,37 @@ namespace PMS.Migrations
                     table.PrimaryKey("PK_Room", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Room_RoomType_RoomTypeId",
+                        column: x => x.RoomTypeId,
+                        principalTable: "RoomType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomRatePlan",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    StartDate = table.Column<DateTime>(type: "date", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "date", nullable: true),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CheckInTime = table.Column<TimeSpan>(type: "time", nullable: false, defaultValue: new TimeSpan(0, 14, 0, 0, 0)),
+                    CheckOutTime = table.Column<TimeSpan>(type: "time", nullable: false, defaultValue: new TimeSpan(0, 12, 0, 0, 0)),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomRatePlan", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomRatePlan_RoomType_RoomTypeId",
                         column: x => x.RoomTypeId,
                         principalTable: "RoomType",
                         principalColumn: "Id",
@@ -1466,6 +1522,59 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MenuItemPriceAdjustment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MenuItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    NewPrice = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    EffectiveDate = table.Column<DateTime>(type: "date", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItemPriceAdjustment", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MenuItemPriceAdjustment_MenuItem_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MenuItemPromoItem",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MenuItemPromoId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MenuItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItemPromoItem", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MenuItemPromoItem_MenuItemPromo_MenuItemPromoId",
+                        column: x => x.MenuItemPromoId,
+                        principalTable: "MenuItemPromo",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MenuItemPromoItem_MenuItem_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MenuModifier",
                 columns: table => new
                 {
@@ -1676,13 +1785,16 @@ namespace PMS.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     StayNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
                     ReservationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CheckInDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ExpectedCheckOutDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ActualCheckOutDateTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     GuestName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    RoomNumber = table.Column<string>(type: "varchar(16)", unicode: false, maxLength: 16, nullable: true),
+                    FirstName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Phone = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     AssignedRoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
@@ -1713,6 +1825,55 @@ namespace PMS.Migrations
                         principalTable: "Room",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RatePlanDateOverride",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomRatePlanId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RateDate = table.Column<DateTime>(type: "date", nullable: false),
+                    OverridePrice = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RatePlanDateOverride", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RatePlanDateOverride_RoomRatePlan_RoomRatePlanId",
+                        column: x => x.RoomRatePlanId,
+                        principalTable: "RoomRatePlan",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomRatePlanDay",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomRatePlanId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DayOfWeek = table.Column<int>(type: "int", nullable: false),
+                    BasePrice = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomRatePlanDay", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomRatePlanDay_RoomRatePlan_RoomRatePlanId",
+                        column: x => x.RoomRatePlanId,
+                        principalTable: "RoomRatePlan",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -2063,6 +2224,12 @@ namespace PMS.Migrations
                     ClosedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CancelReasonType = table.Column<int>(type: "int", nullable: true),
                     CancelReason = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    RoomServiceChargeType = table.Column<int>(type: "int", nullable: false),
+                    RoomServiceChargePercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    RoomServiceChargeAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ServiceChargeType = table.Column<int>(type: "int", nullable: false),
+                    ServiceChargePercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ServiceChargeAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
                     LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -2449,6 +2616,7 @@ namespace PMS.Migrations
                     MenuItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    OriginalPrice = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
                     CancelReasonType = table.Column<int>(type: "int", nullable: true),
@@ -2905,6 +3073,27 @@ namespace PMS.Migrations
                 column: "OptionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MenuItemPriceAdjustment_MenuItemId_EffectiveDate",
+                table: "MenuItemPriceAdjustment",
+                columns: new[] { "MenuItemId", "EffectiveDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemPromo_DateFrom_DateTo",
+                table: "MenuItemPromo",
+                columns: new[] { "DateFrom", "DateTo" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemPromoItem_MenuItemId",
+                table: "MenuItemPromoItem",
+                column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemPromoItem_MenuItemPromoId_MenuItemId",
+                table: "MenuItemPromoItem",
+                columns: new[] { "MenuItemPromoId", "MenuItemId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MenuModifier_MenuItemId",
                 table: "MenuModifier",
                 column: "MenuItemId");
@@ -3121,6 +3310,12 @@ namespace PMS.Migrations
                 column: "RoomTypeId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RatePlanDateOverride_RoomRatePlanId_RateDate",
+                table: "RatePlanDateOverride",
+                columns: new[] { "RoomRatePlanId", "RateDate" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Receipt_ReceiptNo",
                 table: "Receipt",
                 column: "ReceiptNo",
@@ -3262,6 +3457,18 @@ namespace PMS.Migrations
                 name: "IX_RoomChangeRequest_ToRoomTypeId",
                 table: "RoomChangeRequest",
                 column: "ToRoomTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomRatePlan_RoomTypeId_Code",
+                table: "RoomRatePlan",
+                columns: new[] { "RoomTypeId", "Code" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomRatePlanDay_RoomRatePlanId_DayOfWeek",
+                table: "RoomRatePlanDay",
+                columns: new[] { "RoomRatePlanId", "DayOfWeek" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoomStatusLog_RoomId_ChangedAt",
@@ -3785,6 +3992,12 @@ namespace PMS.Migrations
                 name: "MenuItemOptionPriceOverride");
 
             migrationBuilder.DropTable(
+                name: "MenuItemPriceAdjustment");
+
+            migrationBuilder.DropTable(
+                name: "MenuItemPromoItem");
+
+            migrationBuilder.DropTable(
                 name: "MenuModifier");
 
             migrationBuilder.DropTable(
@@ -3809,6 +4022,9 @@ namespace PMS.Migrations
                 name: "QuotationRoom");
 
             migrationBuilder.DropTable(
+                name: "RatePlanDateOverride");
+
+            migrationBuilder.DropTable(
                 name: "ReceiptPayment");
 
             migrationBuilder.DropTable(
@@ -3825,6 +4041,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "RoomChangeRequest");
+
+            migrationBuilder.DropTable(
+                name: "RoomRatePlanDay");
 
             migrationBuilder.DropTable(
                 name: "RoomStatusLog");
@@ -3938,6 +4157,9 @@ namespace PMS.Migrations
                 name: "HousekeepingTask");
 
             migrationBuilder.DropTable(
+                name: "MenuItemPromo");
+
+            migrationBuilder.DropTable(
                 name: "PosOption");
 
             migrationBuilder.DropTable(
@@ -3960,6 +4182,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ExtraBedType");
+
+            migrationBuilder.DropTable(
+                name: "RoomRatePlan");
 
             migrationBuilder.DropTable(
                 name: "StayRoom");

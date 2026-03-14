@@ -4,6 +4,7 @@ using PMS.Dto;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace PMS.App.Stays.Dto;
 
@@ -44,6 +45,26 @@ public class StayGuestDto : EntityDto<Guid>
 public class GetStaysInput : PagedResultFilterRequestDto, IShouldNormalize
 {
     public void Normalize() { Sorting ??= "CheckInDateTime desc"; }
+}
+
+public class GetInHouseWithRoomsInput : PagedResultFilterRequestDto, IShouldNormalize
+{
+    public DateTime? RoomDateFrom { get; set; }
+    public DateTime? RoomDateTo { get; set; }
+    public string RoomIdsCsv { get; set; }
+    public List<Guid> RoomIds { get; set; }
+
+    public void Normalize()
+    {
+        Sorting ??= "CheckInDateTime desc";
+        if (RoomIds == null && !string.IsNullOrWhiteSpace(RoomIdsCsv))
+        {
+            RoomIds = RoomIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(s => Guid.TryParse(s, out _))
+                .Select(Guid.Parse)
+                .ToList();
+        }
+    }
 }
 
 public class TransferRoomDto

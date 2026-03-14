@@ -8,7 +8,7 @@ namespace PMS.App;
 public class Reservation : FullAuditedEntity<Guid>
 {
     public string ReservationNo { get; set; } = string.Empty;
-    public Guid GuestId { get; set; }
+    public Guid? GuestId { get; set; }
     public DateTime ReservationDate { get; set; } = Clock.Now;
     public DateTime ArrivalDate { get; set; }
     public DateTime DepartureDate { get; set; }

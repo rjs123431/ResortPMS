@@ -51,6 +51,7 @@ export const StaysPage = () => {
                   <th className="p-2">Stay No</th>
                   <th className="p-2">Guest</th>
                   <th className="p-2">Room</th>
+                  <th className="p-2">Check-In</th>
                   <th className="p-2">Expected Check-Out</th>
                   <th className="p-2">Action</th>
                 </tr>
@@ -61,6 +62,7 @@ export const StaysPage = () => {
                     <td className="p-2">{stay.stayNo}</td>
                     <td className="p-2">{stay.guestName}</td>
                     <td className="p-2">{stay.roomNumber}</td>
+                    <td className="p-2">{stay.checkInDateTime ? new Date(stay.checkInDateTime).toLocaleString() : '–'}</td>
                     <td className="p-2">{new Date(stay.expectedCheckOutDateTime).toLocaleDateString()}</td>
                     <td className="p-2">
                       <button
@@ -75,7 +77,7 @@ export const StaysPage = () => {
                 ))}
                 {(staysData?.items ?? []).length === 0 ? (
                   <tr>
-                    <td className="p-3 text-gray-500" colSpan={5}>No in-house stays found.</td>
+                    <td className="p-3 text-gray-500" colSpan={6}>No in-house stays found.</td>
                   </tr>
                 ) : null}
               </tbody>

@@ -335,7 +335,7 @@ export interface ReservationListDto {
 }
 
 export interface CreateReservationDto {
-  guestId: string;
+  guestId?: string;
   arrivalDate: string;
   departureDate: string;
   adults: number;
@@ -402,6 +402,7 @@ export interface StayListDto {
   guestName: string;
   checkInDateTime: string;
   expectedCheckOutDateTime: string;
+  actualCheckOutDateTime?: string;
   status: StayStatus;
   roomNumber: string;
 }

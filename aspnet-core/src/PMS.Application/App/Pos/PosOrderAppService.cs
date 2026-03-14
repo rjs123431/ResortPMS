@@ -651,11 +651,15 @@ public class PosOrderAppService(
         if (string.IsNullOrWhiteSpace(roomNumber))
             return new VerifyStayForRoomChargeDto { IsValid = false };
         var stay = await stayRepository.GetAll()
-            .Where(s => (s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn) && s.RoomNumber == roomNumber.Trim())
-            .Select(s => new { s.Id, s.StayNo, s.GuestName, s.RoomNumber })
+            .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
+            .Where(s => (s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn)
+                && s.Rooms.Any(sr => sr.ReleasedAt == null && sr.Room.RoomNumber == roomNumber.Trim()))
             .FirstOrDefaultAsync();
         if (stay == null)
             return new VerifyStayForRoomChargeDto { IsValid = false };
+        var roomNumberDisplay = stay.Rooms != null && stay.Rooms.Count > 0
+            ? string.Join(", ", stay.Rooms.Where(sr => sr.Room != null).Select(sr => sr.Room.RoomNumber).Where(n => !string.IsNullOrEmpty(n)))
+            : string.Empty;
         var folio = await folioRepository.GetAll()
             .AnyAsync(f => f.StayId == stay.Id && f.Status != FolioStatus.Settled && f.Status != FolioStatus.Voided);
         return new VerifyStayForRoomChargeDto
@@ -663,7 +667,7 @@ public class PosOrderAppService(
             StayId = stay.Id,
             StayNo = stay.StayNo,
             GuestName = stay.GuestName,
-            RoomNumber = stay.RoomNumber,
+            RoomNumber = roomNumberDisplay,
             IsValid = folio
         };
     }
@@ -685,7 +689,8 @@ public class PosOrderAppService(
         var total = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
         if (total <= 0) throw new UserFriendlyException("Order has no chargeable amount.");
         var stay = await stayRepository.GetAll()
-            .FirstOrDefaultAsync(s => (s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn) && s.RoomNumber == input.RoomNumber.Trim());
+            .FirstOrDefaultAsync(s => (s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn)
+                && s.Rooms.Any(sr => sr.ReleasedAt == null && sr.Room.RoomNumber == input.RoomNumber.Trim()));
         if (stay == null) throw new UserFriendlyException("No in-house stay found for room " + input.RoomNumber);
         var folio = await folioRepository.GetAll()
             .FirstOrDefaultAsync(f => f.StayId == stay.Id);

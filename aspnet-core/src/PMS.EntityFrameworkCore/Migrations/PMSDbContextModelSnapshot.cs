@@ -3696,7 +3696,7 @@ namespace PMS.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<Guid>("GuestId")
+                    b.Property<Guid?>("GuestId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("GuestName")
@@ -4526,10 +4526,18 @@ namespace PMS.Migrations
                     b.Property<DateTime?>("DeletionTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<DateTime>("ExpectedCheckOutDateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("GuestId")
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid?>("GuestId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("GuestName")
@@ -4545,13 +4553,17 @@ namespace PMS.Migrations
                     b.Property<long?>("LastModifierUserId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("LastName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<Guid?>("ReservationId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("RoomNumber")
-                        .HasMaxLength(16)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(16)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -5849,8 +5861,7 @@ namespace PMS.Migrations
                     b.HasOne("PMS.App.Guest", "Guest")
                         .WithMany()
                         .HasForeignKey("GuestId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Guest");
                 });
@@ -6085,8 +6096,7 @@ namespace PMS.Migrations
                     b.HasOne("PMS.App.Guest", "Guest")
                         .WithMany()
                         .HasForeignKey("GuestId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("PMS.App.Reservation", "Reservation")
                         .WithMany()

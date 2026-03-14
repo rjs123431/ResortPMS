@@ -301,18 +301,13 @@ public class RoomChangeService(
             Reason = BuildTransferReason(request)
         });
 
-        // Update stay's room number snapshot
-        var stay = request.Stay;
-        stay.RoomNumber = toRoom.RoomNumber;
-        await stayRepository.UpdateAsync(stay);
-
         // Mark request as completed
         request.Status = RoomChangeRequestStatus.Completed;
         request.CompletedAt = Clock.Now;
         request.CompletedBy = AbpSession.UserId.HasValue ? AbpSession.UserId.ToString() : "System";
         await roomChangeRequestRepository.UpdateAsync(request);
 
-        Logger.Info($"Room change completed: Stay {stay.StayNo} from {fromRoom.RoomNumber} to {toRoom.RoomNumber}");
+        Logger.Info($"Room change completed: Stay {request.Stay.StayNo} from {fromRoom.RoomNumber} to {toRoom.RoomNumber}");
 
         return newStayRoomId;
     }

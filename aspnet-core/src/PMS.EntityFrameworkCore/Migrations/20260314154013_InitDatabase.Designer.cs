@@ -12,8 +12,8 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260314091140_AddRoomRatePlans")]
-    partial class AddRoomRatePlans
+    [Migration("20260314154013_InitDatabase")]
+    partial class InitDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3699,7 +3699,7 @@ namespace PMS.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<Guid>("GuestId")
+                    b.Property<Guid?>("GuestId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("GuestName")
@@ -4216,6 +4216,16 @@ namespace PMS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<TimeSpan>("CheckInTime")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("time")
+                        .HasDefaultValue(new TimeSpan(0, 14, 0, 0, 0));
+
+                    b.Property<TimeSpan>("CheckOutTime")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("time")
+                        .HasDefaultValue(new TimeSpan(0, 12, 0, 0, 0));
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -4519,10 +4529,18 @@ namespace PMS.Migrations
                     b.Property<DateTime?>("DeletionTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<DateTime>("ExpectedCheckOutDateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("GuestId")
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid?>("GuestId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("GuestName")
@@ -4538,13 +4556,17 @@ namespace PMS.Migrations
                     b.Property<long?>("LastModifierUserId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("LastName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<Guid?>("ReservationId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("RoomNumber")
-                        .HasMaxLength(16)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(16)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -5842,8 +5864,7 @@ namespace PMS.Migrations
                     b.HasOne("PMS.App.Guest", "Guest")
                         .WithMany()
                         .HasForeignKey("GuestId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Guest");
                 });
@@ -6078,8 +6099,7 @@ namespace PMS.Migrations
                     b.HasOne("PMS.App.Guest", "Guest")
                         .WithMany()
                         .HasForeignKey("GuestId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("PMS.App.Reservation", "Reservation")
                         .WithMany()

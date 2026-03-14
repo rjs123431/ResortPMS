@@ -52,9 +52,13 @@ public class CheckInReservationPaymentDto
 
 public class WalkInCheckInDto
 {
-    [Required] public Guid GuestId { get; set; }
+    public Guid? GuestId { get; set; }
     [Required] public Guid RoomId { get; set; }
     [Required] public DateTime ExpectedCheckOutDate { get; set; }
+    [StringLength(128)] public string FirstName { get; set; }
+    [StringLength(128)] public string LastName { get; set; }
+    [StringLength(64)] public string Phone { get; set; }
+    [StringLength(256)] public string Email { get; set; }
     public Guid[] AdditionalGuestIds { get; set; } = [];
     public decimal AdvancePaymentAmount { get; set; } = 0;
     public Guid? PaymentMethodId { get; set; }
@@ -63,8 +67,12 @@ public class WalkInCheckInDto
 
 public class CheckInWalkInDto
 {
-    [Required] public Guid GuestId { get; set; }
+    public Guid? GuestId { get; set; }
     [Required] public Guid RoomId { get; set; }
+    [StringLength(128)] public string FirstName { get; set; }
+    [StringLength(128)] public string LastName { get; set; }
+    [StringLength(64)] public string Phone { get; set; }
+    [StringLength(256)] public string Email { get; set; }
     public Guid? ReservationRoomId { get; set; }
     public DateTime? ExpectedCheckOutDate { get; set; }
     public Guid[] AdditionalGuestIds { get; set; } = [];

@@ -74,6 +74,7 @@ import {
   RoomChangeRequestListDto,
   AvailableRoomForChangeDto,
   TransferRoomDto,
+  ReservationStatus,
 } from '@/types/resort.types';
 
 export const resortService = {
@@ -231,15 +232,51 @@ export const resortService = {
     return response.data.result;
   },
 
-  getReservations: async (filter = '', skipCount = 0, maxResultCount = 50) => {
+  getReservations: async (
+    filter = '',
+    skipCount = 0,
+    maxResultCount = 50,
+    options?: {
+      overlapStartDate?: string;
+      overlapEndDate?: string;
+      roomIds?: string[];
+    }
+  ) => {
+    const params: Record<string, string | number | undefined> = {
+      Filter: filter,
+      Sorting: 'ArrivalDate desc',
+      SkipCount: skipCount,
+      MaxResultCount: maxResultCount,
+    };
+    if (options?.overlapStartDate) params.OverlapStartDate = options.overlapStartDate;
+    if (options?.overlapEndDate) params.OverlapEndDate = options.overlapEndDate;
+    if (options?.roomIds?.length) params.RoomIdsCsv = options.roomIds.join(',');
     const response = await api.get<ApiResponse<PagedResultDto<ReservationListDto>>>('/api/services/app/Reservation/GetAll', {
-      params: {
-        Filter: filter,
-        Sorting: 'ArrivalDate desc',
-        SkipCount: skipCount,
-        MaxResultCount: maxResultCount,
-      },
+      params,
     });
+    return response.data.result;
+  },
+
+  getReservationsWithRooms: async (options: {
+    overlapStartDate: string;
+    overlapEndDate: string;
+    roomIds?: string[];
+    status?: ReservationStatus;
+    maxResultCount?: number;
+  }) => {
+    const params: Record<string, string | number | undefined> = {
+      Sorting: 'ArrivalDate desc',
+      SkipCount: 0,
+      MaxResultCount: options.maxResultCount ?? 300,
+      OverlapStartDate: options.overlapStartDate,
+      OverlapEndDate: options.overlapEndDate,
+    };
+    if (options.roomIds?.length) params.RoomIdsCsv = options.roomIds.join(',');
+    if (options.status !== undefined) params.Status = options.status;
+    const response = await api.get<ApiResponse<PagedResultDto<ReservationDetailDto>>>(
+      '/api/services/app/Reservation/GetReservationsWithRooms',
+      { params }
+    );
     return response.data.result;
   },
 
@@ -363,7 +400,11 @@ export const resortService = {
   },
 
   checkInWalkIn: async (input: {
-    guestId: string;
+    guestId?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
     roomId: string;
     reservationRoomId?: string;
     expectedCheckOutDate?: string;
@@ -408,6 +449,29 @@ export const resortService = {
         MaxResultCount: maxResultCount,
       },
     });
+    return response.data.result;
+  },
+
+  getInHouseWithRooms: async (options: {
+    roomDateFrom: string;
+    roomDateTo: string;
+    roomIds?: string[];
+    filter?: string;
+    maxResultCount?: number;
+  }) => {
+    const params: Record<string, string | number | undefined> = {
+      Sorting: 'CheckInDateTime desc',
+      SkipCount: 0,
+      MaxResultCount: options.maxResultCount ?? 500,
+      RoomDateFrom: options.roomDateFrom,
+      RoomDateTo: options.roomDateTo,
+    };
+    if (options.filter) params.Filter = options.filter;
+    if (options.roomIds?.length) params.RoomIdsCsv = options.roomIds.join(',');
+    const response = await api.get<ApiResponse<PagedResultDto<StayListDto>>>(
+      '/api/services/app/Stay/GetInHouseWithRooms',
+      { params }
+    );
     return response.data.result;
   },
 

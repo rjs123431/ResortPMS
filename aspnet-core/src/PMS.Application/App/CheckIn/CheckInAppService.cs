@@ -97,6 +97,10 @@ public class CheckInAppService(
         var stay = await CreateStayAsync(
             reservationId: reservation.Id,
             guest: reservation.Guest,
+            firstName: reservation.FirstName,
+            lastName: reservation.LastName,
+            phone: reservation.Phone,
+            email: reservation.Email,
             primaryRoom: primaryRoom,
             assignedRooms: rooms,
             expectedCheckOut: input.ExpectedCheckOutDate ?? reservation.DepartureDate,
@@ -156,7 +160,7 @@ public class CheckInAppService(
 
         await CurrentUnitOfWork.SaveChangesAsync();
 
-        Logger.Info($"Check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {reservation.Guest.GuestCode}.");
+        Logger.Info($"Check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {reservation.Guest?.GuestCode ?? reservation.GuestName}.");
 
         return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
     }
@@ -165,9 +169,18 @@ public class CheckInAppService(
     [UnitOfWork]
     public async Task<CheckInResultDto> CheckInWalkInAsync(CheckInWalkInDto input)
     {
-        var guest = await guestRepository.FirstOrDefaultAsync(input.GuestId);
-        if (guest == null)
-            throw new UserFriendlyException(L("GuestNotFound"));
+        Guest guest = null;
+        if (input.GuestId.HasValue && input.GuestId.Value != Guid.Empty)
+        {
+            guest = await guestRepository.FirstOrDefaultAsync(input.GuestId.Value);
+            if (guest == null)
+                throw new UserFriendlyException(L("GuestNotFound"));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(input.FirstName) || string.IsNullOrWhiteSpace(input.LastName) || string.IsNullOrWhiteSpace(input.Phone))
+                throw new UserFriendlyException(L("FirstNameLastNameAndPhoneRequiredWhenNoGuest"));
+        }
 
         var expectedCheckOut = input.ExpectedCheckOutDate ?? Clock.Now.Date.AddDays(1);
         var primaryRoom = await ValidateAndGetRoomAsync(input.RoomId);
@@ -182,6 +195,10 @@ public class CheckInAppService(
         var stay = await CreateStayAsync(
             reservationId: null,
             guest: guest,
+            firstName: input.FirstName ?? string.Empty,
+            lastName: input.LastName ?? string.Empty,
+            phone: input.Phone ?? string.Empty,
+            email: input.Email ?? string.Empty,
             primaryRoom: primaryRoom,
             assignedRooms: rooms,
             expectedCheckOut: expectedCheckOut,
@@ -227,7 +244,7 @@ public class CheckInAppService(
         await UpdateInventoryAfterCheckInAsync(stay, primaryRoom);
         await CurrentUnitOfWork.SaveChangesAsync();
 
-        Logger.Info($"Walk-in check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {guest.GuestCode}.");
+        Logger.Info($"Walk-in check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {guest?.GuestCode ?? stay.GuestName}.");
 
         return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
     }
@@ -244,6 +261,10 @@ public class CheckInAppService(
             GuestId = input.GuestId,
             RoomId = input.RoomId,
             ExpectedCheckOutDate = input.ExpectedCheckOutDate,
+            FirstName = input.FirstName,
+            LastName = input.LastName,
+            Phone = input.Phone,
+            Email = input.Email,
             AdditionalGuestIds = input.AdditionalGuestIds ?? [],
             Payments = input.AdvancePaymentAmount > 0 && input.PaymentMethodId.HasValue
                 ? [new CheckInReservationPaymentDto
@@ -442,7 +463,17 @@ public class CheckInAppService(
         return roomIds.Distinct().ToList();
     }
 
-    private async Task<Stay> CreateStayAsync(Guid? reservationId, Guest guest, Room primaryRoom, IReadOnlyCollection<Room> assignedRooms, DateTime expectedCheckOut, Guid[] additionalGuestIds)
+    private async Task<Stay> CreateStayAsync(
+        Guid? reservationId,
+        Guest guest,
+        string firstName,
+        string lastName,
+        string phone,
+        string email,
+        Room primaryRoom,
+        IReadOnlyCollection<Room> assignedRooms,
+        DateTime expectedCheckOut,
+        Guid[] additionalGuestIds)
     {
         var stayNo = await documentNumberService.GenerateNextDocumentNumberAsync("STAY", "STY-");
         var effectiveRooms = (assignedRooms == null || assignedRooms.Count == 0 ? [primaryRoom] : assignedRooms)
@@ -451,27 +482,33 @@ public class CheckInAppService(
             .ToList();
 
         var (_, checkOutTime) = await propertyTimesProvider.GetDefaultCheckInCheckOutTimesAsync();
+        var guestName = !string.IsNullOrWhiteSpace(firstName) || !string.IsNullOrWhiteSpace(lastName)
+            ? $"{firstName} {lastName}".Trim()
+            : (guest != null ? $"{guest.FirstName} {guest.LastName}".Trim() : string.Empty);
         var stay = new Stay
         {
             StayNo = stayNo,
             ReservationId = reservationId,
-            GuestId = guest.Id,
-            GuestName = $"{guest.FirstName} {guest.LastName}".Trim(),
+            GuestId = guest?.Id,
+            GuestName = guestName,
+            FirstName = firstName ?? guest?.FirstName ?? string.Empty,
+            LastName = lastName ?? guest?.LastName ?? string.Empty,
+            Phone = phone ?? guest?.Phone ?? string.Empty,
+            Email = email ?? guest?.Email ?? string.Empty,
             CheckInDateTime = Clock.Now,
             ExpectedCheckOutDateTime = expectedCheckOut.Date.Add(checkOutTime),
             Status = StayStatus.InHouse,
             AssignedRoom = primaryRoom,
-            RoomNumber = string.Join(", ", effectiveRooms.Select(r => r.RoomNumber))
         };
 
         var stayId = await stayRepository.InsertAndGetIdAsync(stay);
 
-        // Register primary guest
-        await stayGuestRepository.InsertAsync(new StayGuest { StayId = stayId, GuestId = guest.Id, IsPrimary = true });
-
-        // Register additional guests
-        foreach (var gid in additionalGuestIds)
-            await stayGuestRepository.InsertAsync(new StayGuest { StayId = stayId, GuestId = gid, IsPrimary = false });
+        if (guest != null)
+        {
+            await stayGuestRepository.InsertAsync(new StayGuest { StayId = stayId, GuestId = guest.Id, IsPrimary = true });
+            foreach (var gid in additionalGuestIds)
+                await stayGuestRepository.InsertAsync(new StayGuest { StayId = stayId, GuestId = gid, IsPrimary = false });
+        }
 
         // Record all requested room assignments for this stay.
         foreach (var room in effectiveRooms)

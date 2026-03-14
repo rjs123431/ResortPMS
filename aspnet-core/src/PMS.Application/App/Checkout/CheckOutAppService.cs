@@ -84,12 +84,15 @@ public class CheckOutAppService(
         var totalPayments = activePayments.Sum(p => p.Amount);
         var balance = totalCharges - totalDiscounts - totalPayments;
 
+        var roomNumber = stayRooms.Count > 0
+            ? string.Join(", ", stayRooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)))
+            : string.Empty;
         return new CheckOutStatementDto
         {
             StayId = stayId,
             StayNo = stay.StayNo,
             GuestName = stay.GuestName,
-            RoomNumber = stay.RoomNumber,
+            RoomNumber = roomNumber,
             CheckInDateTime = stay.CheckInDateTime,
             ExpectedCheckOutDateTime = stay.ExpectedCheckOutDateTime,
             FolioId = folio.Id,
@@ -317,6 +320,9 @@ public class CheckOutAppService(
         var receipt = await receiptRepository.GetAll()
             .Include(r => r.Stay)
             .ThenInclude(s => s.AssignedRoom)
+            .Include(r => r.Stay)
+            .ThenInclude(s => s.Rooms)
+            .ThenInclude(sr => sr.Room)
             .Include(r => r.Payments)
             .ThenInclude(p => p.PaymentMethod)
             .FirstOrDefaultAsync(r => r.Id == receiptId);
@@ -330,7 +336,9 @@ public class CheckOutAppService(
             StayId = receipt.StayId,
             StayNo = receipt.Stay?.StayNo,
             GuestName = receipt.Stay?.GuestName,
-            RoomNumber = receipt.Stay?.RoomNumber,
+            RoomNumber = receipt.Stay != null && receipt.Stay.Rooms != null && receipt.Stay.Rooms.Count > 0
+                ? string.Join(", ", receipt.Stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)))
+                : string.Empty,
             IssuedDate = receipt.IssuedDate,
             Amount = receipt.Amount,
             Payments = receipt.Payments
@@ -359,9 +367,15 @@ public class CheckOutAppService(
     {
         var record = await checkOutRecordRepository.GetAll()
             .Include(r => r.Stay)
+            .ThenInclude(s => s.Rooms)
+            .ThenInclude(sr => sr.Room)
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (record == null) throw new UserFriendlyException(L("CheckOutRecordNotFound"));
+
+        var stayRoomNumber = record.Stay?.Rooms != null && record.Stay.Rooms.Count > 0
+            ? string.Join(", ", record.Stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)))
+            : string.Empty;
 
         var receipt = await receiptRepository.GetAll()
             .Include(r => r.Payments)
@@ -376,7 +390,7 @@ public class CheckOutAppService(
             StayId = record.StayId,
             StayNo = record.Stay?.StayNo ?? string.Empty,
             GuestName = record.Stay?.GuestName ?? string.Empty,
-            RoomNumber = record.Stay?.RoomNumber ?? string.Empty,
+            RoomNumber = stayRoomNumber,
             CheckOutDateTime = record.CheckOutDateTime,
             TotalCharges = record.TotalCharges,
             TotalPayments = record.TotalPayments,
@@ -390,7 +404,7 @@ public class CheckOutAppService(
                 StayId = receipt.StayId,
                 StayNo = record.Stay?.StayNo,
                 GuestName = record.Stay?.GuestName,
-                RoomNumber = record.Stay?.RoomNumber,
+                RoomNumber = stayRoomNumber,
                 IssuedDate = receipt.IssuedDate,
                 Amount = receipt.Amount,
                 Payments = receipt.Payments.Select(p => new ReceiptPaymentDto

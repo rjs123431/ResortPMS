@@ -31,6 +31,7 @@ internal class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         entity.HasOne(e => e.Guest)
             .WithMany()
             .HasForeignKey(e => e.GuestId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

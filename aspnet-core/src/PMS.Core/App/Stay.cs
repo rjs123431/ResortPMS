@@ -9,16 +9,18 @@ public class Stay : FullAuditedEntity<Guid>
 {
     public string StayNo { get; set; } = string.Empty;
     public Guid? ReservationId { get; set; }
-    public Guid GuestId { get; set; }
+    public Guid? GuestId { get; set; }
     public DateTime CheckInDateTime { get; set; } = Clock.Now;
     public DateTime ExpectedCheckOutDateTime { get; set; }
     public DateTime? ActualCheckOutDateTime { get; set; }
     public StayStatus Status { get; set; } = StayStatus.CheckedIn;
 
-    // Snapshot: guest name at check-in time
+    // Snapshot: guest info at check-in time (used when GuestId is null or for display)
     public string GuestName { get; set; } = string.Empty;
-    // Snapshot: room number at check-in time
-    public string RoomNumber { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
 
     public virtual Reservation Reservation { get; set; }
     public virtual Guest Guest { get; set; }

@@ -5,6 +5,7 @@ using PMS.Dto;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace PMS.App.Reservations.Dto;
 
@@ -13,7 +14,7 @@ namespace PMS.App.Reservations.Dto;
 public class ReservationDto : EntityDto<Guid>
 {
     public string ReservationNo { get; set; }
-    public Guid GuestId { get; set; }
+    public Guid? GuestId { get; set; }
     public string GuestName { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
@@ -44,7 +45,7 @@ public class ReservationDto : EntityDto<Guid>
 public class ReservationListDto : EntityDto<Guid>
 {
     public string ReservationNo { get; set; }
-    public Guid GuestId { get; set; }
+    public Guid? GuestId { get; set; }
     public string GuestName { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
@@ -62,7 +63,7 @@ public class ReservationListDto : EntityDto<Guid>
 // ── Create DTO ───────────────────────────────────────────────────────────────
 public class CreateReservationDto : IValidatableObject
 {
-    [Required] public Guid GuestId { get; set; }
+    public Guid? GuestId { get; set; }
     [Required] public DateTime ArrivalDate { get; set; }
     [Required] public DateTime DepartureDate { get; set; }
     [Range(1, 20)] public int Adults { get; set; } = 1;
@@ -73,9 +74,9 @@ public class CreateReservationDto : IValidatableObject
     [StringLength(1024)] public string Notes { get; set; }
     [StringLength(2048)] public string ReservationConditions { get; set; }
     [StringLength(2048)] public string SpecialRequests { get; set; }
-    [StringLength(128)] public string FirstName { get; set; }
-    [StringLength(128)] public string LastName { get; set; }
-    [StringLength(64)] public string Phone { get; set; }
+    [Required][StringLength(128)] public string FirstName { get; set; }
+    [Required][StringLength(128)] public string LastName { get; set; }
+    [Required][StringLength(64)] public string Phone { get; set; }
     [StringLength(256)] public string Email { get; set; }
     [Required][MinLength(1)] public List<CreateReservationRoomDto> Rooms { get; set; } = [];
     public List<CreateReservationExtraBedDto> ExtraBeds { get; set; } = [];
@@ -248,10 +249,22 @@ public class GetReservationsInput : PagedResultFilterRequestDto, IShouldNormaliz
     public ReservationStatus? Status { get; set; }
     public DateTime? ArrivalDateFrom { get; set; }
     public DateTime? ArrivalDateTo { get; set; }
+    public DateTime? OverlapStartDate { get; set; }
+    public DateTime? OverlapEndDate { get; set; }
     public Guid? GuestId { get; set; }
+    /// <summary>Comma-separated room IDs to filter reservations that have an assigned room in this set.</summary>
+    public string RoomIdsCsv { get; set; }
+    public List<Guid> RoomIds { get; set; }
 
     public void Normalize()
     {
         Sorting ??= "ArrivalDate asc, CreationTime asc";
+        if (RoomIds == null && !string.IsNullOrWhiteSpace(RoomIdsCsv))
+        {
+            RoomIds = RoomIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(s => Guid.TryParse(s, out _))
+                .Select(Guid.Parse)
+                .ToList();
+        }
     }
 }
