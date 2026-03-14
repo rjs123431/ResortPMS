@@ -108,3 +108,30 @@ Example:
 ```
 
 Use the same header row (with or without a right-side action) and content section on all resort and admin list/detail pages.
+
+---
+
+# EF Core Migrations and Database
+
+Use the project’s `./app` script from the **repository root** for migrations and database updates. Do not use raw `dotnet ef` unless the script does not support what you need.
+
+**Add a new migration** (after changing entities or DbContext):
+
+```bash
+./app migration add "MigrationName"
+```
+
+Example: `./app migration add "AddPosOrderPosTerminalId"`
+
+**Apply migrations to the database**:
+
+```bash
+./app db update
+```
+
+Other useful commands (see `./app` for full list):
+
+- `./app migration remove` — remove the last migration
+- `./app migration list` — list migrations
+- `./app db drop` — drop the database
+- `./app db reset` — drop and recreate the database

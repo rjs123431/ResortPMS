@@ -16,6 +16,8 @@ import type {
   AddOrderPaymentDto,
   ChargeToRoomDto,
   VerifyStayForRoomChargeDto,
+  PosSessionListDto,
+  OpenPosSessionInput,
 } from '@/types/pos.types';
 
 export const posService = {
@@ -130,5 +132,31 @@ export const posService = {
 
   chargeOrderToRoom: async (input: ChargeToRoomDto) => {
     await api.post('/api/services/app/PosOrder/ChargeToRoom', input);
+  },
+
+  /** List POS sessions for the current user (open, closed, suspended). */
+  getMyPosSessions: async (): Promise<PosSessionListDto[]> => {
+    const response = await api.get<ApiResponse<PosSessionListDto[]>>(
+      '/api/services/app/PosSession/GetMySessions'
+    );
+    return response.data.result ?? [];
+  },
+
+  /** Get current user's open session id, if any. */
+  getMyCurrentOpenSessionId: async (): Promise<string | null> => {
+    const response = await api.get<ApiResponse<string | null>>(
+      '/api/services/app/PosSession/GetMyCurrentOpenSessionId'
+    );
+    const id = response.data.result;
+    return id ?? null;
+  },
+
+  /** Open a new POS session (fails if user already has an open session). */
+  openPosSession: async (input: OpenPosSessionInput): Promise<string> => {
+    const response = await api.post<ApiResponse<string>>(
+      '/api/services/app/PosSession/OpenSession',
+      input
+    );
+    return response.data.result;
   },
 };

@@ -6,6 +6,7 @@ import {
   ClipboardDocumentListIcon,
   ChartBarIcon,
   Cog6ToothIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 
 const navItems = [

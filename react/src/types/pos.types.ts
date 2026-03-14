@@ -44,6 +44,7 @@ export interface PosOutletListDto {
   name: string;
   location: string;
   isActive: boolean;
+  hasKitchen: boolean;
 }
 
 export interface PosTableListDto {
@@ -116,6 +117,7 @@ export interface PosOrderDto {
   id: string;
   outletId: string;
   outletName: string;
+  outletHasKitchen: boolean;
   tableId?: string;
   tableNumber: string;
   stayId?: string;
@@ -201,4 +203,34 @@ export interface VerifyStayForRoomChargeDto {
   guestName: string;
   roomNumber: string;
   isValid: boolean;
+}
+
+/** POS session lifecycle: Open → (Orders & Payments) → Shift Closing → Cash Count → Close */
+export enum PosSessionStatus {
+  Open = 0,
+  Closed = 1,
+  Suspended = 2,
+}
+
+export interface PosSessionListDto {
+  id: string;
+  outletId: string;
+  outletName: string;
+  terminalId: string;
+  terminalName?: string;
+  userId: string;
+  userName: string;
+  openedAt: string;
+  closedAt?: string;
+  openingCash: number;
+  closingCash?: number;
+  expectedCash?: number;
+  cashDifference?: number;
+  status: number;
+}
+
+export interface OpenPosSessionInput {
+  outletId: string;
+  terminalId: string;
+  openingCash: number;
 }

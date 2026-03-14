@@ -68,7 +68,8 @@ public class PosOrderAppService(
                 Id = o.Id,
                 Name = o.Name,
                 Location = o.Location,
-                IsActive = o.IsActive
+                IsActive = o.IsActive,
+                HasKitchen = o.HasKitchen
             })
             .ToListAsync();
         return list;
@@ -300,9 +301,12 @@ public class PosOrderAppService(
         if (input.Items == null || input.Items.Count == 0)
             return;
         var order = await orderRepository.GetAll()
+            .Include(o => o.Outlet)
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Id == input.OrderId);
         if (order == null) throw new UserFriendlyException("Order not found.");
+        if (order.Outlet?.HasKitchen != true)
+            throw new UserFriendlyException("This outlet does not have a kitchen. Send to Kitchen is not available.");
         if (order.Status != PosOrderStatus.Open && order.Status != PosOrderStatus.SentToKitchen && order.Status != PosOrderStatus.Preparing)
             throw new UserFriendlyException("Cannot add items to this order.");
         if (order.Status == PosOrderStatus.Closed || order.Status == PosOrderStatus.Cancelled)
@@ -364,9 +368,12 @@ public class PosOrderAppService(
     public async Task SendToKitchenAsync(SendToKitchenDto input)
     {
         var order = await orderRepository.GetAll()
+            .Include(o => o.Outlet)
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Id == input.OrderId);
         if (order == null) throw new UserFriendlyException("Order not found.");
+        if (order.Outlet?.HasKitchen != true)
+            throw new UserFriendlyException("This outlet does not have a kitchen. Send to Kitchen is not available.");
         if (order.Status == PosOrderStatus.Closed || order.Status == PosOrderStatus.Cancelled)
             throw new UserFriendlyException("Cannot send closed or cancelled order to kitchen.");
 
@@ -571,6 +578,7 @@ public class PosOrderAppService(
             Id = order.Id,
             OutletId = order.OutletId,
             OutletName = order.Outlet?.Name ?? "",
+            OutletHasKitchen = order.Outlet?.HasKitchen ?? false,
             TableId = order.TableId,
             TableNumber = order.Table?.TableNumber ?? "",
             StayId = order.StayId,

@@ -13,8 +13,29 @@ public class PosOutlet : AuditedEntity<Guid>, IPassivable
     public string Name { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+    /// <summary>When true, orders from this outlet can use Send to Kitchen.</summary>
+    public bool HasKitchen { get; set; } = false;
+    /// <summary>Optional charge type used for Charge to Room transactions from this outlet.</summary>
+    public Guid? ChargeTypeId { get; set; }
 
     public virtual ICollection<PosTable> Tables { get; set; } = [];
+    public virtual ICollection<PosOutletTerminal> Terminals { get; set; } = [];
+    public virtual ChargeType ChargeType { get; set; }
+}
+
+/// <summary>
+/// Terminal (device/station) within an outlet. An outlet can have one or more terminals.
+/// </summary>
+public class PosOutletTerminal : AuditedEntity<Guid>, IPassivable
+{
+    public Guid OutletId { get; set; }
+    /// <summary>Unique code within the outlet, e.g. "POS-01".</summary>
+    public string Code { get; set; } = string.Empty;
+    /// <summary>Display name for the terminal.</summary>
+    public string Name { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+
+    public virtual PosOutlet Outlet { get; set; }
 }
 
 public enum PosTableStatus
@@ -116,6 +137,7 @@ public enum OrderItemCancelReasonType
 public class PosOrder : FullAuditedEntity<Guid>
 {
     public Guid OutletId { get; set; }
+    public Guid? PosTerminalId { get; set; }
     public Guid? TableId { get; set; }
     public Guid? StayId { get; set; }
     public string GuestName { get; set; } = string.Empty;
@@ -133,6 +155,7 @@ public class PosOrder : FullAuditedEntity<Guid>
     public string CancelReason { get; set; } = string.Empty;
 
     public virtual PosOutlet Outlet { get; set; }
+    public virtual PosOutletTerminal Terminal { get; set; }
     public virtual PosTable Table { get; set; }
     public virtual Stay Stay { get; set; }
     public virtual Staff ServerStaff { get; set; }
@@ -165,4 +188,29 @@ public class PosOrderPayment : FullAuditedEntity<Guid>
 
     public virtual PosOrder Order { get; set; }
     public virtual PaymentMethod PaymentMethod { get; set; }
+}
+
+// ── POS Sessions (shift / cash drawer lifecycle) ─────────────────────────────
+
+public enum PosSessionStatus
+{
+    Open = 0,
+    Closed = 1,
+    Suspended = 2,
+}
+
+public class PosSession : FullAuditedEntity<Guid>
+{
+    public Guid OutletId { get; set; }
+    public string TerminalId { get; set; } = string.Empty;
+    public long UserId { get; set; }
+    public DateTime OpenedAt { get; set; } = Clock.Now;
+    public DateTime? ClosedAt { get; set; }
+    public decimal OpeningCash { get; set; }
+    public decimal? ClosingCash { get; set; }
+    public decimal? ExpectedCash { get; set; }
+    public decimal? CashDifference { get; set; }
+    public PosSessionStatus Status { get; set; } = PosSessionStatus.Open;
+
+    public virtual PosOutlet Outlet { get; set; }
 }

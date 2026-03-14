@@ -12,6 +12,26 @@ internal class PosOutletConfiguration : IEntityTypeConfiguration<PosOutlet>
         entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
         entity.Property(e => e.Location).HasMaxLength(256);
         entity.HasIndex(e => e.Name);
+        entity.HasIndex(e => e.ChargeTypeId);
+        entity.HasOne(e => e.ChargeType)
+            .WithMany()
+            .HasForeignKey(e => e.ChargeTypeId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+internal class PosOutletTerminalConfiguration : IEntityTypeConfiguration<PosOutletTerminal>
+{
+    public void Configure(EntityTypeBuilder<PosOutletTerminal> entity)
+    {
+        entity.ToTable("PosOutletTerminal");
+        entity.Property(e => e.Code).HasMaxLength(32).IsRequired();
+        entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
+        entity.HasIndex(e => new { e.OutletId, e.Code }).IsUnique();
+        entity.HasOne(e => e.Outlet)
+            .WithMany(o => o.Terminals)
+            .HasForeignKey(e => e.OutletId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -86,6 +106,7 @@ internal class PosOrderConfiguration : IEntityTypeConfiguration<PosOrder>
         entity.Property(e => e.CancelReason).HasMaxLength(512);
         entity.HasIndex(e => e.OrderNumber).IsUnique();
         entity.HasIndex(e => new { e.OutletId, e.Status });
+        entity.HasIndex(e => e.PosTerminalId);
         entity.HasIndex(e => e.TableId);
         entity.HasIndex(e => e.StayId);
         entity.HasIndex(e => e.ServerStaffId);
@@ -94,6 +115,10 @@ internal class PosOrderConfiguration : IEntityTypeConfiguration<PosOrder>
             .WithMany()
             .HasForeignKey(e => e.OutletId)
             .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(e => e.Terminal)
+            .WithMany()
+            .HasForeignKey(e => e.PosTerminalId)
+            .OnDelete(DeleteBehavior.SetNull);
         entity.HasOne(e => e.Table)
             .WithMany()
             .HasForeignKey(e => e.TableId)
@@ -144,6 +169,26 @@ internal class PosOrderPaymentConfiguration : IEntityTypeConfiguration<PosOrderP
         entity.HasOne(e => e.PaymentMethod)
             .WithMany()
             .HasForeignKey(e => e.PaymentMethodId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal class PosSessionConfiguration : IEntityTypeConfiguration<PosSession>
+{
+    public void Configure(EntityTypeBuilder<PosSession> entity)
+    {
+        entity.ToTable("PosSession");
+        entity.Property(e => e.TerminalId).HasMaxLength(32).IsRequired();
+        entity.Property(e => e.OpeningCash).HasPrecision(18, 4);
+        entity.Property(e => e.ClosingCash).HasPrecision(18, 4);
+        entity.Property(e => e.ExpectedCash).HasPrecision(18, 4);
+        entity.Property(e => e.CashDifference).HasPrecision(18, 4);
+        entity.Property(e => e.Status).HasConversion<int>();
+        entity.HasIndex(e => new { e.UserId, e.Status });
+        entity.HasIndex(e => e.OutletId);
+        entity.HasOne(e => e.Outlet)
+            .WithMany()
+            .HasForeignKey(e => e.OutletId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

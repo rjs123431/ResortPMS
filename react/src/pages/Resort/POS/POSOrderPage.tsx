@@ -9,6 +9,7 @@ import {
   PosOrderType,
   PosOrderStatus,
   OrderItemStatus,
+  PosSessionStatus,
   type PosOutletListDto,
   type PosTableListDto,
   type MenuCategoryListDto,
@@ -16,6 +17,7 @@ import {
   type PosOrderListDto,
   type OrderItemDto,
 } from '@/types/pos.types';
+import { usePOSSession } from '@contexts/POSSessionContext';
 import { RemoveItemDialog } from './RemoveItemDialog';
 import type { StayListDto } from '@/types/resort.types';
 import { AddEditOrderItemDialog } from './AddEditOrderItemDialog';
@@ -66,6 +68,7 @@ export const POSOrderPage = () => {
   const queryClient = useQueryClient();
   const { orderId: orderIdParam } = useParams<{ orderId?: string }>();
   const navigate = useNavigate();
+  const { currentSession, setCurrentSession } = usePOSSession();
   const [localCart, setLocalCart] = useState<LocalCart | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const effectiveOrderId = orderIdParam ?? currentOrderId;
@@ -107,6 +110,18 @@ export const POSOrderPage = () => {
     queryFn: () => posService.getPosOutlets(),
   });
 
+  const { data: mySessions = [] } = useQuery({
+    queryKey: ['pos-my-sessions'],
+    queryFn: () => posService.getMyPosSessions(),
+    enabled: currentSession === null,
+  });
+
+  useEffect(() => {
+    if (currentSession !== null || mySessions.length === 0) return;
+    const openSession = mySessions.find((s) => s.status === PosSessionStatus.Open);
+    if (openSession) setCurrentSession(openSession);
+  }, [currentSession, mySessions, setCurrentSession]);
+
   useEffect(() => {
     if (orderIdParam !== 'new') {
       initedNewOrderRef.current = false;
@@ -114,7 +129,10 @@ export const POSOrderPage = () => {
     }
     if (outlets.length === 0 || initedNewOrderRef.current) return;
     initedNewOrderRef.current = true;
-    const outletId = outlets[0]?.id ?? '';
+    const outletId =
+      (currentSession && outlets.some((o: PosOutletListDto) => o.id === currentSession.outletId))
+        ? currentSession.outletId
+        : outlets[0]?.id ?? '';
     const outlet = outlets.find((o: PosOutletListDto) => o.id === outletId);
     setNewOrderOutletId(outletId);
     setNewOrderOrderType(PosOrderType.DineIn);
@@ -127,7 +145,7 @@ export const POSOrderPage = () => {
     setPendingOrderItems([]);
     setLocalCart({
       outletId,
-      outletName: outlet?.name ?? '',
+      outletName: outlet?.name ?? (currentSession?.outletName ?? ''),
       tableId: '',
       tableNumber: '',
       orderType: PosOrderType.DineIn,
@@ -138,7 +156,7 @@ export const POSOrderPage = () => {
       serverStaffName: undefined,
       items: [],
     });
-  }, [orderIdParam, outlets]);
+  }, [orderIdParam, outlets, currentSession]);
 
   const { data: newOrderTables = [] } = useQuery({
     queryKey: ['pos-tables', newOrderOutletId],
@@ -476,11 +494,16 @@ export const POSOrderPage = () => {
   };
 
   const canModifyOrder = currentOrder && PENDING_STATUSES.includes(currentOrder.status);
+  const outletHasKitchen =
+    isCartMode && localCart
+      ? (outlets.find((o: PosOutletListDto) => o.id === localCart.outletId)?.hasKitchen ?? false)
+      : (currentOrder?.outletHasKitchen ?? false);
   const showSaveAndSendToKitchen =
     currentOrder &&
     currentOrder.status !== PosOrderStatus.Open &&
     pendingOrderItems.length > 0 &&
-    canModifyOrder;
+    canModifyOrder &&
+    outletHasKitchen;
   const activeSavedItems = currentOrder?.items.filter((i) => i.status !== OrderItemStatus.Cancelled) ?? [];
   const pendingItemsForKitchen = currentOrder?.items.filter((i) => i.status === OrderItemStatus.Pending) ?? [];
   const cartItems = localCart?.items ?? [];
@@ -516,15 +539,28 @@ export const POSOrderPage = () => {
     <POSLayout
       sidebar={<POSSidebar />}
       headerCenter={
-        message ? (
-          <div
-            className={`rounded px-4 py-2 text-sm ${
-              message.type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-            }`}
-          >
-            {message.text}
-          </div>
-        ) : undefined
+        <>
+          {currentSession ? (
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-medium text-gray-800 dark:text-gray-200">Session:</span>
+              <span>
+                {currentSession.outletName ?? currentSession.outletId} — {currentSession.terminalName ?? currentSession.terminalId}
+              </span>
+              <span className="text-gray-400 dark:text-gray-500">
+                (opened {currentSession.openedAt ? new Date(currentSession.openedAt).toLocaleString() : ''})
+              </span>
+            </div>
+          ) : null}
+          {message ? (
+            <div
+              className={`rounded px-4 py-2 text-sm ${
+                message.type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+              }`}
+            >
+              {message.text}
+            </div>
+          ) : null}
+        </>
       }
       headerRight={
         <>
@@ -612,7 +648,7 @@ export const POSOrderPage = () => {
                   {ORDER_STATUS_LABELS[currentOrder.status] ?? 'Unknown'}
                 </span>
               )}
-              {canModifyOrder && currentOrder && pendingItemsForKitchen.length > 0 && (
+              {canModifyOrder && currentOrder && pendingItemsForKitchen.length > 0 && outletHasKitchen && (
                 <button
                   type="button"
                   onClick={() =>

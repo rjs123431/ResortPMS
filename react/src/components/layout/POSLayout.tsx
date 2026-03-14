@@ -22,7 +22,7 @@ export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, he
             </svg>
             Back to PMS
           </Link>
-          <span className="text-lg font-semibold text-gray-900 dark:text-white">POS (F&B)</span>
+          <span className="text-lg font-semibold text-gray-900 dark:text-white">POS</span>
         </div>
         <div className="flex min-w-0 flex-1 justify-center">
           {headerCenter}

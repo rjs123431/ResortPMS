@@ -132,24 +132,6 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PosOutlet",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    Location = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
-                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PosOutlet", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "RoomType",
                 columns: table => new
                 {
@@ -663,6 +645,32 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PosOutlet",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Location = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    HasKitchen = table.Column<bool>(type: "bit", nullable: false),
+                    ChargeTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOutlet", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOutlet_ChargeType_ChargeTypeId",
+                        column: x => x.ChargeTypeId,
+                        principalTable: "ChargeType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GuestIdentification",
                 columns: table => new
                 {
@@ -794,31 +802,6 @@ namespace PMS.Migrations
                         name: "FK_MenuItem_MenuCategory_CategoryId",
                         column: x => x.CategoryId,
                         principalTable: "MenuCategory",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "PosTable",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OutletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TableNumber = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    Capacity = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
-                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PosTable", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_PosTable_PosOutlet_OutletId",
-                        column: x => x.OutletId,
-                        principalTable: "PosOutlet",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -1167,6 +1150,90 @@ namespace PMS.Migrations
                         principalTable: "ZzzWebhookEvents",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PosOutletTerminal",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OutletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOutletTerminal", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOutletTerminal_PosOutlet_OutletId",
+                        column: x => x.OutletId,
+                        principalTable: "PosOutlet",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PosSession",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OutletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TerminalId = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    UserId = table.Column<long>(type: "bigint", nullable: false),
+                    OpenedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ClosedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    OpeningCash = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ClosingCash = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
+                    ExpectedCash = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
+                    CashDifference = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosSession", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosSession_PosOutlet_OutletId",
+                        column: x => x.OutletId,
+                        principalTable: "PosOutlet",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PosTable",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OutletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TableNumber = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Capacity = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosTable", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosTable_PosOutlet_OutletId",
+                        column: x => x.OutletId,
+                        principalTable: "PosOutlet",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1868,6 +1935,7 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     OutletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PosTerminalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     TableId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     GuestName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -1894,6 +1962,12 @@ namespace PMS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PosOrder", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOrder_PosOutletTerminal_PosTerminalId",
+                        column: x => x.PosTerminalId,
+                        principalTable: "PosOutletTerminal",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_PosOrder_PosOutlet_OutletId",
                         column: x => x.OutletId,
@@ -2682,6 +2756,11 @@ namespace PMS.Migrations
                 columns: new[] { "OutletId", "Status" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_PosOrder_PosTerminalId",
+                table: "PosOrder",
+                column: "PosTerminalId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PosOrder_ServerStaffId",
                 table: "PosOrder",
                 column: "ServerStaffId");
@@ -2717,9 +2796,30 @@ namespace PMS.Migrations
                 column: "PosOrderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PosOutlet_ChargeTypeId",
+                table: "PosOutlet",
+                column: "ChargeTypeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PosOutlet_Name",
                 table: "PosOutlet",
                 column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOutletTerminal_OutletId_Code",
+                table: "PosOutletTerminal",
+                columns: new[] { "OutletId", "Code" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosSession_OutletId",
+                table: "PosSession",
+                column: "OutletId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosSession_UserId_Status",
+                table: "PosSession",
+                columns: new[] { "UserId", "Status" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PosTable_OutletId_TableNumber",
@@ -3497,6 +3597,9 @@ namespace PMS.Migrations
                 name: "PosOrderPayment");
 
             migrationBuilder.DropTable(
+                name: "PosSession");
+
+            migrationBuilder.DropTable(
                 name: "PreCheckInExtraBed");
 
             migrationBuilder.DropTable(
@@ -3629,9 +3732,6 @@ namespace PMS.Migrations
                 name: "ZzzWebhookSubscriptions");
 
             migrationBuilder.DropTable(
-                name: "ChargeType");
-
-            migrationBuilder.DropTable(
                 name: "Folio");
 
             migrationBuilder.DropTable(
@@ -3689,6 +3789,9 @@ namespace PMS.Migrations
                 name: "MenuCategory");
 
             migrationBuilder.DropTable(
+                name: "PosOutletTerminal");
+
+            migrationBuilder.DropTable(
                 name: "PosTable");
 
             migrationBuilder.DropTable(
@@ -3714,6 +3817,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Room");
+
+            migrationBuilder.DropTable(
+                name: "ChargeType");
 
             migrationBuilder.DropTable(
                 name: "Guest");

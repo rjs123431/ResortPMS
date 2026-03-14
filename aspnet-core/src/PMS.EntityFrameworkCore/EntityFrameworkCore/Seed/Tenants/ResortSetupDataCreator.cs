@@ -309,13 +309,44 @@ public class ResortSetupDataCreator
     {
         if (_context.PosOutlets.Any()) return;
 
+        var restaurantChargeType = _context.ChargeTypes.FirstOrDefault(x => x.Name == "Restaurant");
+        var spaChargeType = _context.ChargeTypes.FirstOrDefault(x => x.Name == "Spa");
+
         var mainOutlet = new PosOutlet
         {
             Name = "Main Restaurant",
             Location = "Lobby Level",
             IsActive = true,
+            HasKitchen = true,
+            ChargeTypeId = restaurantChargeType?.Id,
         };
         _context.PosOutlets.Add(mainOutlet);
+
+        var spaOutlet = new PosOutlet
+        {
+            Name = "Spa Services",
+            Location = "Wellness Wing",
+            IsActive = true,
+            HasKitchen = false,
+            ChargeTypeId = spaChargeType?.Id,
+        };
+        _context.PosOutlets.Add(spaOutlet);
+        _context.SaveChanges();
+
+        _context.PosOutletTerminals.Add(new PosOutletTerminal
+        {
+            OutletId = mainOutlet.Id,
+            Code = "POS-01",
+            Name = "Terminal 1",
+            IsActive = true,
+        });
+        _context.PosOutletTerminals.Add(new PosOutletTerminal
+        {
+            OutletId = spaOutlet.Id,
+            Code = "POS-01",
+            Name = "Terminal 1",
+            IsActive = true,
+        });
         _context.SaveChanges();
 
         for (var i = 1; i <= 8; i++)

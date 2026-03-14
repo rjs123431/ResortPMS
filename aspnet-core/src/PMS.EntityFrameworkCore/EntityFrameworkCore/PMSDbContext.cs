@@ -79,6 +79,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
 
     // POS
     public DbSet<PosOutlet> PosOutlets { get; set; }
+    public DbSet<PosOutletTerminal> PosOutletTerminals { get; set; }
     public DbSet<PosTable> PosTables { get; set; }
     public DbSet<MenuCategory> MenuCategories { get; set; }
     public DbSet<MenuItem> MenuItems { get; set; }
@@ -86,6 +87,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<PosOrder> PosOrders { get; set; }
     public DbSet<PosOrderItem> PosOrderItems { get; set; }
     public DbSet<PosOrderPayment> PosOrderPayments { get; set; }
+    public DbSet<PosSession> PosSessions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -160,6 +162,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
 
         // POS
         modelBuilder.ApplyConfiguration(new PosOutletConfiguration());
+        modelBuilder.ApplyConfiguration(new PosOutletTerminalConfiguration());
         modelBuilder.ApplyConfiguration(new PosTableConfiguration());
         modelBuilder.ApplyConfiguration(new MenuCategoryConfiguration());
         modelBuilder.ApplyConfiguration(new MenuItemConfiguration());
@@ -167,6 +170,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new PosOrderConfiguration());
         modelBuilder.ApplyConfiguration(new PosOrderItemConfiguration());
         modelBuilder.ApplyConfiguration(new PosOrderPaymentConfiguration());
+        modelBuilder.ApplyConfiguration(new PosSessionConfiguration());
     }
 
     public PMSDbContext(DbContextOptions<PMSDbContext> options)

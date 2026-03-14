@@ -2365,6 +2365,9 @@ namespace PMS.Migrations
                     b.Property<Guid>("OutletId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("PosTerminalId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("SeniorCitizenDiscount")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
@@ -2385,6 +2388,8 @@ namespace PMS.Migrations
 
                     b.HasIndex("OrderNumber")
                         .IsUnique();
+
+                    b.HasIndex("PosTerminalId");
 
                     b.HasIndex("ServerStaffId");
 
@@ -2519,11 +2524,17 @@ namespace PMS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ChargeTypeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2");
 
                     b.Property<long?>("CreatorUserId")
                         .HasColumnType("bigint");
+
+                    b.Property<bool>("HasKitchen")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -2545,9 +2556,125 @@ namespace PMS.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ChargeTypeId");
+
                     b.HasIndex("Name");
 
                     b.ToTable("PosOutlet", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.PosOutletTerminal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("OutletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OutletId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("PosOutletTerminal", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.PosSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("CashDifference")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("ClosingCash")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("DeleterUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("ExpectedCash")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("OpeningCash")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("OutletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TerminalId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OutletId");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("PosSession", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.PosTable", b =>
@@ -4836,6 +4963,11 @@ namespace PMS.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("PMS.App.PosOutletTerminal", "Terminal")
+                        .WithMany()
+                        .HasForeignKey("PosTerminalId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("PMS.App.Staff", "ServerStaff")
                         .WithMany()
                         .HasForeignKey("ServerStaffId")
@@ -4858,6 +4990,8 @@ namespace PMS.Migrations
                     b.Navigation("Stay");
 
                     b.Navigation("Table");
+
+                    b.Navigation("Terminal");
                 });
 
             modelBuilder.Entity("PMS.App.PosOrderItem", b =>
@@ -4896,6 +5030,38 @@ namespace PMS.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("PaymentMethod");
+                });
+
+            modelBuilder.Entity("PMS.App.PosOutlet", b =>
+                {
+                    b.HasOne("PMS.App.ChargeType", "ChargeType")
+                        .WithMany()
+                        .HasForeignKey("ChargeTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ChargeType");
+                });
+
+            modelBuilder.Entity("PMS.App.PosOutletTerminal", b =>
+                {
+                    b.HasOne("PMS.App.PosOutlet", "Outlet")
+                        .WithMany("Terminals")
+                        .HasForeignKey("OutletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Outlet");
+                });
+
+            modelBuilder.Entity("PMS.App.PosSession", b =>
+                {
+                    b.HasOne("PMS.App.PosOutlet", "Outlet")
+                        .WithMany()
+                        .HasForeignKey("OutletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Outlet");
                 });
 
             modelBuilder.Entity("PMS.App.PosTable", b =>
@@ -5568,6 +5734,8 @@ namespace PMS.Migrations
             modelBuilder.Entity("PMS.App.PosOutlet", b =>
                 {
                     b.Navigation("Tables");
+
+                    b.Navigation("Terminals");
                 });
 
             modelBuilder.Entity("PMS.App.PreCheckIn", b =>

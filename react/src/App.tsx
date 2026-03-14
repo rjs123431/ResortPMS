@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '@contexts/AuthContext';
 import { ThemeProvider } from '@contexts/ThemeContext';
 import { SignalRProvider } from '@contexts/SignalRContext';
+import { POSSessionProvider } from '@contexts/POSSessionContext';
 import { ProtectedRoute } from '@components/auth/ProtectedRoute';
 import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { LogoSpinner } from '@components/common/LogoSpinner';
@@ -49,6 +50,7 @@ const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/Cleaning
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
 const POSOrderPage = lazy(() => import('@pages/Resort/POS/POSOrderPage').then((m) => ({ default: m.POSOrderPage })));
+const POSPage = lazy(() => import('@pages/Resort/POS/POSPage').then((m) => ({ default: m.POSPage })));
 const POSTablesPage = lazy(() => import('@pages/Resort/POS/POSTablesPage').then((m) => ({ default: m.POSTablesPage })));
 const POSOrdersPage = lazy(() => import('@pages/Resort/POS/POSOrdersPage').then((m) => ({ default: m.POSOrdersPage })));
 const POSReportsPage = lazy(() => import('@pages/Resort/POS/POSReportsPage').then((m) => ({ default: m.POSReportsPage })));
@@ -92,6 +94,7 @@ const App: React.FC = () => {
           <BrowserRouter>
             <AuthProvider>
               <SignalRProvider>
+                <POSSessionProvider>
                 <Suspense fallback={<LoadingScreen />}>
                   <Routes>
                     <Route
@@ -433,9 +436,9 @@ const App: React.FC = () => {
                     <Route
                       path="/pos"
                       element={
-                        <PageTitle title="POS (F&B)">
+                        <PageTitle title="POS">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <POSOrderPage />
+                            <POSPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
@@ -443,7 +446,7 @@ const App: React.FC = () => {
                     <Route
                       path="/pos/order/:orderId"
                       element={
-                        <PageTitle title="POS (F&B)">
+                        <PageTitle title="POS">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
                             <POSOrderPage />
                           </ProtectedRoute>
@@ -524,6 +527,7 @@ const App: React.FC = () => {
                   </Routes>
                 </Suspense>
                 <NotificationToast />
+                </POSSessionProvider>
               </SignalRProvider>
             </AuthProvider>
           </BrowserRouter>

@@ -11,6 +11,7 @@ public class PosOutletListDto : EntityDto<Guid>
     public string Name { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public bool HasKitchen { get; set; }
 }
 
 public class PosTableListDto : EntityDto<Guid>
@@ -65,6 +66,7 @@ public class PosOrderDto : EntityDto<Guid>
 {
     public Guid OutletId { get; set; }
     public string OutletName { get; set; } = string.Empty;
+    public bool OutletHasKitchen { get; set; }
     public Guid? TableId { get; set; }
     public string TableNumber { get; set; } = string.Empty;
     public Guid? StayId { get; set; }
@@ -203,4 +205,29 @@ public class VerifyStayForRoomChargeDto
     public string GuestName { get; set; } = string.Empty;
     public string RoomNumber { get; set; } = string.Empty;
     public bool IsValid { get; set; }
+}
+
+// POS Session
+public class PosSessionListDto : EntityDto<Guid>
+{
+    public Guid OutletId { get; set; }
+    public string OutletName { get; set; } = string.Empty;
+    public string TerminalId { get; set; } = string.Empty;
+    public string TerminalName { get; set; } = string.Empty;
+    public long UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public DateTime OpenedAt { get; set; }
+    public DateTime? ClosedAt { get; set; }
+    public decimal OpeningCash { get; set; }
+    public decimal? ClosingCash { get; set; }
+    public decimal? ExpectedCash { get; set; }
+    public decimal? CashDifference { get; set; }
+    public int Status { get; set; } // PosSessionStatus
+}
+
+public class OpenPosSessionInput
+{
+    [Required] public Guid OutletId { get; set; }
+    [Required] [StringLength(32)] public string TerminalId { get; set; } = string.Empty;
+    [Range(0, double.MaxValue)] public decimal OpeningCash { get; set; }
 }
