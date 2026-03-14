@@ -9,7 +9,10 @@ interface MenuItem {
   label: string;
   icon: React.ReactNode;
   children?: MenuItem[];
+  /** User needs all of these permissions (default). */
   permissions?: string[];
+  /** If true, user only needs one of the permissions. Use when parent permission may not be granted but child permissions are. */
+  permissionsAny?: boolean;
 }
 
 interface SidebarProps {
@@ -145,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       },
       {
         path: '/pos',
-        label: 'POS (F&B)',
+        label: 'POS',
         permissions: [PermissionNames.Pages_POS],
         icon: (
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,15 +297,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     setExpandedMenus((prev) => (prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]));
   };
 
-  const hasPermission = (permissions?: string[]) => {
-    if (!permissions || permissions.length === 0) return true;
-    return permissions.every((perm) => isGranted(perm));
+  const hasPermission = (item: MenuItem) => {
+    if (!item.permissions || item.permissions.length === 0) return true;
+    if (item.permissionsAny) return item.permissions.some((perm) => isGranted(perm));
+    return item.permissions.every((perm) => isGranted(perm));
   };
 
   const filterMenuItems = (items: MenuItem[]): MenuItem[] =>
     items
-      .filter((item) => hasPermission(item.permissions))
-      .map((item) => (item.children ? { ...item, children: filterMenuItems(item.children) } : item));
+      .filter((item) => hasPermission(item))
+      .map((item) => (item.children ? { ...item, children: filterMenuItems(item.children) } : item))
+      .filter((item) => !item.children || item.children.length > 0);
 
   const visibleMenuItems = useMemo(() => filterMenuItems(menuItems), [menuItems, isGranted]);
 

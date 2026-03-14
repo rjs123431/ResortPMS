@@ -13,6 +13,7 @@ import { NotificationToast } from '@components/common/NotificationToast';
 import { initAbpEvents } from '@/utils/abp-events';
 import './index.css';
 import { PermissionNames } from './config/permissionNames';
+import { ImpersonatePage } from './pages/Impersonate/ImpersonatePage';
 
 const LoginPage = lazy(() => import('@pages/Login/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('@pages/Register/RegisterPage').then((m) => ({ default: m.RegisterPage })));
@@ -505,6 +506,16 @@ const App: React.FC = () => {
                         <PageTitle title="Roles">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Roles]}>
                             <RolesPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/xx"
+                      element={
+                        <PageTitle title="Impersonate">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Users]}>
+                            <ImpersonatePage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
