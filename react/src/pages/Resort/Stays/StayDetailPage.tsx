@@ -261,7 +261,7 @@ export const StayDetailPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Stay Details</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">View stay information, rooms, folio ledger, and guest requests.</p>

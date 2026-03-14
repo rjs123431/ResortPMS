@@ -66,3 +66,45 @@ Example:
 
 - Without `pointer-events-none` on the backdrop and wrapper, the overlay can capture clicks and cause focus/stacking issues when multiple dialogs or dropdowns are present (e.g. Add Extra Bed, New Guest, Search Guest).
 - `pointer-events-auto` on the panel ensures the dialog content remains interactive and that nested controls (inputs, buttons) work correctly.
+
+---
+
+# Standard Page Layout (MainLayout)
+
+Use this layout for list/detail pages so headers and primary actions are consistent.
+
+## Pattern
+
+1. **Root**: `<MainLayout>` wraps the page.
+2. **Outer container**: `<div className="space-y-6">` for vertical spacing.
+3. **Header row**: `<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">`
+   - **Left**: A `<div>` with page title and description:
+     - `<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Page Title</h1>`
+     - `<p className="text-sm text-gray-500 dark:text-gray-400">Short description.</p>`
+   - **Right** (optional): Primary action — e.g. `<Link>` or `<button>` with `rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700`.
+4. **Content card**: `<section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">` for the main content (tables, forms, etc.).
+
+Example:
+
+```tsx
+<MainLayout>
+  <div className="space-y-6">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reservations</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Confirm, cancel, and inspect reservation details.</p>
+      </div>
+
+      <Link to="/reservations/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
+        New Reservation
+      </Link>
+    </div>
+
+    <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+      {/* list, filters, table, etc. */}
+    </section>
+  </div>
+</MainLayout>
+```
+
+Use the same header row (with or without a right-side action) and content section on all resort and admin list/detail pages.

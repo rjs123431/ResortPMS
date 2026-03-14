@@ -133,11 +133,26 @@ export const RolesPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Roles</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Manage roles and permission assignments.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Roles</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Manage roles and permission assignments.
+            </p>
+          </div>
+
+          {canCreate ? (
+            <button
+              type="button"
+              className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
+              onClick={() => {
+                setForm(defaultForm);
+                setShowCreate(true);
+              }}
+            >
+              New Role
+            </button>
+          ) : null}
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
@@ -157,18 +172,6 @@ export const RolesPage = () => {
                   onChange={(e) => setFilter(e.target.value)}
                 />
               </div>
-              {canCreate ? (
-                <button
-                  type="button"
-                  className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
-                  onClick={() => {
-                    setForm(defaultForm);
-                    setShowCreate(true);
-                  }}
-                >
-                  New Role
-                </button>
-              ) : null}
             </div>
           </div>
 

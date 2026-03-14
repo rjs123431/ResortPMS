@@ -42,28 +42,28 @@ export const CheckInPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="space-y-1">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Check-In</h1>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPreCheckInDialog(true)}
-                className="rounded border border-amber-600 bg-white px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 dark:border-amber-500 dark:bg-gray-800 dark:text-amber-500 dark:hover:bg-amber-900/20"
-              >
-                Pre-Check-In
-              </button>
-              <Link
-                to="/check-in/walk-in"
-                className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-              >
-                Walk-In
-              </Link>
-            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Confirmed reservations arriving today.
+            </p>
           </div>
-          <p className="hidden text-sm text-gray-500 dark:text-gray-400 sm:block">
-            Confirmed reservations arriving today.
-          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPreCheckInDialog(true)}
+              className="rounded border border-amber-600 bg-white px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 dark:border-amber-500 dark:bg-gray-800 dark:text-amber-500 dark:hover:bg-amber-900/20"
+            >
+              Pre-Check-In
+            </button>
+            <Link
+              to="/check-in/walk-in"
+              className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            >
+              Walk-In
+            </Link>
+          </div>
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">

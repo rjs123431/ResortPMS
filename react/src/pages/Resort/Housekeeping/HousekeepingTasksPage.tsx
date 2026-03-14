@@ -81,9 +81,11 @@ export const HousekeepingTasksPage = () => {
     return (
         <MainLayout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Housekeeping Tasks</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage and track housekeeping task assignments and completion.</p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Housekeeping Tasks</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Manage and track housekeeping task assignments and completion.</p>
+                    </div>
                 </div>
 
                 <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">

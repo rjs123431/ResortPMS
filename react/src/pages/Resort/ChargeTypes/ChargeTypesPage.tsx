@@ -69,9 +69,31 @@ export const ChargeTypeListPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Charge Types</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Define charge categories for folio postings.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Charge Types</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Define charge categories for folio postings.</p>
+          </div>
+
+          {canCreate ? (
+            <button
+              type="button"
+              className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
+              onClick={() => {
+                setForm({
+                  id: '',
+                  name: '',
+                  category: '',
+                  sort: 0,
+                  roomChargeType: RoomChargeType.None,
+                  isActive: true,
+                });
+                setShowCreate(true);
+              }}
+            >
+              New Charge Type
+            </button>
+          ) : null}
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
@@ -82,25 +104,6 @@ export const ChargeTypeListPage = () => {
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Search Charge Types</label>
                 <input className="w-full rounded border p-2 dark:bg-gray-700" value={filter} onChange={(e) => setFilter(e.target.value)} />
               </div>
-              {canCreate ? (
-                <button
-                  type="button"
-                  className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
-                  onClick={() => {
-                    setForm({
-                      id: '',
-                      name: '',
-                      category: '',
-                      sort: 0,
-                      roomChargeType: RoomChargeType.None,
-                      isActive: true,
-                    });
-                    setShowCreate(true);
-                  }}
-                >
-                  New Charge Type
-                </button>
-              ) : null}
             </div>
           </div>
 

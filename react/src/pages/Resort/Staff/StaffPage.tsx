@@ -59,9 +59,24 @@ export const StaffListPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Staff</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Manage housekeeping and operations staff directory.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Staff</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manage housekeeping and operations staff directory.</p>
+          </div>
+
+          {canCreate ? (
+            <button
+              type="button"
+              className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
+              onClick={() => {
+                setForm({ id: '', staffCode: '', fullName: '', department: '', position: '', phoneNumber: '', isActive: true });
+                setShowCreate(true);
+              }}
+            >
+              New Staff
+            </button>
+          ) : null}
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
@@ -72,18 +87,6 @@ export const StaffListPage = () => {
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Search Staff</label>
                 <input className="w-full rounded border p-2 dark:bg-gray-700" value={filter} onChange={(e) => setFilter(e.target.value)} />
               </div>
-              {canCreate ? (
-                <button
-                  type="button"
-                  className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
-                  onClick={() => {
-                    setForm({ id: '', staffCode: '', fullName: '', department: '', position: '', phoneNumber: '', isActive: true });
-                    setShowCreate(true);
-                  }}
-                >
-                  New Staff
-                </button>
-              ) : null}
             </div>
           </div>
 

@@ -75,26 +75,29 @@ export const GuestListPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Guests</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Create and manage guest profiles.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Guests</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Create and manage guest profiles.</p>
+          </div>
+
+          {canCreate ? (
+            <button
+              type="button"
+              className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
+              onClick={() => {
+                resetForm();
+                setShowCreate(true);
+              }}
+            >
+              New Guest
+            </button>
+          ) : null}
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Guest List</h2>
-            {canCreate ? (
-              <button
-                type="button"
-                className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
-                onClick={() => {
-                  resetForm();
-                  setShowCreate(true);
-                }}
-              >
-                New Guest
-              </button>
-            ) : null}
           </div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="w-full max-w-sm">

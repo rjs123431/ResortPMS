@@ -102,7 +102,7 @@ export const ImpersonatePage: React.FC = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Impersonate User</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Select a user to sign in as.</p>

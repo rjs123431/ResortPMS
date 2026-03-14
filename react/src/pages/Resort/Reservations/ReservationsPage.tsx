@@ -18,9 +18,15 @@ export const ReservationListPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reservations</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Confirm, cancel, and inspect reservation details.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reservations</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Confirm, cancel, and inspect reservation details.</p>
+          </div>
+
+          <Link to="/reservations/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
+            New Reservation
+          </Link>
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
@@ -28,15 +34,8 @@ export const ReservationListPage = () => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Reservation List</h2>
             <div className="flex w-full max-w-2xl items-end justify-end gap-2">
               <div className="w-full max-w-sm">
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Search Reservations</label>
-                <input className="w-full rounded border p-2 dark:bg-gray-700" value={filter} onChange={(e) => setFilter(e.target.value)} />
+                <input className="w-full rounded border p-2 dark:bg-gray-700" placeholder="Search reservations..." value={filter} onChange={(e) => setFilter(e.target.value)} />
               </div>
-              <Link to="/find-available-rooms" className="rounded border px-4 py-2 dark:border-gray-600">
-                Find Rooms
-              </Link>
-              <Link to="/reservations/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
-                New Reservation
-              </Link>
             </div>
           </div>
           {isLoading ? <p className="text-sm text-gray-500">Loading...</p> : null}

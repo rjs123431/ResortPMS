@@ -63,9 +63,11 @@ export const HousekeepingRoomStatusPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Status</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Housekeeping view — update room cleanliness status across the property.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Status</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Housekeeping view — update room cleanliness status across the property.</p>
+          </div>
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">

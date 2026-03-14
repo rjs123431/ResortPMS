@@ -270,7 +270,7 @@ export const CheckOutPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Checkout</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Settle folio, clear rooms, and complete departure.</p>
