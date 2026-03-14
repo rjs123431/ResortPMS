@@ -59,33 +59,67 @@ const getStayCheckOutKey = (stay: StayRow): string => {
   return toDateKey(raw);
 };
 
-/** Stay occupies date if checkIn <= date <= checkout (checkout day inclusive so bar shows on departure day). Uses actualCheckOut when present. */
-const stayCoversDate = (stay: StayRow, dateKey: string): boolean => {
+/** Per-room date range from stay.stayRooms (ArrivalDate/DepartureDate) or fallback to stay-level check-in/checkout. */
+const getStayRoomDateRange = (
+  stay: StayRow,
+  roomNum: string
+): { arrivalKey: string; departureKey: string } => {
+  const trim = (s: string) => (s ?? '').trim().toLowerCase();
+  const rooms = stay.stayRooms ?? [];
+  const sr = rooms.find(
+    (r) => trim(r.roomNumber ?? (r as { RoomNumber?: string }).RoomNumber ?? '') === trim(roomNum)
+  );
+  if (sr) {
+    const a = toDateKey(sr.arrivalDate ?? (sr as { ArrivalDate?: string }).ArrivalDate);
+    const d = toDateKey(sr.departureDate ?? (sr as { DepartureDate?: string }).DepartureDate);
+    if (a && d) return { arrivalKey: a, departureKey: d };
+  }
   const checkIn = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
   const checkOut = getStayCheckOutKey(stay);
-  if (!checkIn || !checkOut) return false;
-  return dateKey >= checkIn && dateKey < checkOut;
+  return { arrivalKey: checkIn ?? '', departureKey: checkOut ?? '' };
 };
 
-/** True if grid start date is within or touches stay period [checkIn, checkOut] (inclusive), so stays that checkout on start date are shown. */
+/** Stay occupies this (room, date) using per-room ArrivalDate/DepartureDate when available. */
+const stayRoomCoversDate = (stay: StayRow, roomNum: string, dateKey: string): boolean => {
+  const { arrivalKey, departureKey } = getStayRoomDateRange(stay, roomNum);
+  if (!arrivalKey || !departureKey) return false;
+  return dateKey >= arrivalKey && dateKey <= departureKey;
+};
+
+/** True if grid start date is within or touches stay (any room) period; uses per-room dates when stayRooms present. */
 const stayContainsStartDate = (stay: StayRow, startKey: string): boolean => {
+  const rooms = stay.stayRooms ?? [];
+  if (rooms.length > 0) {
+    return rooms.some((sr) => {
+      const a = toDateKey(sr.arrivalDate ?? (sr as { ArrivalDate?: string }).ArrivalDate);
+      const d = toDateKey(sr.departureDate ?? (sr as { DepartureDate?: string }).DepartureDate);
+      return a && d && startKey >= a && startKey <= d;
+    });
+  }
   const checkIn = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
   const checkOut = getStayCheckOutKey(stay);
   if (!checkIn || !checkOut) return false;
   return startKey >= checkIn && startKey <= checkOut;
 };
 
-/** Extract room number(s) from stay; API may return one or comma-separated, camelCase or PascalCase. */
+/** Extract room number(s) from stay; prefer stayRooms when present. */
 const getStayRoomNumbers = (stay: StayRow): string[] => {
+  const rooms = stay.stayRooms ?? [];
+  if (rooms.length > 0) {
+    return rooms
+      .map((r) => (r.roomNumber ?? (r as { RoomNumber?: string }).RoomNumber ?? '').trim())
+      .filter(Boolean);
+  }
   const raw = stay.roomNumber ?? stay.RoomNumber;
   if (typeof raw !== 'string' || !raw.trim()) return [];
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 };
 
+/** Reservation room occupies date if arrival <= date <= departure (departure day inclusive so bar shows on checkout day, then drawn half). */
 const reservationRoomCoversDate = (room: ReservationRoomDetailDto, dateKey: string): boolean => {
   const arr = toDateKey(room.arrivalDate);
   const dep = toDateKey(room.departureDate);
-  return dateKey >= arr && dateKey < dep;
+  return dateKey >= arr && dateKey <= dep;
 };
 
 type CellInfo = { type: 'stay'; stayNo: string; guestName: string; stayId: string } | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string } | null;
@@ -238,9 +272,9 @@ export const RoomRackPage = () => {
       const guestName = stay.guestName ?? stay.GuestName ?? '';
       const stayId = stay.id ?? stay.Id ?? '';
       if (roomNumbers.length === 0) return;
-      dateColumns.forEach((dateKey) => {
-        if (!stayCoversDate(stay, dateKey)) return;
-        roomNumbers.forEach((roomNum) => {
+      roomNumbers.forEach((roomNum) => {
+        dateColumns.forEach((dateKey) => {
+          if (!stayRoomCoversDate(stay, roomNum, dateKey)) return;
           const key = `${roomNum}|${dateKey}`;
           resByRoomDate.set(key, { type: 'stay', stayNo: String(stayNo), guestName: String(guestName), stayId: String(stayId) });
         });
@@ -359,9 +393,9 @@ export const RoomRackPage = () => {
     const staysForRange = ((staysData?.items ?? []) as StayRow[]).filter((stay) => stayContainsStartDate(stay, startKey));
     staysForRange.forEach((stay: StayRow) => {
       const roomNumbers = getStayRoomNumbers(stay);
-      dateColumns.forEach((dateKey) => {
-        if (!stayCoversDate(stay, dateKey)) return;
-        roomNumbers.forEach((roomNum) => {
+      roomNumbers.forEach((roomNum) => {
+        dateColumns.forEach((dateKey) => {
+          if (!stayRoomCoversDate(stay, roomNum, dateKey)) return;
           const typeName = roomNumberToType.get(roomNum.trim());
           if (typeName) add(typeName, dateKey);
         });
@@ -474,8 +508,8 @@ export const RoomRackPage = () => {
             >
               <table className="min-w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
-                    <th className="sticky left-0 z-[1] min-w-[100px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 dark:bg-gray-700/50 dark:text-white">Room</th>
+                  <tr className="border-b bg-gray-50 dark:bg-gray-700">
+                    <th className="sticky left-0 z-[30] min-w-[100px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">Room</th>
                     {dateColumns.map((dateKey) => {
                     const d = new Date(dateKey + 'T12:00:00');
                     return (
@@ -490,8 +524,8 @@ export const RoomRackPage = () => {
               <tbody>
                 {roomsByType.map(([roomTypeName, rooms]) => (
                   <React.Fragment key={roomTypeName}>
-                    <tr className="bg-gray-100 dark:bg-gray-700/30">
-                      <td className="sticky left-0 z-[1] min-w-[100px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 dark:bg-gray-700/30 dark:text-gray-200">
+                    <tr className="bg-gray-100 dark:bg-gray-700">
+                      <td className="sticky left-0 z-[30] min-w-[100px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-gray-200 dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
                         {roomTypeName}
                       </td>
                       {dateColumns.map((dateKey) => (
@@ -504,7 +538,7 @@ export const RoomRackPage = () => {
                     {rooms.map((room) => {
                       const roomNum = room.roomNumber;
                       const n = dateColumns.length;
-                      type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; lastDayHalf?: boolean };
+                      type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean };
                       const segments: SegmentItem[] = [];
                       let i = 0;
                       while (i < dateColumns.length) {
@@ -527,25 +561,27 @@ export const RoomRackPage = () => {
                         let bgClass: string;
                         let textClass: string;
                         if (cell.type === 'stay') {
-                          bgClass = 'bg-blue-100 dark:bg-blue-900/30';
+                          bgClass = 'bg-blue-100 dark:bg-blue-900';
                           textClass = 'text-blue-900 hover:underline dark:text-blue-100';
                         } else {
                           const res = (reservationDetails ?? []).find((r) => r.id === cell.reservationId);
                           const isPending = res?.status === ReservationStatus.Pending;
-                          bgClass = isPending ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-green-100 dark:bg-green-900/30';
+                          bgClass = isPending ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-green-100 dark:bg-green-900';
                           textClass = isPending ? 'text-yellow-900 hover:underline dark:text-yellow-100' : 'text-green-900 hover:underline dark:text-green-100';
                         }
                         let extendsBefore = false;
                         let extendsAfter = false;
+                        let firstDayHalf = false;
                         let lastDayHalf = false;
                         if (cell.type === 'stay') {
                           const stay = (staysData?.items ?? []).find((s: StayRow) => s.id === cell.stayId || (s as { Id?: string }).Id === cell.stayId) as StayRow | undefined;
                           if (stay) {
-                            const recordStart = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
-                            const recordEnd = getStayCheckOutKey(stay);
+                            const { arrivalKey: recordStart, departureKey: recordEnd } = getStayRoomDateRange(stay, roomNum);
                             extendsBefore = recordStart !== '' && recordStart < startKey;
                             extendsAfter = recordEnd !== '' && recordEnd > endKey;
+                            const firstDateKey = dateColumns[startIndex];
                             const lastDateKey = dateColumns[endIndex - 1];
+                            if (recordEnd !== '' && firstDateKey === recordEnd) firstDayHalf = true;
                             if (recordEnd !== '' && lastDateKey === recordEnd) lastDayHalf = true;
                           }
                         } else {
@@ -556,19 +592,23 @@ export const RoomRackPage = () => {
                             const recordEnd = toDateKey(roomDetail.departureDate);
                             extendsBefore = recordStart !== '' && recordStart < startKey;
                             extendsAfter = recordEnd !== '' && recordEnd > endKey;
+                            const firstDateKey = dateColumns[startIndex];
+                            const lastDateKey = dateColumns[endIndex - 1];
+                            if (recordEnd !== '' && firstDateKey === recordEnd) firstDayHalf = true;
+                            if (recordEnd !== '' && lastDateKey === recordEnd) lastDayHalf = true;
                           }
                         }
-                        segments.push({ id: `${cellId}-${startIndex}`, guestName: guestName || '—', navPath, startIndex, endIndex, bgClass, textClass, extendsBefore, extendsAfter, lastDayHalf: lastDayHalf || undefined });
+                        segments.push({ id: `${cellId}-${startIndex}`, guestName: guestName || '—', navPath, startIndex, endIndex, bgClass, textClass, extendsBefore, extendsAfter, firstDayHalf: firstDayHalf || undefined, lastDayHalf: lastDayHalf || undefined });
                         i = endIndex;
                       }
                       return (
                         <tr key={room.id} className="border-b">
-                          <td className="sticky left-0 z-[1] border-r bg-white p-2 font-medium text-gray-900 dark:bg-gray-800 dark:text-white">
+                          <td className="sticky left-0 z-[30] h-[2.5rem] border-r bg-white p-2 font-medium text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-800 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)] align-middle">
                             {roomNum}
                           </td>
-                          <td colSpan={n} className="min-w-0 p-0 align-top">
+                          <td colSpan={n} className="min-w-0 p-0 align-middle h-[2.5rem]">
                             <div
-                              className="relative w-full h-8 min-h-[2rem] border-b border-gray-200 dark:border-gray-600"
+                              className="relative w-full h-full min-h-8 border-b border-gray-200 dark:border-gray-600"
                               style={{
                                 backgroundImage: `linear-gradient(to right, var(--tw-border-color, rgb(229 231 235)) 1px, transparent 1px)`,
                                 backgroundSize: `${100 / n}% 100%`,
@@ -623,7 +663,7 @@ export const RoomRackPage = () => {
                                 />
                               )}
                               {segments.map((seg) => {
-                                const leftPct = seg.extendsBefore ? 0 : ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                const leftPct = seg.extendsBefore ? 0 : seg.firstDayHalf ? (seg.startIndex / n) * 100 : ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
                                 const rightPct = seg.extendsAfter ? 100 : seg.lastDayHalf ? ((seg.endIndex - 0.5) / n) * 100 : ((seg.endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
                                 const widthPct = rightPct - leftPct;
                                 const bothExtend = seg.extendsBefore && seg.extendsAfter;
@@ -638,7 +678,7 @@ export const RoomRackPage = () => {
                                 return (
                                   <div
                                     key={seg.id}
-                                    className={`absolute top-0 bottom-0 z-10 min-w-0 flex items-center overflow-hidden border border-gray-300/50 dark:border-gray-600/50 ${seg.bgClass}`}
+                                    className={`absolute top-0 bottom-0 z-10 min-w-0 flex items-center overflow-hidden border border-gray-300 dark:border-gray-600 ${seg.bgClass}`}
                                     style={{
                                       left: `${leftPct}%`,
                                       width: `${widthPct}%`,

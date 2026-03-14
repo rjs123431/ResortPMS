@@ -510,6 +510,10 @@ public class CheckInAppService(
                 await stayGuestRepository.InsertAsync(new StayGuest { StayId = stayId, GuestId = gid, IsPrimary = false });
         }
 
+        var now = Clock.Now;
+        var arrivalDate = now.Date;
+        var departureDate = expectedCheckOut.Date;
+
         // Record all requested room assignments for this stay.
         foreach (var room in effectiveRooms)
         {
@@ -518,7 +522,9 @@ public class CheckInAppService(
                 StayId = stayId,
                 RoomTypeId = room.RoomTypeId,
                 RoomId = room.Id,
-                AssignedAt = Clock.Now,
+                AssignedAt = now,
+                ArrivalDate = arrivalDate,
+                DepartureDate = departureDate,
                 OriginalRoomTypeId = room.RoomTypeId,
                 OriginalRoomId = room.Id
             });

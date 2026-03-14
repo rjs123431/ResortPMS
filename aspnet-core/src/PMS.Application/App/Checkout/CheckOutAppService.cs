@@ -238,9 +238,11 @@ public class CheckOutAppService(
             .Where(sr => sr.StayId == input.StayId && sr.ReleasedAt == null)
             .ToListAsync();
 
+        var releasedAt = Clock.Now;
         foreach (var activeStayRoom in activeStayRooms)
         {
-            activeStayRoom.ReleasedAt = Clock.Now;
+            activeStayRoom.ReleasedAt = releasedAt;
+            activeStayRoom.DepartureDate = releasedAt.Date;
             await stayRoomRepository.UpdateAsync(activeStayRoom);
 
             if (activeStayRoom.Room != null)

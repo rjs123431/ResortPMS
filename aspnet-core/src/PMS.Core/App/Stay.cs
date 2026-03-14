@@ -52,6 +52,11 @@ public class StayRoom : CreationAuditedEntity<Guid>
     public DateTime AssignedAt { get; set; } = Clock.Now;
     public DateTime? ReleasedAt { get; set; }
 
+    /// <summary>Date the guest arrived in this room (same semantics as ReservationRoom.ArrivalDate).</summary>
+    public DateTime ArrivalDate { get; set; }
+    /// <summary>Date the guest departs this room (same semantics as ReservationRoom.DepartureDate).</summary>
+    public DateTime DepartureDate { get; set; }
+
     public bool IsCleared { get; set; } = false;
     public DateTime? ClearedAt { get; set; }
     public Guid? ClearedByStaffId { get; set; }

@@ -26,7 +26,7 @@ export const HeaderNotifications = () => {
         0,
         signal
       ),
-    refetchInterval: 30000, // Refetch every 30 seconds
+    // refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Close dropdown when clicking outside

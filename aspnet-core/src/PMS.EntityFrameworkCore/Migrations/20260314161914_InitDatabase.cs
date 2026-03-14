@@ -2409,6 +2409,8 @@ namespace PMS.Migrations
                     RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ReleasedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ArrivalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DepartureDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsCleared = table.Column<bool>(type: "bit", nullable: false),
                     ClearedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ClearedByStaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),

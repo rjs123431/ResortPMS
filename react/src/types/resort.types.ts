@@ -396,6 +396,19 @@ export interface CheckOutRecordDto {
   receipt: ReceiptDto | null;
 }
 
+export interface StayRoomDto {
+  id: string;
+  stayId: string;
+  roomId: string;
+  roomNumber: string;
+  roomTypeId: string;
+  roomTypeName: string;
+  assignedAt: string;
+  releasedAt?: string;
+  arrivalDate: string;
+  departureDate: string;
+}
+
 export interface StayListDto {
   id: string;
   stayNo: string;
@@ -405,6 +418,7 @@ export interface StayListDto {
   actualCheckOutDateTime?: string;
   status: StayStatus;
   roomNumber: string;
+  stayRooms?: StayRoomDto[];
 }
 
 export interface AddGuestRequestDto {

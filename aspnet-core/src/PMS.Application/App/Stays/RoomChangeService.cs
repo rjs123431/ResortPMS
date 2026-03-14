@@ -261,16 +261,21 @@ public class RoomChangeService(
         var toRoom = await roomRepository.GetAsync(request.ToRoomId.Value);
 
         // Step 5: Close old StayRoom
-        activeStayRoom.ReleasedAt = Clock.Now;
+        var releaseNow = Clock.Now;
+        activeStayRoom.ReleasedAt = releaseNow;
+        activeStayRoom.DepartureDate = releaseNow.Date;
         await stayRoomRepository.UpdateAsync(activeStayRoom);
 
         // Step 6: Create new StayRoom (preserve original assignment)
+        var assignNow = Clock.Now;
         var newStayRoom = new StayRoom
         {
             StayId = request.StayId,
             RoomTypeId = request.ToRoomTypeId.Value,
             RoomId = request.ToRoomId.Value,
-            AssignedAt = Clock.Now,
+            AssignedAt = assignNow,
+            ArrivalDate = assignNow.Date,
+            DepartureDate = request.Stay.ExpectedCheckOutDateTime.Date,
             OriginalRoomTypeId = activeStayRoom.OriginalRoomTypeId != Guid.Empty
                 ? activeStayRoom.OriginalRoomTypeId
                 : activeStayRoom.RoomTypeId,

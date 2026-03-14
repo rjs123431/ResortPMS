@@ -4677,6 +4677,9 @@ namespace PMS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime>("ArrivalDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("AssignedAt")
                         .HasColumnType("datetime2");
 
@@ -4691,6 +4694,9 @@ namespace PMS.Migrations
 
                     b.Property<long?>("CreatorUserId")
                         .HasColumnType("bigint");
+
+                    b.Property<DateTime>("DepartureDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsCleared")
                         .HasColumnType("bit");

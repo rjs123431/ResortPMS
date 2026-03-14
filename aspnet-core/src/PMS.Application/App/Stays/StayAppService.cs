@@ -58,6 +58,26 @@ public class StayAppService(
     IRepository<ReservationRoom, Guid> reservationRoomRepository
 ) : PMSAppServiceBase, IStayAppService
 {
+    private static List<StayRoomDto> MapStayRooms(IEnumerable<StayRoom> rooms)
+    {
+        if (rooms == null) return [];
+        return rooms
+            .Select(sr => new StayRoomDto
+            {
+                Id = sr.Id,
+                StayId = sr.StayId,
+                RoomId = sr.RoomId,
+                RoomNumber = sr.Room?.RoomNumber ?? string.Empty,
+                RoomTypeId = sr.RoomTypeId,
+                RoomTypeName = sr.RoomType?.Name ?? sr.Room?.RoomType?.Name ?? string.Empty,
+                AssignedAt = sr.AssignedAt,
+                ReleasedAt = sr.ReleasedAt,
+                ArrivalDate = sr.ArrivalDate,
+                DepartureDate = sr.DepartureDate,
+            })
+            .ToList();
+    }
+
     public async Task<StayDto> GetAsync(Guid stayId)
     {
         var stay = await stayRepository.GetAll()
@@ -65,12 +85,16 @@ public class StayAppService(
             .Include(s => s.AssignedRoom).ThenInclude(r => r.RoomType)
             .Include(s => s.Guests).ThenInclude(sg => sg.Guest)
             .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
+            .Include(s => s.Rooms).ThenInclude(sr => sr.RoomType)
             .FirstOrDefaultAsync(s => s.Id == stayId);
 
         if (stay == null) throw new UserFriendlyException(L("StayNotFound"));
         var dto = ObjectMapper.Map<StayDto>(stay);
         if (stay.Rooms != null && stay.Rooms.Count > 0)
+        {
             dto.RoomNumber = string.Join(", ", stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)));
+            dto.StayRooms = MapStayRooms(stay.Rooms);
+        }
         return dto;
     }
 
@@ -80,6 +104,7 @@ public class StayAppService(
             .Include(s => s.Guest)
             .Include(s => s.AssignedRoom)
             .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
+            .Include(s => s.Rooms).ThenInclude(sr => sr.RoomType)
             .Where(s => s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn)
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
                 s => s.StayNo.Contains(input.Filter) ||
@@ -92,7 +117,10 @@ public class StayAppService(
         {
             var dto = ObjectMapper.Map<StayListDto>(stay);
             if (stay.Rooms != null && stay.Rooms.Count > 0)
+            {
                 dto.RoomNumber = string.Join(",", stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)));
+                dto.StayRooms = MapStayRooms(stay.Rooms);
+            }
             return dto;
         }).ToList();
         return new PagedResultDto<StayListDto>(total, dtos);
@@ -103,6 +131,7 @@ public class StayAppService(
         var query = stayRepository.GetAll()
             .Include(s => s.Guest)
             .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
+            .Include(s => s.Rooms).ThenInclude(sr => sr.RoomType)
             .Where(s => s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn)
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
                 s => s.StayNo.Contains(input.Filter) ||
@@ -121,7 +150,10 @@ public class StayAppService(
         {
             var dto = ObjectMapper.Map<StayListDto>(stay);
             if (stay.Rooms != null && stay.Rooms.Count > 0)
+            {
                 dto.RoomNumber = string.Join(",", stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)));
+                dto.StayRooms = MapStayRooms(stay.Rooms);
+            }
             return dto;
         }).ToList();
         return new PagedResultDto<StayListDto>(total, dtos);
@@ -216,16 +248,21 @@ public class StayAppService(
         await ValidateTargetRoomForTransferAsync(stay, input.ToRoomId);
 
         // Close old StayRoom
-        activeStayRoom.ReleasedAt = Clock.Now;
+        var releaseNow = Clock.Now;
+        activeStayRoom.ReleasedAt = releaseNow;
+        activeStayRoom.DepartureDate = releaseNow.Date;
         await stayRoomRepository.UpdateAsync(activeStayRoom);
 
+        var assignNow = Clock.Now;
         // Create new StayRoom (preserve original assignment)
         var newStayRoom = new StayRoom
         {
             StayId = input.StayId,
             RoomTypeId = toRoom.RoomTypeId,
             RoomId = input.ToRoomId,
-            AssignedAt = Clock.Now,
+            AssignedAt = assignNow,
+            ArrivalDate = assignNow.Date,
+            DepartureDate = stay.ExpectedCheckOutDateTime.Date,
             OriginalRoomTypeId = activeStayRoom.OriginalRoomTypeId != Guid.Empty 
                 ? activeStayRoom.OriginalRoomTypeId 
                 : activeStayRoom.RoomTypeId,

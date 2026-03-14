@@ -22,6 +22,7 @@ public class StayDto : EntityDto<Guid>
     public string RoomNumber { get; set; }
     public string RoomTypeName { get; set; }
     public List<StayGuestDto> Guests { get; set; } = [];
+    public List<StayRoomDto> StayRooms { get; set; } = [];
 }
 
 public class StayListDto : EntityDto<Guid>
@@ -33,6 +34,20 @@ public class StayListDto : EntityDto<Guid>
     public StayStatus Status { get; set; }
     public string RoomNumber { get; set; }
     public int NightsElapsed => (int)(DateTime.Now - CheckInDateTime).TotalDays;
+    public List<StayRoomDto> StayRooms { get; set; } = [];
+}
+
+public class StayRoomDto : EntityDto<Guid>
+{
+    public Guid StayId { get; set; }
+    public Guid RoomId { get; set; }
+    public string RoomNumber { get; set; }
+    public Guid RoomTypeId { get; set; }
+    public string RoomTypeName { get; set; }
+    public DateTime AssignedAt { get; set; }
+    public DateTime? ReleasedAt { get; set; }
+    public DateTime ArrivalDate { get; set; }
+    public DateTime DepartureDate { get; set; }
 }
 
 public class StayGuestDto : EntityDto<Guid>
