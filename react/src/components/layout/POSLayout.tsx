@@ -5,9 +5,10 @@ interface POSLayoutProps {
   children: React.ReactNode;
   headerCenter?: React.ReactNode;
   headerRight?: React.ReactNode;
+  sidebar?: React.ReactNode;
 }
 
-export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, headerRight }) => {
+export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, headerRight, sidebar }) => {
   return (
     <div className="flex min-h-screen flex-col bg-gray-100 dark:bg-gray-900">
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -30,8 +31,11 @@ export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, he
           {headerRight}
         </div>
       </header>
-      <main className="flex min-h-0 flex-1 flex-col overflow-auto p-4">
-        {children}
+      <main className="flex min-h-0 flex-1 overflow-auto">
+        {sidebar}
+        <div className="flex min-h-0 flex-1 flex-col p-4">
+          {children}
+        </div>
       </main>
     </div>
   );

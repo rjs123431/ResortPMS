@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { POSLayout } from '@components/layout/POSLayout';
+import { POSSidebar } from '@components/layout/POSSidebar';
 import { posService } from '@services/pos.service';
 import { resortService } from '@services/resort.service';
 import {
@@ -513,6 +514,7 @@ export const POSOrderPage = () => {
 
   return (
     <POSLayout
+      sidebar={<POSSidebar />}
       headerCenter={
         message ? (
           <div

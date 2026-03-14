@@ -31,6 +31,14 @@ export enum OrderItemCancelReasonType {
   Other = 4,
 }
 
+export enum OrderCancelReasonType {
+  GuestRequest = 0,
+  WrongOrder = 1,
+  OutOfStock = 2,
+  Duplicate = 3,
+  Other = 4,
+}
+
 export interface PosOutletListDto {
   id: string;
   name: string;

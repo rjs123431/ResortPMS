@@ -48,6 +48,10 @@ const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/Cleaning
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
 const POSOrderPage = lazy(() => import('@pages/Resort/POS/POSOrderPage').then((m) => ({ default: m.POSOrderPage })));
+const POSTablesPage = lazy(() => import('@pages/Resort/POS/POSTablesPage').then((m) => ({ default: m.POSTablesPage })));
+const POSOrdersPage = lazy(() => import('@pages/Resort/POS/POSOrdersPage').then((m) => ({ default: m.POSOrdersPage })));
+const POSReportsPage = lazy(() => import('@pages/Resort/POS/POSReportsPage').then((m) => ({ default: m.POSReportsPage })));
+const POSSettingsPage = lazy(() => import('@pages/Resort/POS/POSSettingsPage').then((m) => ({ default: m.POSSettingsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -439,6 +443,46 @@ const App: React.FC = () => {
                         <PageTitle title="POS (F&B)">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
                             <POSOrderPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/tables"
+                      element={
+                        <PageTitle title="POS Tables">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <POSTablesPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/orders"
+                      element={
+                        <PageTitle title="POS Orders">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <POSOrdersPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/reports"
+                      element={
+                        <PageTitle title="POS Reports">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <POSReportsPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/pos/settings"
+                      element={
+                        <PageTitle title="POS Settings">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <POSSettingsPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

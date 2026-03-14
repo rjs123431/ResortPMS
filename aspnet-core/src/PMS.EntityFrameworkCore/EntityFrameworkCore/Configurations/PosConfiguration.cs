@@ -82,6 +82,8 @@ internal class PosOrderConfiguration : IEntityTypeConfiguration<PosOrder>
         entity.Property(e => e.SeniorCitizenDiscount).HasPrecision(18, 4);
         entity.Property(e => e.OrderType).HasConversion<int>();
         entity.Property(e => e.Status).HasConversion<int>();
+        entity.Property(e => e.CancelReasonType).HasConversion<int>();
+        entity.Property(e => e.CancelReason).HasMaxLength(512);
         entity.HasIndex(e => e.OrderNumber).IsUnique();
         entity.HasIndex(e => new { e.OutletId, e.Status });
         entity.HasIndex(e => e.TableId);

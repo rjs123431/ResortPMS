@@ -183,6 +183,13 @@ public class SendToKitchenDto
     public List<Guid>? OrderItemIds { get; set; }
 }
 
+public class CancelOrderDto
+{
+    [Required] public Guid OrderId { get; set; }
+    public int ReasonType { get; set; } // OrderCancelReasonType
+    [StringLength(512)] public string Reason { get; set; } = string.Empty;
+}
+
 public class ChargeToRoomDto
 {
     [Required] public Guid OrderId { get; set; }

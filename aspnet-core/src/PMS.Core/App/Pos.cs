@@ -87,6 +87,15 @@ public enum PosOrderStatus
     Cancelled = 6,
 }
 
+public enum OrderCancelReasonType
+{
+    GuestRequest = 0,
+    WrongOrder = 1,
+    OutOfStock = 2,
+    Duplicate = 3,
+    Other = 4,
+}
+
 public enum OrderItemStatus
 {
     Pending = 0,
@@ -120,6 +129,8 @@ public class PosOrder : FullAuditedEntity<Guid>
     public decimal SeniorCitizenDiscount { get; set; }
     public DateTime OpenedAt { get; set; } = Clock.Now;
     public DateTime? ClosedAt { get; set; }
+    public OrderCancelReasonType? CancelReasonType { get; set; }
+    public string CancelReason { get; set; } = string.Empty;
 
     public virtual PosOutlet Outlet { get; set; }
     public virtual PosTable Table { get; set; }

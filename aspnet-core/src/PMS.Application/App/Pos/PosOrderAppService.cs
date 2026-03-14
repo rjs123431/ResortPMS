@@ -34,6 +34,7 @@ public interface IPosOrderAppService : IApplicationService
     Task CancelItemAsync(CancelOrderItemDto input);
     Task SendToKitchenAsync(SendToKitchenDto input);
     Task CloseOrderAsync(Guid orderId);
+    Task CancelOrderAsync(CancelOrderDto input);
     Task AddPaymentAsync(AddOrderPaymentDto input);
     Task<VerifyStayForRoomChargeDto> VerifyStayByRoomNumberAsync(string roomNumber);
     Task ChargeToRoomAsync(ChargeToRoomDto input);
@@ -411,6 +412,27 @@ public class PosOrderAppService(
             throw new UserFriendlyException("Cannot close order with unpaid balance. Add payment or charge to room.");
         order.Status = PosOrderStatus.Closed;
         order.ClosedAt = Clock.Now;
+        await orderRepository.UpdateAsync(order);
+        if (order.TableId.HasValue && order.Table != null)
+        {
+            order.Table.Status = PosTableStatus.Available;
+            await tableRepository.UpdateAsync(order.Table);
+        }
+    }
+
+    [UnitOfWork]
+    public async Task CancelOrderAsync(CancelOrderDto input)
+    {
+        var order = await orderRepository.GetAll()
+            .Include(o => o.Table)
+            .FirstOrDefaultAsync(o => o.Id == input.OrderId);
+        if (order == null) throw new UserFriendlyException("Order not found.");
+        if (order.Status == PosOrderStatus.Closed) throw new UserFriendlyException("Order is already closed.");
+        if (order.Status == PosOrderStatus.Cancelled) throw new UserFriendlyException("Order is already cancelled.");
+        order.Status = PosOrderStatus.Cancelled;
+        order.ClosedAt = Clock.Now;
+        order.CancelReasonType = (OrderCancelReasonType)input.ReasonType;
+        order.CancelReason = input.Reason ?? string.Empty;
         await orderRepository.UpdateAsync(order);
         if (order.TableId.HasValue && order.Table != null)
         {

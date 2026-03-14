@@ -109,6 +109,14 @@ export const posService = {
     await api.post('/api/services/app/PosOrder/CloseOrder', null, { params: { orderId } });
   },
 
+  cancelPosOrder: async (input: { orderId: string; reasonType: number; reason: string }) => {
+    await api.post('/api/services/app/PosOrder/CancelOrder', {
+      orderId: input.orderId,
+      reasonType: input.reasonType,
+      reason: input.reason,
+    });
+  },
+
   addOrderPayment: async (input: AddOrderPaymentDto) => {
     await api.post('/api/services/app/PosOrder/AddPayment', input);
   },
