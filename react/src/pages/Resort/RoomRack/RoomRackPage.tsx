@@ -306,9 +306,28 @@ export const RoomRackPage = () => {
   const isDateOccupied = useCallback(
     (roomNumber: string, dateIndex: number) => {
       if (dateIndex < 0 || dateIndex >= dateColumns.length) return true;
-      return getCellInfo(roomNumber, dateColumns[dateIndex]) !== null;
+      const dateKey = dateColumns[dateIndex];
+      const cell = getCellInfo(roomNumber, dateKey);
+      if (!cell) return false;
+      // Checkout/departure day: room is available for new check-in, so do not block selection
+      if (cell.type === 'stay') {
+        const stay = (staysData?.items ?? []).find(
+          (s: StayRow) => s.id === cell.stayId || (s as { Id?: string }).Id === cell.stayId
+        ) as StayRow | undefined;
+        if (stay) {
+          const { departureKey } = getStayRoomDateRange(stay, roomNumber);
+          if (dateKey === departureKey) return false;
+        }
+      } else {
+        const res = (reservationDetails ?? []).find((r) => r.id === cell.reservationId);
+        const roomDetail = res?.rooms?.find(
+          (rm) => (rm.roomNumber ?? '').trim() === roomNumber.trim()
+        );
+        if (roomDetail && dateKey === toDateKey(roomDetail.departureDate)) return false;
+      }
+      return true;
     },
-    [getCellInfo, dateColumns]
+    [getCellInfo, dateColumns, staysData?.items, reservationDetails]
   );
 
   useEffect(() => {
