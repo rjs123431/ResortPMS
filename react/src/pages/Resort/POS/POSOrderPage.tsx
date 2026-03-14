@@ -61,7 +61,7 @@ type LocalCart = {
   items: LocalCartItem[];
 };
 
-export const POSPage = () => {
+export const POSOrderPage = () => {
   const queryClient = useQueryClient();
   const { orderId: orderIdParam } = useParams<{ orderId?: string }>();
   const navigate = useNavigate();
@@ -363,20 +363,19 @@ export const POSPage = () => {
   }, [effectiveOrderId, pendingOrderItems, addOrderItemsMutation]);
 
   const saveAndSendToKitchenMutation = useMutation({
-    mutationFn: async () => {
-      if (!effectiveOrderId || pendingOrderItems.length === 0) return;
-      await addOrderItemsMutation.mutateAsync({
-        orderId: effectiveOrderId,
-        items: pendingOrderItems,
-      });
-      const { data: order } = await refetchOrder();
-      const pendingIds = order?.items?.filter((i) => i.status === OrderItemStatus.Pending).map((i) => i.id) ?? [];
-      if (pendingIds.length > 0) {
-        await posService.sendOrderToKitchen(effectiveOrderId, pendingIds);
-      }
-    },
+    mutationFn: () =>
+      posService.addOrderItemsAndSendToKitchen({
+        orderId: effectiveOrderId!,
+        items: pendingOrderItems.map((line) => ({
+          menuItemId: line.menuItemId,
+          quantity: line.quantity,
+          price: line.price,
+          notes: line.notes ?? '',
+        })),
+      }),
     onSuccess: () => {
       setPendingOrderItems([]);
+      void refetchOrder();
       void queryClient.invalidateQueries({ queryKey: ['pos-order', effectiveOrderId] });
       void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
       setMessage({ type: 'success', text: 'Items saved and sent to kitchen.' });

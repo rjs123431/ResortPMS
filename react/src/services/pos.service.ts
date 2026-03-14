@@ -82,6 +82,10 @@ export const posService = {
     await api.post('/api/services/app/PosOrder/AddItems', input);
   },
 
+  addOrderItemsAndSendToKitchen: async (input: AddOrderItemsDto) => {
+    await api.post('/api/services/app/PosOrder/AddItemsAndSendToKitchen', input);
+  },
+
   updateOrderItem: async (input: UpdateOrderItemDto) => {
     await api.put('/api/services/app/PosOrder/UpdateItem', input);
   },

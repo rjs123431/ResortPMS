@@ -29,6 +29,7 @@ public interface IPosOrderAppService : IApplicationService
     Task<Guid> CreateOrderWithItemsAsync(CreatePosOrderWithItemsDto input);
     Task AddItemAsync(AddOrderItemDto input);
     Task AddItemsAsync(AddOrderItemsDto input);
+    Task AddItemsAndSendToKitchenAsync(AddOrderItemsDto input);
     Task UpdateItemAsync(UpdateOrderItemDto input);
     Task CancelItemAsync(CancelOrderItemDto input);
     Task SendToKitchenAsync(SendToKitchenDto input);
@@ -290,6 +291,41 @@ public class PosOrderAppService(
                 Notes = line.Notes ?? ""
             });
         }
+    }
+
+    [UnitOfWork]
+    public async Task AddItemsAndSendToKitchenAsync(AddOrderItemsDto input)
+    {
+        if (input.Items == null || input.Items.Count == 0)
+            return;
+        var order = await orderRepository.GetAll()
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == input.OrderId);
+        if (order == null) throw new UserFriendlyException("Order not found.");
+        if (order.Status != PosOrderStatus.Open && order.Status != PosOrderStatus.SentToKitchen && order.Status != PosOrderStatus.Preparing)
+            throw new UserFriendlyException("Cannot add items to this order.");
+        if (order.Status == PosOrderStatus.Closed || order.Status == PosOrderStatus.Cancelled)
+            throw new UserFriendlyException("Cannot send closed or cancelled order to kitchen.");
+
+        var newItemIds = new List<Guid>();
+        foreach (var line in input.Items)
+        {
+            await menuItemRepository.GetAsync(line.MenuItemId);
+            var entity = new PosOrderItem
+            {
+                PosOrderId = input.OrderId,
+                MenuItemId = line.MenuItemId,
+                Quantity = line.Quantity,
+                Price = line.Price,
+                Status = OrderItemStatus.SentToKitchen,
+                Notes = line.Notes ?? ""
+            };
+            await posOrderItemRepository.InsertAsync(entity);
+            newItemIds.Add(entity.Id);
+        }
+        if (order.Status == PosOrderStatus.Open)
+            order.Status = PosOrderStatus.SentToKitchen;
+        await orderRepository.UpdateAsync(order);
     }
 
     [UnitOfWork]
