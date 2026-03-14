@@ -76,12 +76,17 @@ internal class PosOrderConfiguration : IEntityTypeConfiguration<PosOrder>
         entity.ToTable("PosOrder");
         entity.Property(e => e.GuestName).HasMaxLength(256);
         entity.Property(e => e.OrderNumber).HasMaxLength(32).IsRequired();
+        entity.Property(e => e.Notes).HasMaxLength(512);
+        entity.Property(e => e.DiscountPercent).HasPrecision(18, 4);
+        entity.Property(e => e.DiscountAmount).HasPrecision(18, 4);
+        entity.Property(e => e.SeniorCitizenDiscount).HasPrecision(18, 4);
         entity.Property(e => e.OrderType).HasConversion<int>();
         entity.Property(e => e.Status).HasConversion<int>();
         entity.HasIndex(e => e.OrderNumber).IsUnique();
         entity.HasIndex(e => new { e.OutletId, e.Status });
         entity.HasIndex(e => e.TableId);
         entity.HasIndex(e => e.StayId);
+        entity.HasIndex(e => e.ServerStaffId);
 
         entity.HasOne(e => e.Outlet)
             .WithMany()
@@ -95,20 +100,26 @@ internal class PosOrderConfiguration : IEntityTypeConfiguration<PosOrder>
             .WithMany()
             .HasForeignKey(e => e.StayId)
             .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(e => e.ServerStaff)
+            .WithMany()
+            .HasForeignKey(e => e.ServerStaffId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
-internal class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
+internal class PosOrderItemConfiguration : IEntityTypeConfiguration<PosOrderItem>
 {
-    public void Configure(EntityTypeBuilder<OrderItem> entity)
+    public void Configure(EntityTypeBuilder<PosOrderItem> entity)
     {
-        entity.ToTable("OrderItem");
+        entity.ToTable("PosOrderItem");
         entity.Property(e => e.Price).HasPrecision(18, 4);
         entity.Property(e => e.Status).HasConversion<int>();
         entity.Property(e => e.Notes).HasMaxLength(512);
+        entity.Property(e => e.CancelReasonType).HasConversion<int>();
+        entity.Property(e => e.CancelReason).HasMaxLength(512);
         entity.HasOne(e => e.Order)
             .WithMany(o => o.Items)
-            .HasForeignKey(e => e.OrderId)
+            .HasForeignKey(e => e.PosOrderId)
             .OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(e => e.MenuItem)
             .WithMany()
@@ -117,16 +128,16 @@ internal class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
     }
 }
 
-internal class OrderPaymentConfiguration : IEntityTypeConfiguration<OrderPayment>
+internal class PosOrderPaymentConfiguration : IEntityTypeConfiguration<PosOrderPayment>
 {
-    public void Configure(EntityTypeBuilder<OrderPayment> entity)
+    public void Configure(EntityTypeBuilder<PosOrderPayment> entity)
     {
-        entity.ToTable("OrderPayment");
+        entity.ToTable("PosOrderPayment");
         entity.Property(e => e.Amount).HasPrecision(18, 4);
         entity.Property(e => e.ReferenceNo).HasMaxLength(64);
         entity.HasOne(e => e.Order)
             .WithMany(o => o.Payments)
-            .HasForeignKey(e => e.OrderId)
+            .HasForeignKey(e => e.PosOrderId)
             .OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(e => e.PaymentMethod)
             .WithMany()

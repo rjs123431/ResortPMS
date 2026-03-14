@@ -86,12 +86,19 @@ export const posService = {
     await api.put('/api/services/app/PosOrder/UpdateItem', input);
   },
 
-  cancelOrderItem: async (orderItemId: string) => {
-    await api.post('/api/services/app/PosOrder/CancelItem', null, { params: { orderItemId } });
+  cancelOrderItem: async (input: { orderItemId: string; reasonType: number; reason: string }) => {
+    await api.post('/api/services/app/PosOrder/CancelItem', {
+      orderItemId: input.orderItemId,
+      reasonType: input.reasonType,
+      reason: input.reason,
+    });
   },
 
-  sendOrderToKitchen: async (orderId: string) => {
-    await api.post('/api/services/app/PosOrder/SendToKitchen', null, { params: { orderId } });
+  sendOrderToKitchen: async (orderId: string, orderItemIds?: string[]) => {
+    await api.post('/api/services/app/PosOrder/SendToKitchen', {
+      orderId,
+      orderItemIds: orderItemIds?.length ? orderItemIds : undefined,
+    });
   },
 
   closePosOrder: async (orderId: string) => {

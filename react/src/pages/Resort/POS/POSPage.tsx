@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { POSLayout } from '@components/layout/POSLayout';
 import { posService } from '@services/pos.service';
@@ -6,6 +7,7 @@ import { resortService } from '@services/resort.service';
 import {
   PosOrderType,
   PosOrderStatus,
+  OrderItemStatus,
   type PosOutletListDto,
   type PosTableListDto,
   type MenuCategoryListDto,
@@ -13,8 +15,13 @@ import {
   type PosOrderListDto,
   type OrderItemDto,
 } from '@/types/pos.types';
+import { RemoveItemDialog } from './RemoveItemDialog';
 import type { StayListDto } from '@/types/resort.types';
 import { AddEditOrderItemDialog } from './AddEditOrderItemDialog';
+import { POSPaymentModal } from './POSPaymentModal';
+import { POSRoomChargeModal } from './POSRoomChargeModal';
+import { POSRetrieveOrderModal } from './POSRetrieveOrderModal';
+import { PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const formatMoney = (value: number) =>
   value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -29,7 +36,7 @@ const ORDER_TYPE_LABELS: Record<number, string> = {
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
   [PosOrderStatus.Open]: 'Open',
-  [PosOrderStatus.SentToKitchen]: 'Sent to Kitchen',
+  [PosOrderStatus.SentToKitchen]: 'Kitchen',
   [PosOrderStatus.Preparing]: 'Preparing',
   [PosOrderStatus.Served]: 'Served',
   [PosOrderStatus.Billed]: 'Billed',
@@ -48,20 +55,32 @@ type LocalCart = {
   orderType: number;
   guestName: string;
   roomNumber: string;
+  notes?: string;
+  serverStaffId?: string;
+  serverStaffName?: string;
   items: LocalCartItem[];
 };
 
 export const POSPage = () => {
   const queryClient = useQueryClient();
+  const { orderId: orderIdParam } = useParams<{ orderId?: string }>();
+  const navigate = useNavigate();
   const [localCart, setLocalCart] = useState<LocalCart | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const effectiveOrderId = orderIdParam ?? currentOrderId;
+  const isNewOrderMode = orderIdParam === 'new';
+
+  useEffect(() => {
+    if (orderIdParam && orderIdParam !== 'new') setCurrentOrderId(orderIdParam);
+  }, [orderIdParam]);
+
+  const initedNewOrderRef = useRef(false);
   const [selectedStayForCharge, setSelectedStayForCharge] = useState<StayListDto | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRoomChargeModal, setShowRoomChargeModal] = useState(false);
   const [showRetrieveModal, setShowRetrieveModal] = useState(false);
-  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [retrieveStatusFilter, setRetrieveStatusFilter] = useState<number | ''>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [newOrderOutletId, setNewOrderOutletId] = useState<string>('');
@@ -69,6 +88,8 @@ export const POSPage = () => {
   const [newOrderTableId, setNewOrderTableId] = useState<string>('');
   const [newOrderGuestName, setNewOrderGuestName] = useState('');
   const [newOrderRoomNumber, setNewOrderRoomNumber] = useState('');
+  const [newOrderNotes, setNewOrderNotes] = useState('');
+  const [newOrderServerStaffId, setNewOrderServerStaffId] = useState('');
   const [pendingOrderItems, setPendingOrderItems] = useState<LocalCartItem[]>([]);
   const [addEditDialog, setAddEditDialog] = useState<
     | { mode: 'add'; menuItem: MenuItemListDto }
@@ -77,22 +98,64 @@ export const POSPage = () => {
     | { mode: 'edit-saved'; orderItem: OrderItemDto }
     | null
   >(null);
+  const [removeItemDialog, setRemoveItemDialog] = useState<OrderItemDto | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const { data: outlets = [] } = useQuery({
     queryKey: ['pos-outlets'],
     queryFn: () => posService.getPosOutlets(),
   });
 
+  useEffect(() => {
+    if (orderIdParam !== 'new') {
+      initedNewOrderRef.current = false;
+      return;
+    }
+    if (outlets.length === 0 || initedNewOrderRef.current) return;
+    initedNewOrderRef.current = true;
+    const outletId = outlets[0]?.id ?? '';
+    const outlet = outlets.find((o: PosOutletListDto) => o.id === outletId);
+    setNewOrderOutletId(outletId);
+    setNewOrderOrderType(PosOrderType.DineIn);
+    setNewOrderTableId('');
+    setNewOrderGuestName('');
+    setNewOrderRoomNumber('');
+    setNewOrderNotes('');
+    setNewOrderServerStaffId('');
+    setCurrentOrderId(null);
+    setPendingOrderItems([]);
+    setLocalCart({
+      outletId,
+      outletName: outlet?.name ?? '',
+      tableId: '',
+      tableNumber: '',
+      orderType: PosOrderType.DineIn,
+      guestName: '',
+      roomNumber: '',
+      notes: undefined,
+      serverStaffId: undefined,
+      serverStaffName: undefined,
+      items: [],
+    });
+  }, [orderIdParam, outlets]);
+
   const { data: newOrderTables = [] } = useQuery({
     queryKey: ['pos-tables', newOrderOutletId],
     queryFn: () => posService.getPosTables(newOrderOutletId),
-    enabled: showNewOrderModal && !!newOrderOutletId,
+    enabled: isNewOrderMode && !!newOrderOutletId,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['pos-menu-categories'],
     queryFn: () => posService.getMenuCategories(),
   });
+
+  useEffect(() => {
+    if (categories.length > 0 && selectedCategoryId === null) {
+      const first = [...categories].sort((a: MenuCategoryListDto, b: MenuCategoryListDto) => a.displayOrder - b.displayOrder)[0];
+      setSelectedCategoryId(first.id);
+    }
+  }, [categories, selectedCategoryId]);
 
   const { data: menuItems = [] } = useQuery({
     queryKey: ['pos-menu-items'],
@@ -105,9 +168,9 @@ export const POSPage = () => {
   });
 
   const { data: currentOrder, refetch: refetchOrder } = useQuery({
-    queryKey: ['pos-order', currentOrderId],
-    queryFn: () => posService.getPosOrder(currentOrderId!),
-    enabled: !!currentOrderId,
+    queryKey: ['pos-order', effectiveOrderId],
+    queryFn: () => posService.getPosOrder(effectiveOrderId!),
+    enabled: !!effectiveOrderId && effectiveOrderId !== 'new',
   });
 
   const { data: retrieveOrders = [], isFetching: isFetchingRetrieveOrders } = useQuery({
@@ -127,8 +190,15 @@ export const POSPage = () => {
   });
   const inHouseStays = inHouseStaysData?.items ?? [];
 
+  const { data: staffList = [] } = useQuery({
+    queryKey: ['resort-staff-active'],
+    queryFn: () => resortService.getStaffs(),
+    enabled: isNewOrderMode,
+  });
+
   const sendToKitchenMutation = useMutation({
-    mutationFn: (orderId: string) => posService.sendOrderToKitchen(orderId),
+    mutationFn: ({ orderId, orderItemIds }: { orderId: string; orderItemIds?: string[] }) =>
+      posService.sendOrderToKitchen(orderId, orderItemIds),
     onSuccess: () => {
       void refetchOrder();
       void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
@@ -162,6 +232,7 @@ export const POSPage = () => {
       setShowRoomChargeModal(false);
       setSelectedStayForCharge(null);
       setCurrentOrderId(null);
+      navigate('/pos');
       void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
       setMessage({ type: 'success', text: 'Charged to room.' });
     },
@@ -172,6 +243,7 @@ export const POSPage = () => {
     mutationFn: (orderId: string) => posService.closePosOrder(orderId),
     onSuccess: () => {
       setCurrentOrderId(null);
+      navigate('/pos');
       void refetchOrder();
       void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
       setMessage({ type: 'success', text: 'Order closed.' });
@@ -180,8 +252,10 @@ export const POSPage = () => {
   });
 
   const cancelItemMutation = useMutation({
-    mutationFn: (orderItemId: string) => posService.cancelOrderItem(orderItemId),
+    mutationFn: (input: { orderItemId: string; reasonType: number; reason: string }) =>
+      posService.cancelOrderItem(input),
     onSuccess: () => {
+      setRemoveItemDialog(null);
       void refetchOrder();
       void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
     },
@@ -202,40 +276,13 @@ export const POSPage = () => {
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to update item.' }),
   });
 
-  const isCartMode = localCart !== null && currentOrderId === null;
-  const isSavedOrderMode = currentOrderId !== null;
+  const isCartMode = localCart !== null && (effectiveOrderId === null || effectiveOrderId === 'new');
+  const isSavedOrderMode = effectiveOrderId !== null && effectiveOrderId !== 'new';
 
-  const handleOpenNewOrderModal = useCallback(() => {
-    setNewOrderOutletId(outlets[0]?.id ?? '');
-    setNewOrderOrderType(PosOrderType.DineIn);
-    setNewOrderTableId('');
-    setNewOrderGuestName('');
-    setNewOrderRoomNumber('');
-    setShowNewOrderModal(true);
-  }, [outlets]);
+  const handleOpenNewOrder = useCallback(() => {
+    navigate('/pos/order/new');
+  }, [navigate]);
 
-  const handleConfirmNewOrder = useCallback(() => {
-    if (!newOrderOutletId) {
-      setMessage({ type: 'error', text: 'Select an outlet.' });
-      return;
-    }
-    const outlet = outlets.find((o: PosOutletListDto) => o.id === newOrderOutletId);
-    const table = newOrderTables.find((t: PosTableListDto) => t.id === newOrderTableId);
-    setCurrentOrderId(null);
-    setPendingOrderItems([]);
-    setLocalCart({
-      outletId: newOrderOutletId,
-      outletName: outlet?.name ?? '',
-      tableId: newOrderTableId,
-      tableNumber: table?.tableNumber ?? '',
-      orderType: newOrderOrderType,
-      guestName: newOrderGuestName,
-      roomNumber: newOrderRoomNumber,
-      items: [],
-    });
-    setShowNewOrderModal(false);
-    setMessage(null);
-  }, [newOrderOutletId, newOrderOrderType, newOrderTableId, newOrderGuestName, newOrderRoomNumber, outlets, newOrderTables]);
 
   const openAddItemDialog = useCallback((menuItem: MenuItemListDto) => {
     setAddEditDialog({ mode: 'add', menuItem });
@@ -311,9 +358,36 @@ export const POSPage = () => {
   });
 
   const handleSavePendingOrderItems = useCallback(() => {
-    if (!currentOrderId || pendingOrderItems.length === 0) return;
-    addOrderItemsMutation.mutate({ orderId: currentOrderId, items: pendingOrderItems });
-  }, [currentOrderId, pendingOrderItems, addOrderItemsMutation]);
+    if (!effectiveOrderId || pendingOrderItems.length === 0) return;
+    addOrderItemsMutation.mutate({ orderId: effectiveOrderId, items: pendingOrderItems });
+  }, [effectiveOrderId, pendingOrderItems, addOrderItemsMutation]);
+
+  const saveAndSendToKitchenMutation = useMutation({
+    mutationFn: async () => {
+      if (!effectiveOrderId || pendingOrderItems.length === 0) return;
+      await addOrderItemsMutation.mutateAsync({
+        orderId: effectiveOrderId,
+        items: pendingOrderItems,
+      });
+      const { data: order } = await refetchOrder();
+      const pendingIds = order?.items?.filter((i) => i.status === OrderItemStatus.Pending).map((i) => i.id) ?? [];
+      if (pendingIds.length > 0) {
+        await posService.sendOrderToKitchen(effectiveOrderId, pendingIds);
+      }
+    },
+    onSuccess: () => {
+      setPendingOrderItems([]);
+      void queryClient.invalidateQueries({ queryKey: ['pos-order', effectiveOrderId] });
+      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      setMessage({ type: 'success', text: 'Items saved and sent to kitchen.' });
+    },
+    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to save or send to kitchen.' }),
+  });
+
+  const handleSaveAndSendToKitchen = useCallback(() => {
+    if (!effectiveOrderId || pendingOrderItems.length === 0) return;
+    saveAndSendToKitchenMutation.mutate();
+  }, [effectiveOrderId, pendingOrderItems.length, saveAndSendToKitchenMutation]);
 
   const updateCartItemByIndex = useCallback((index: number, quantity: number, notes: string) => {
     setLocalCart((prev) => {
@@ -357,6 +431,8 @@ export const POSPage = () => {
         tableId: localCart.tableId || undefined,
         orderType: localCart.orderType,
         guestName: localCart.guestName || undefined,
+        notes: localCart.notes ?? '',
+        serverStaffId: localCart.serverStaffId || undefined,
         items: localCart.items.map((line) => ({
           menuItemId: line.menuItemId,
           quantity: line.quantity,
@@ -366,40 +442,47 @@ export const POSPage = () => {
       });
       setLocalCart(null);
       setCurrentOrderId(orderId);
+      navigate(`/pos/order/${orderId}`);
       void queryClient.invalidateQueries({ queryKey: ['pos-order', orderId] });
       void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
       setMessage({ type: 'success', text: 'Order saved.' });
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save order.' });
     }
-  }, [localCart, queryClient]);
+  }, [localCart, navigate, queryClient]);
 
   const handleLoadOrder = useCallback(
     (order: PosOrderListDto) => {
-      setCurrentOrderId(order.id);
       setLocalCart(null);
       setPendingOrderItems([]);
       setShowRetrieveModal(false);
+      navigate(`/pos/order/${order.id}`);
       void queryClient.invalidateQueries({ queryKey: ['pos-order', order.id] });
       void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
       setMessage({ type: 'success', text: `Order #${order.orderNumber} loaded.` });
     },
-    [queryClient]
+    [navigate, queryClient]
   );
 
   const handleChargeToRoom = () => {
-    if (!currentOrderId || !selectedStayForCharge?.roomNumber) return;
-    chargeToRoomMutation.mutate({ orderId: currentOrderId, roomNumber: selectedStayForCharge.roomNumber });
+    if (!effectiveOrderId || !selectedStayForCharge?.roomNumber) return;
+    chargeToRoomMutation.mutate({ orderId: effectiveOrderId, roomNumber: selectedStayForCharge.roomNumber });
   };
 
   const handleAddPayment = () => {
     const amount = Number(paymentAmount);
-    if (!currentOrderId || !paymentMethodId || amount <= 0) return;
-    addPaymentMutation.mutate({ orderId: currentOrderId, paymentMethodId, amount });
+    if (!effectiveOrderId || !paymentMethodId || amount <= 0) return;
+    addPaymentMutation.mutate({ orderId: effectiveOrderId, paymentMethodId, amount });
   };
 
   const canModifyOrder = currentOrder && PENDING_STATUSES.includes(currentOrder.status);
-  const activeSavedItems = currentOrder?.items.filter((i) => i.status !== 3) ?? [];
+  const showSaveAndSendToKitchen =
+    currentOrder &&
+    currentOrder.status !== PosOrderStatus.Open &&
+    pendingOrderItems.length > 0 &&
+    canModifyOrder;
+  const activeSavedItems = currentOrder?.items.filter((i) => i.status !== OrderItemStatus.Cancelled) ?? [];
+  const pendingItemsForKitchen = currentOrder?.items.filter((i) => i.status === OrderItemStatus.Pending) ?? [];
   const cartItems = localCart?.items ?? [];
   const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const canAddItems = isCartMode || (isSavedOrderMode && canModifyOrder);
@@ -416,12 +499,16 @@ export const POSPage = () => {
           typeLabel: ORDER_TYPE_LABELS[localCart.orderType] ?? '',
           tableNumber: localCart.tableNumber || '—',
           guestOrRoom: localCart.roomNumber ? `Room ${localCart.roomNumber}` : localCart.guestName || '—',
+          notes: localCart.notes,
+          serverStaffName: localCart.serverStaffName,
         }
       : currentOrder
         ? {
             typeLabel: ORDER_TYPE_LABELS[currentOrder.orderType] ?? '',
             tableNumber: currentOrder.tableNumber || '—',
             guestOrRoom: currentOrder.guestName || '—',
+            notes: currentOrder.notes,
+            serverStaffName: currentOrder.serverStaffName,
           }
         : null;
 
@@ -442,7 +529,7 @@ export const POSPage = () => {
         <>
           <button
             type="button"
-            onClick={handleOpenNewOrderModal}
+            onClick={handleOpenNewOrder}
             className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
             New Order
@@ -457,41 +544,65 @@ export const POSPage = () => {
         </>
       }
     >
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="grid min-h-[calc(100vh-6rem)] flex-1 grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr] lg:items-stretch">
           {/* Menu - 2/3 */}
           <section className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
-            <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Menu</h2>
-            <div className="max-h-[70vh] space-y-3 overflow-y-auto">
-              {categories.map((cat: MenuCategoryListDto) => {
-                const items = menuItems.filter((m: MenuItemListDto) => m.categoryId === cat.id);
-                if (items.length === 0) return null;
+            <div className="mb-3 flex flex-wrap gap-2">
+              {categories
+                .slice()
+                .sort((a: MenuCategoryListDto, b: MenuCategoryListDto) => a.displayOrder - b.displayOrder)
+                .map((cat: MenuCategoryListDto) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategoryId(cat.id)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      selectedCategoryId === cat.id
+                        ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto">
+              {(() => {
+                const effectiveCategoryId = selectedCategoryId ?? categories[0]?.id ?? null;
+                const items = effectiveCategoryId
+                  ? menuItems.filter((m: MenuItemListDto) => m.categoryId === effectiveCategoryId)
+                  : [];
                 return (
-                  <div key={cat.id}>
-                    <h3 className="mb-2 font-medium text-gray-700 dark:text-gray-300">{cat.name}</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {items.map((item: MenuItemListDto) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          disabled={!canAddItems}
-                          onClick={() => openAddItemDialog(item)}
-                          className="rounded border border-gray-200 bg-gray-50 p-3 text-left transition hover:bg-indigo-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-indigo-900/20 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <span className="block font-medium text-gray-900 dark:text-white">{item.name}</span>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {items.map((item: MenuItemListDto) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        disabled={!canAddItems || !item.isAvailable}
+                        onClick={() => openAddItemDialog(item)}
+                        className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-center transition hover:bg-indigo-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-indigo-900/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <div className="flex aspect-square w-full shrink-0 items-center justify-center bg-gray-200 dark:bg-gray-600">
+                          <svg className="h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-1 flex-col justify-end p-2 text-center">
+                          <span className="block truncate font-medium text-gray-900 dark:text-white">{item.name}</span>
                           <span className="text-sm text-gray-600 dark:text-gray-400">₱{formatMoney(item.price)}</span>
-                        </button>
-                      ))}
-                    </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 );
-              })}
+              })()}
             </div>
           </section>
 
           {/* Right: Current Order / Cart - 1/3 */}
-          <section className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
+          <section className="flex min-h-0 flex-col rounded-lg bg-white p-4 shadow dark:bg-gray-800 lg:min-h-full">
+            <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {isCartMode ? 'New Order (unsaved)' : currentOrder ? `Order #${currentOrder.orderNumber}` : 'No Current Order'}
               </h2>
@@ -500,9 +611,175 @@ export const POSPage = () => {
                   {ORDER_STATUS_LABELS[currentOrder.status] ?? 'Unknown'}
                 </span>
               )}
+              {canModifyOrder && currentOrder && pendingItemsForKitchen.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    sendToKitchenMutation.mutate({
+                      orderId: currentOrder.id,
+                      orderItemIds: pendingItemsForKitchen.map((i) => i.id),
+                    })
+                  }
+                  disabled={sendToKitchenMutation.isPending}
+                  className="rounded bg-amber-600 px-3 py-1.5 text-sm text-white hover:bg-amber-700 disabled:opacity-50"
+                >
+                  Send to Kitchen ({pendingItemsForKitchen.length})
+                </button>
+              )}
             </div>
-            {orderInfoBlock && (
-              <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-2 text-sm dark:border-gray-600 dark:bg-gray-700/50">
+            {isNewOrderMode && localCart && (
+              <div className="mb-3 shrink-0 space-y-3 rounded border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-600 dark:bg-gray-700/50">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Outlet</label>
+                  <select
+                    value={newOrderOutletId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      const outlet = outlets.find((o: PosOutletListDto) => o.id === id);
+                      setNewOrderOutletId(id);
+                      setNewOrderTableId('');
+                      setLocalCart((prev) =>
+                        prev ? { ...prev, outletId: id, outletName: outlet?.name ?? '', tableId: '', tableNumber: '' } : null
+                      );
+                    }}
+                    className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  >
+                    {outlets.map((o: PosOutletListDto) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Order type</span>
+                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                    {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => {
+                          const n = Number(k);
+                          setNewOrderOrderType(n);
+                          setLocalCart((prev) => (prev ? { ...prev, orderType: n } : null));
+                        }}
+                        className={`rounded border px-2 py-1.5 text-xs font-medium transition ${
+                          newOrderOrderType === Number(k)
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-300'
+                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {newOrderOrderType === PosOrderType.DineIn && (
+                  <div>
+                    <span className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Table</span>
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewOrderTableId('');
+                          setLocalCart((prev) => (prev ? { ...prev, tableId: '', tableNumber: '' } : null));
+                        }}
+                        className={`rounded border px-2 py-1 text-xs font-medium ${
+                          !newOrderTableId ? 'border-indigo-600 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-600 dark:bg-gray-700'
+                        }`}
+                      >
+                        None
+                      </button>
+                      {newOrderTables.map((t: PosTableListDto) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setNewOrderTableId(t.id);
+                            setLocalCart((prev) =>
+                              prev ? { ...prev, tableId: t.id, tableNumber: t.tableNumber } : null
+                            );
+                          }}
+                          className={`rounded border px-2 py-1 text-xs font-medium ${
+                            newOrderTableId === t.id ? 'border-indigo-600 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-600 dark:bg-gray-700'
+                          }`}
+                        >
+                          {t.tableNumber}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-0.5 block text-xs text-gray-500 dark:text-gray-400">Guest</label>
+                    <input
+                      type="text"
+                      value={newOrderGuestName}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setNewOrderGuestName(v);
+                        setLocalCart((prev) => (prev ? { ...prev, guestName: v } : null));
+                      }}
+                      placeholder="Guest name"
+                      className="w-full rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-0.5 block text-xs text-gray-500 dark:text-gray-400">Room #</label>
+                    <input
+                      type="text"
+                      value={newOrderRoomNumber}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setNewOrderRoomNumber(v);
+                        setLocalCart((prev) => (prev ? { ...prev, roomNumber: v } : null));
+                      }}
+                      placeholder="Room"
+                      className="w-full rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-xs text-gray-500 dark:text-gray-400">Server</label>
+                  <select
+                    value={newOrderServerStaffId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      const server = staffList.find((s: { id: string; fullName?: string }) => s.id === id);
+                      setNewOrderServerStaffId(id);
+                      setLocalCart((prev) =>
+                        prev ? { ...prev, serverStaffId: id || undefined, serverStaffName: server?.fullName } : null
+                      );
+                    }}
+                    className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">No server</option>
+                    {staffList.map((s: { id: string; fullName?: string }) => (
+                      <option key={s.id} value={s.id}>
+                        {s.fullName ?? s.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-xs text-gray-500 dark:text-gray-400">Notes</label>
+                  <textarea
+                    value={newOrderNotes}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewOrderNotes(v);
+                      setLocalCart((prev) => (prev ? { ...prev, notes: v || undefined } : null));
+                    }}
+                    placeholder="Order notes…"
+                    rows={2}
+                    className="w-full resize-none rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+            )}
+            {orderInfoBlock && !isNewOrderMode && (
+              <div className="mb-3 shrink-0 rounded border border-gray-200 bg-gray-50 p-2 text-sm dark:border-gray-600 dark:bg-gray-700/50">
                 <div className="flex justify-between">
                   <span className="text-gray-500 dark:text-gray-400">Type</span>
                   <span className="font-medium text-gray-900 dark:text-white">{orderInfoBlock.typeLabel}</span>
@@ -515,9 +792,21 @@ export const POSPage = () => {
                   <span className="text-gray-500 dark:text-gray-400">Guest / Room</span>
                   <span className="font-medium text-gray-900 dark:text-white">{orderInfoBlock.guestOrRoom}</span>
                 </div>
+                {orderInfoBlock.serverStaffName && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Server</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{orderInfoBlock.serverStaffName}</span>
+                  </div>
+                )}
+                {orderInfoBlock.notes && (
+                  <div className="mt-1 border-t border-gray-200 pt-1 dark:border-gray-600">
+                    <span className="text-gray-500 dark:text-gray-400">Notes</span>
+                    <p className="mt-0.5 text-gray-900 dark:text-white">{orderInfoBlock.notes}</p>
+                  </div>
+                )}
               </div>
             )}
-            <div ref={orderItemsListRef} className="max-h-[35vh] overflow-y-auto">
+            <div ref={orderItemsListRef} className="min-h-0 flex-1 overflow-y-auto">
               {isCartMode && cartItems.length === 0 && (
                 <p className="py-4 text-center text-gray-500 dark:text-gray-400">Click a menu item to add it to the order.</p>
               )}
@@ -529,21 +818,23 @@ export const POSPage = () => {
                         <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">{item.menuItemName}</span>
                         <span className="shrink-0 font-medium text-gray-900 dark:text-white">₱{formatMoney(item.price * item.quantity)}</span>
                       </div>
-                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                         <span>× {item.quantity}</span>
                         <button
                           type="button"
                           onClick={() => setAddEditDialog({ mode: 'edit-cart', cartItem: item, cartIndex: index })}
-                          className="text-indigo-600 hover:underline dark:text-indigo-400"
+                          className="rounded p-1 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                          title="Edit"
                         >
-                          Edit
+                          <PencilSquareIcon className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => removeCartItemByIndex(index)}
-                          className="text-red-600 hover:underline dark:text-red-400"
+                          className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                          title="Remove"
                         >
-                          Remove
+                          <TrashIcon className="h-4 w-4" />
                         </button>
                       </div>
                       {item.notes && (
@@ -562,26 +853,35 @@ export const POSPage = () => {
                     {activeSavedItems.map((item) => (
                       <li key={item.id} className="border-b border-gray-100 pb-3 dark:border-gray-700">
                         <div className="flex justify-between gap-2">
-                          <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">{item.menuItemName}</span>
+                          <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">
+                            {item.menuItemName}
+                            {item.status === OrderItemStatus.Pending && (
+                              <span className="ml-1.5 inline rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                Pending
+                              </span>
+                            )}
+                          </span>
                           <span className="shrink-0 font-medium text-gray-900 dark:text-white">₱{formatMoney(item.lineTotal)}</span>
                         </div>
-                        <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>× {item.quantity}</span>
                           {canModifyOrder && (
                             <>
                               <button
                                 type="button"
                                 onClick={() => setAddEditDialog({ mode: 'edit-saved', orderItem: item })}
-                                className="text-indigo-600 hover:underline dark:text-indigo-400"
+                                className="rounded p-1 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                                title="Edit"
                               >
-                                Edit
+                                <PencilSquareIcon className="h-4 w-4" />
                               </button>
                               <button
                                 type="button"
-                                onClick={() => cancelItemMutation.mutate(item.id)}
-                                className="text-red-600 hover:underline dark:text-red-400"
+                                onClick={() => setRemoveItemDialog(item)}
+                                className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                                title="Remove"
                               >
-                                Remove
+                                <TrashIcon className="h-4 w-4" />
                               </button>
                             </>
                           )}
@@ -604,21 +904,23 @@ export const POSPage = () => {
                               <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">{item.menuItemName}</span>
                               <span className="shrink-0 font-medium text-gray-900 dark:text-white">₱{formatMoney(item.price * item.quantity)}</span>
                             </div>
-                            <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                               <span>× {item.quantity}</span>
                               <button
                                 type="button"
                                 onClick={() => setAddEditDialog({ mode: 'edit-pending', cartItem: item, pendingIndex: index })}
-                                className="text-indigo-600 hover:underline dark:text-indigo-400"
+                                className="rounded p-1 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                                title="Edit"
                               >
-                                Edit
+                                <PencilSquareIcon className="h-4 w-4" />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => removePendingOrderItem(index)}
-                                className="text-red-600 hover:underline dark:text-red-400"
+                                className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                                title="Remove"
                               >
-                                Remove
+                                <TrashIcon className="h-4 w-4" />
                               </button>
                             </div>
                             {item.notes && (
@@ -627,14 +929,26 @@ export const POSPage = () => {
                           </li>
                         ))}
                       </ul>
-                      <button
-                        type="button"
-                        onClick={handleSavePendingOrderItems}
-                        disabled={addOrderItemsMutation.isPending}
-                        className="mt-2 w-full rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        {addOrderItemsMutation.isPending ? 'Saving…' : 'Save'}
-                      </button>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSavePendingOrderItems}
+                          disabled={addOrderItemsMutation.isPending || saveAndSendToKitchenMutation.isPending}
+                          className="flex-1 rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {addOrderItemsMutation.isPending ? 'Saving…' : 'Save'}
+                        </button>
+                        {showSaveAndSendToKitchen && (
+                          <button
+                            type="button"
+                            onClick={handleSaveAndSendToKitchen}
+                            disabled={addOrderItemsMutation.isPending || saveAndSendToKitchenMutation.isPending}
+                            className="flex-1 rounded bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                          >
+                            {saveAndSendToKitchenMutation.isPending ? 'Saving & sending…' : 'Save and Send to Kitchen'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>
@@ -642,13 +956,13 @@ export const POSPage = () => {
             </div>
             {isCartMode && cartItems.length > 0 && (
               <>
-                <div className="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">
+                <div className="mt-3 shrink-0 border-t border-gray-200 pt-3 dark:border-gray-700">
                   <div className="flex justify-between text-lg font-semibold text-gray-900 dark:text-white">
                     <span>Total</span>
                     <span>₱{formatMoney(cartTotal)}</span>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 shrink-0 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={handleSaveOrder}
@@ -669,7 +983,7 @@ export const POSPage = () => {
             )}
             {currentOrder && (
               <>
-                <div className="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">
+                <div className="mt-3 shrink-0 border-t border-gray-200 pt-3 dark:border-gray-700">
                   <div className="flex justify-between text-lg font-semibold text-gray-900 dark:text-white">
                     <span>Total</span>
                     <span>₱{formatMoney(currentOrder.itemsTotal)}</span>
@@ -683,17 +997,7 @@ export const POSPage = () => {
                     <span>₱{formatMoney(currentOrder.balanceDue)}</span>
                   </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {canModifyOrder && currentOrder.status === PosOrderStatus.Open && activeSavedItems.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => sendToKitchenMutation.mutate(currentOrder.id)}
-                      disabled={sendToKitchenMutation.isPending}
-                      className="rounded bg-amber-600 px-3 py-1.5 text-sm text-white hover:bg-amber-700 disabled:opacity-50"
-                    >
-                      Send to Kitchen
-                    </button>
-                  )}
+                <div className="mt-4 shrink-0 flex flex-wrap gap-2">
                   {canModifyOrder && currentOrder.balanceDue > 0 && (
                     <>
                       <button
@@ -732,303 +1036,46 @@ export const POSPage = () => {
         </div>
       </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && currentOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add Payment</h3>
-            <div className="mt-3 space-y-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
-                <select
-                  value={paymentMethodId}
-                  onChange={(e) => setPaymentMethodId(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">Select</option>
-                  {paymentMethods.map((pm: { id: string; name: string }) => (
-                    <option key={pm.id} value={pm.id}>{pm.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => { setShowPaymentModal(false); setPaymentAmount(''); setPaymentMethodId(''); }}
-                className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleAddPayment}
-                disabled={!paymentMethodId || Number(paymentAmount) <= 0 || addPaymentMutation.isPending}
-                className="rounded bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                Add Payment
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <POSPaymentModal
+        open={showPaymentModal && !!currentOrder}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPaymentAmount('');
+          setPaymentMethodId('');
+        }}
+        paymentMethodId={paymentMethodId}
+        setPaymentMethodId={setPaymentMethodId}
+        paymentAmount={paymentAmount}
+        setPaymentAmount={setPaymentAmount}
+        paymentMethods={paymentMethods}
+        onAddPayment={handleAddPayment}
+        isPending={addPaymentMutation.isPending}
+      />
 
-      {/* Room Charge Modal - list of current stays */}
-      {showRoomChargeModal && currentOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800">
-            <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Charge to Room</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select a stay to charge this order to the guest folio.</p>
-              <p className="mt-2 text-base font-semibold text-gray-900 dark:text-white">
-                Amount to charge: ₱{formatMoney(currentOrder.itemsTotal)}
-              </p>
-            </div>
-            <div className="flex-1 overflow-auto p-4">
-              {isFetchingInHouseStays ? (
-                <p className="py-6 text-center text-gray-500 dark:text-gray-400">Loading stays…</p>
-              ) : inHouseStays.length === 0 ? (
-                <p className="py-6 text-center text-gray-500 dark:text-gray-400">No in-house stays found.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {inHouseStays.map((stay: StayListDto) => (
-                    <li key={stay.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedStayForCharge(selectedStayForCharge?.id === stay.id ? null : stay)}
-                        className={`w-full rounded-lg border p-3 text-left transition ${
-                          selectedStayForCharge?.id === stay.id
-                            ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-900/30'
-                            : 'border-gray-200 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-medium text-gray-900 dark:text-white">Room {stay.roomNumber}</span>
-                            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">({stay.stayNo})</span>
-                          </div>
-                          {selectedStayForCharge?.id === stay.id && (
-                            <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Selected</span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{stay.guestName}</p>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 border-t border-gray-200 p-4 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => { setShowRoomChargeModal(false); setSelectedStayForCharge(null); }}
-                className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleChargeToRoom}
-                disabled={!selectedStayForCharge || chargeToRoomMutation.isPending}
-                className="rounded bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                Charge to Room
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <POSRoomChargeModal
+        open={showRoomChargeModal && !!currentOrder}
+        onClose={() => {
+          setShowRoomChargeModal(false);
+          setSelectedStayForCharge(null);
+        }}
+        orderItemsTotal={currentOrder?.itemsTotal ?? 0}
+        inHouseStays={inHouseStays}
+        isFetchingStays={isFetchingInHouseStays}
+        selectedStay={selectedStayForCharge}
+        onSelectStay={setSelectedStayForCharge}
+        onCharge={handleChargeToRoom}
+        isPending={chargeToRoomMutation.isPending}
+      />
 
-      {/* New Order Dialog */}
-      {showNewOrderModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">New Order</h3>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Outlet</label>
-                <select
-                  value={newOrderOutletId}
-                  onChange={(e) => { setNewOrderOutletId(e.target.value); setNewOrderTableId(''); }}
-                  className="w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">Select outlet</option>
-                  {outlets.map((o: PosOutletListDto) => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Order Type</label>
-                <select
-                  value={newOrderOrderType}
-                  onChange={(e) => setNewOrderOrderType(Number(e.target.value))}
-                  className="w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                >
-                  {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-              </div>
-              {newOrderOrderType === PosOrderType.DineIn && (
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Table #</label>
-                  <select
-                    value={newOrderTableId}
-                    onChange={(e) => setNewOrderTableId(e.target.value)}
-                    className="w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="">No table</option>
-                    {newOrderTables.map((t: PosTableListDto) => (
-                      <option key={t.id} value={t.id}>Table {t.tableNumber}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Guest name (optional)</label>
-                <input
-                  type="text"
-                  value={newOrderGuestName}
-                  onChange={(e) => setNewOrderGuestName(e.target.value)}
-                  placeholder="Guest name"
-                  className="w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Room # (optional)</label>
-                <input
-                  type="text"
-                  value={newOrderRoomNumber}
-                  onChange={(e) => setNewOrderRoomNumber(e.target.value)}
-                  placeholder="For room charge"
-                  className="w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowNewOrderModal(false)}
-                className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmNewOrder}
-                disabled={!newOrderOutletId}
-                className="rounded bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                New Order
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Retrieve Order Modal - list/grid with status filter */}
-      {showRetrieveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Retrieve Order</h3>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                <select
-                  value={retrieveStatusFilter === '' ? '' : retrieveStatusFilter}
-                  onChange={(e) => setRetrieveStatusFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">All</option>
-                  {Object.entries(ORDER_STATUS_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowRetrieveModal(false)}
-                  className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto p-4">
-              {isFetchingRetrieveOrders ? (
-                <p className="py-8 text-center text-gray-500 dark:text-gray-400">Loading orders…</p>
-              ) : retrieveOrders.length === 0 ? (
-                <p className="py-8 text-center text-gray-500 dark:text-gray-400">No orders found.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-left dark:border-gray-700">
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300">Order #</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300">Outlet</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300">Table</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300">Guest</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300">Type</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300">Status</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300 text-right">Total</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300">Opened</th>
-                        <th className="p-2 font-medium text-gray-700 dark:text-gray-300"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {retrieveOrders.map((order: PosOrderListDto) => (
-                        <tr
-                          key={order.id}
-                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        >
-                          <td className="p-2 font-medium text-gray-900 dark:text-white">{order.orderNumber}</td>
-                          <td className="p-2 text-gray-700 dark:text-gray-300">{order.outletName}</td>
-                          <td className="p-2 text-gray-700 dark:text-gray-300">{order.tableNumber || '—'}</td>
-                          <td className="p-2 text-gray-700 dark:text-gray-300">{order.guestName || '—'}</td>
-                          <td className="p-2 text-gray-700 dark:text-gray-300">
-                            {ORDER_TYPE_LABELS[order.orderType] ?? order.orderType}
-                          </td>
-                          <td className="p-2">
-                            <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-700 dark:bg-gray-600 dark:text-gray-300">
-                              {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                            </span>
-                          </td>
-                          <td className="p-2 text-right font-medium text-gray-900 dark:text-white">
-                            ₱{formatMoney(order.itemsTotal)}
-                          </td>
-                          <td className="p-2 text-gray-600 dark:text-gray-400">
-                            {new Date(order.openedAt).toLocaleString()}
-                          </td>
-                          <td className="p-2">
-                            <button
-                              type="button"
-                              onClick={() => handleLoadOrder(order)}
-                              className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
-                            >
-                              Load
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <POSRetrieveOrderModal
+        open={showRetrieveModal}
+        onClose={() => setShowRetrieveModal(false)}
+        orders={retrieveOrders}
+        statusFilter={retrieveStatusFilter}
+        onStatusFilterChange={setRetrieveStatusFilter}
+        onLoadOrder={handleLoadOrder}
+        isFetching={isFetchingRetrieveOrders}
+      />
 
       {/* Add / Edit Order Item Dialog */}
       {addEditDialog?.mode === 'add' && (
@@ -1096,6 +1143,21 @@ export const POSPage = () => {
           isPending={updateOrderItemMutation.isPending}
         />
       )}
+
+      <RemoveItemDialog
+        open={removeItemDialog !== null}
+        onClose={() => setRemoveItemDialog(null)}
+        item={removeItemDialog}
+        onConfirm={(reasonType, reason) => {
+          if (removeItemDialog)
+            cancelItemMutation.mutate({
+              orderItemId: removeItemDialog.id,
+              reasonType,
+              reason,
+            });
+        }}
+        isPending={cancelItemMutation.isPending}
+      />
     </POSLayout>
   );
 };

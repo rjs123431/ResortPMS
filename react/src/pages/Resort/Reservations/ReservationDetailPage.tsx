@@ -51,6 +51,33 @@ export const ReservationDetailPage = () => {
   const [showCreateGuest, setShowCreateGuest] = useState(false);
   const [assignDialogReservationRoomId, setAssignDialogReservationRoomId] = useState('');
   const [assignDialogSelectedRoomId, setAssignDialogSelectedRoomId] = useState('');
+
+  const closeGuestDialog = () => {
+    setIsGuestDialogOpen(false);
+    setGuestFilter('');
+    setSelectedGuestsForAdd({});
+    setShowCreateGuest(false);
+  };
+
+  useEffect(() => {
+    if (!isDepositDialogOpen && !isGuestDialogOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (isGuestDialogOpen) {
+          setIsGuestDialogOpen(false);
+          setGuestFilter('');
+          setSelectedGuestsForAdd({});
+          setShowCreateGuest(false);
+        } else {
+          setIsDepositDialogOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDepositDialogOpen, isGuestDialogOpen]);
+
   const [newGuest, setNewGuest] = useState({
     guestCode: `GST${Date.now().toString().slice(-6)}`,
     firstName: '',
@@ -565,7 +592,7 @@ export const ReservationDetailPage = () => {
         </section>
 
         {reservationDetail?.status === ReservationStatus.Pending ? (
-          <Dialog open={isDepositDialogOpen} onClose={setIsDepositDialogOpen} className="relative z-50">
+          <Dialog open={isDepositDialogOpen} onClose={() => {}} className="relative z-50">
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
               <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
@@ -654,24 +681,13 @@ export const ReservationDetailPage = () => {
           </Dialog>
         ) : null}
 
-        <Dialog
-          open={isGuestDialogOpen}
-          onClose={(open) => {
-            setIsGuestDialogOpen(open);
-            if (!open) {
-              setGuestFilter('');
-              setSelectedGuestsForAdd({});
-              setShowCreateGuest(false);
-            }
-          }}
-          className="relative z-50"
-        >
+        <Dialog open={isGuestDialogOpen} onClose={() => {}} className="relative z-50">
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex min-h-screen items-center justify-center bg-black/50 p-4">
               <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
                 <div className="mb-4 flex items-center justify-between">
                   <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">Search Guests</DialogTitle>
-                  <button className="rounded bg-gray-200 px-2 py-1 text-sm dark:bg-gray-700" onClick={() => setIsGuestDialogOpen(false)}>
+                  <button className="rounded bg-gray-200 px-2 py-1 text-sm dark:bg-gray-700" onClick={closeGuestDialog}>
                     Close
                   </button>
                 </div>

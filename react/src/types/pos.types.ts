@@ -16,6 +16,21 @@ export enum PosOrderStatus {
   Cancelled = 6,
 }
 
+export enum OrderItemStatus {
+  Pending = 0,
+  SentToKitchen = 1,
+  Served = 2,
+  Cancelled = 3,
+}
+
+export enum OrderItemCancelReasonType {
+  GuestRequest = 0,
+  WrongOrder = 1,
+  OutOfStock = 2,
+  Duplicate = 3,
+  Other = 4,
+}
+
 export interface PosOutletListDto {
   id: string;
   name: string;
@@ -79,6 +94,9 @@ export interface PosOrderListDto {
   status: number;
   itemsTotal: number;
   openedAt: string;
+  notes: string;
+  serverStaffId?: string;
+  serverStaffName: string;
 }
 
 export interface GetPosOrdersInput {
@@ -97,6 +115,12 @@ export interface PosOrderDto {
   orderNumber: string;
   orderType: number;
   status: number;
+  notes: string;
+  serverStaffId?: string;
+  serverStaffName: string;
+  discountPercent: number;
+  discountAmount: number;
+  seniorCitizenDiscount: number;
   openedAt: string;
   closedAt?: string;
   items: OrderItemDto[];
@@ -111,6 +135,8 @@ export interface CreatePosOrderDto {
   tableId?: string;
   orderType: number;
   guestName?: string;
+  notes?: string;
+  serverStaffId?: string;
 }
 
 export interface CreatePosOrderLineDto {
@@ -125,6 +151,8 @@ export interface CreatePosOrderWithItemsDto {
   tableId?: string;
   orderType: number;
   guestName?: string;
+  notes?: string;
+  serverStaffId?: string;
   items: CreatePosOrderLineDto[];
 }
 

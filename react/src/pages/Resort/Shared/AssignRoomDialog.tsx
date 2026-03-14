@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { useQuery } from '@tanstack/react-query';
 import { RoomOperationalStatus, HousekeepingStatus } from '@/types/resort.types';
@@ -72,9 +73,23 @@ export const AssignRoomDialog = ({
   const filteredRooms = rooms.filter(
     (room) => room.id === selectedRoomId || !excludeSet.has(room.id)
   );
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   return (
-    <Dialog open={open} onClose={onClose} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center bg-black/40 p-4">
+    <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/40" aria-hidden />
+      <div className="flex min-h-screen items-center justify-center p-4">
         <DialogPanel className="w-full max-w-xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">

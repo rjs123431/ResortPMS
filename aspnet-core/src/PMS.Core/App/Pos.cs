@@ -95,6 +95,15 @@ public enum OrderItemStatus
     Cancelled = 3,
 }
 
+public enum OrderItemCancelReasonType
+{
+    GuestRequest = 0,
+    WrongOrder = 1,
+    OutOfStock = 2,
+    Duplicate = 3,
+    Other = 4,
+}
+
 public class PosOrder : FullAuditedEntity<Guid>
 {
     public Guid OutletId { get; set; }
@@ -104,32 +113,40 @@ public class PosOrder : FullAuditedEntity<Guid>
     public string OrderNumber { get; set; } = string.Empty;
     public PosOrderType OrderType { get; set; }
     public PosOrderStatus Status { get; set; } = PosOrderStatus.Open;
+    public string Notes { get; set; } = string.Empty;
+    public Guid? ServerStaffId { get; set; }
+    public decimal DiscountPercent { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal SeniorCitizenDiscount { get; set; }
     public DateTime OpenedAt { get; set; } = Clock.Now;
     public DateTime? ClosedAt { get; set; }
 
     public virtual PosOutlet Outlet { get; set; }
     public virtual PosTable Table { get; set; }
     public virtual Stay Stay { get; set; }
-    public virtual ICollection<OrderItem> Items { get; set; } = [];
-    public virtual ICollection<OrderPayment> Payments { get; set; } = [];
+    public virtual Staff ServerStaff { get; set; }
+    public virtual ICollection<PosOrderItem> Items { get; set; } = [];
+    public virtual ICollection<PosOrderPayment> Payments { get; set; } = [];
 }
 
-public class OrderItem : FullAuditedEntity<Guid>
+public class PosOrderItem : FullAuditedEntity<Guid>
 {
-    public Guid OrderId { get; set; }
+    public Guid PosOrderId { get; set; }
     public Guid MenuItemId { get; set; }
     public int Quantity { get; set; }
     public decimal Price { get; set; }
     public OrderItemStatus Status { get; set; } = OrderItemStatus.Pending;
     public string Notes { get; set; } = string.Empty;
+    public OrderItemCancelReasonType? CancelReasonType { get; set; }
+    public string CancelReason { get; set; } = string.Empty;
 
     public virtual PosOrder Order { get; set; }
     public virtual MenuItem MenuItem { get; set; }
 }
 
-public class OrderPayment : FullAuditedEntity<Guid>
+public class PosOrderPayment : FullAuditedEntity<Guid>
 {
-    public Guid OrderId { get; set; }
+    public Guid PosOrderId { get; set; }
     public Guid PaymentMethodId { get; set; }
     public decimal Amount { get; set; }
     public DateTime PaidAt { get; set; } = Clock.Now;

@@ -30,7 +30,7 @@ export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, he
           {headerRight}
         </div>
       </header>
-      <main className="flex-1 overflow-auto p-4">
+      <main className="flex min-h-0 flex-1 flex-col overflow-auto p-4">
         {children}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog } from '@headlessui/react';
@@ -76,6 +76,18 @@ export const CheckOutPage = () => {
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showSettleConfirm, setShowSettleConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!showSettleConfirm) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSettleConfirm(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSettleConfirm]);
 
   const { data: paymentMethods } = useQuery({
     queryKey: ['resort-payment-methods-checkout'],
@@ -585,7 +597,7 @@ export const CheckOutPage = () => {
           })}
         />
 
-        <Dialog open={showSettleConfirm} onClose={() => setShowSettleConfirm(false)} className="relative z-50">
+        <Dialog open={showSettleConfirm} onClose={() => {}} className="relative z-50">
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
           <div className="fixed inset-0 flex items-center justify-center p-4">
             <Dialog.Panel className="mx-auto max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">

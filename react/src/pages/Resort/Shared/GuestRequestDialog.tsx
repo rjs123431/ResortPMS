@@ -40,6 +40,18 @@ export const GuestRequestDialog = ({ open, isSaving = false, onClose, onSave }: 
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   const toggleRequestType = (value: GuestRequestType) => {
     setForm((prev) => ({
       ...prev,
@@ -50,8 +62,9 @@ export const GuestRequestDialog = ({ open, isSaving = false, onClose, onSave }: 
   };
 
   return (
-    <Dialog open={open} onClose={onClose} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center bg-black/40 p-4">
+    <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/40" aria-hidden />
+      <div className="flex min-h-screen items-center justify-center p-4">
         <DialogPanel className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800">
           <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">Create Guest Request</DialogTitle>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">

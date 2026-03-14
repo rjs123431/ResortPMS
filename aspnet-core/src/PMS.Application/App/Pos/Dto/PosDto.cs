@@ -49,6 +49,9 @@ public class PosOrderListDto : EntityDto<Guid>
     public int Status { get; set; }
     public decimal ItemsTotal { get; set; }
     public DateTime OpenedAt { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public Guid? ServerStaffId { get; set; }
+    public string ServerStaffName { get; set; } = string.Empty;
 }
 
 public class GetPosOrdersInput
@@ -69,6 +72,12 @@ public class PosOrderDto : EntityDto<Guid>
     public string OrderNumber { get; set; } = string.Empty;
     public int OrderType { get; set; }
     public int Status { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public Guid? ServerStaffId { get; set; }
+    public string ServerStaffName { get; set; } = string.Empty;
+    public decimal DiscountPercent { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal SeniorCitizenDiscount { get; set; }
     public DateTime OpenedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
     public List<OrderItemDto> Items { get; set; } = [];
@@ -107,6 +116,8 @@ public class CreatePosOrderDto
     public Guid? TableId { get; set; }
     [Required] public int OrderType { get; set; } // PosOrderType
     [StringLength(256)] public string GuestName { get; set; } = string.Empty;
+    [StringLength(512)] public string Notes { get; set; } = string.Empty;
+    public Guid? ServerStaffId { get; set; }
 }
 
 public class CreatePosOrderLineDto
@@ -123,6 +134,8 @@ public class CreatePosOrderWithItemsDto
     public Guid? TableId { get; set; }
     [Required] public int OrderType { get; set; } // PosOrderType
     [StringLength(256)] public string GuestName { get; set; } = string.Empty;
+    [StringLength(512)] public string Notes { get; set; } = string.Empty;
+    public Guid? ServerStaffId { get; set; }
     public List<CreatePosOrderLineDto> Items { get; set; } = [];
 }
 
@@ -148,12 +161,26 @@ public class UpdateOrderItemDto
     [StringLength(512)] public string Notes { get; set; } = string.Empty;
 }
 
+public class CancelOrderItemDto
+{
+    [Required] public Guid OrderItemId { get; set; }
+    public int ReasonType { get; set; } // OrderItemCancelReasonType
+    [StringLength(512)] public string Reason { get; set; } = string.Empty;
+}
+
 public class AddOrderPaymentDto
 {
     [Required] public Guid OrderId { get; set; }
     [Required] public Guid PaymentMethodId { get; set; }
     [Range(0.01, double.MaxValue)] public decimal Amount { get; set; }
     [StringLength(64)] public string ReferenceNo { get; set; } = string.Empty;
+}
+
+public class SendToKitchenDto
+{
+    [Required] public Guid OrderId { get; set; }
+    /// <summary>When set, only these order item IDs are marked SentToKitchen (e.g. for follow-up sends). When null or empty, all pending items are sent and order must be Open.</summary>
+    public List<Guid>? OrderItemIds { get; set; }
 }
 
 public class ChargeToRoomDto

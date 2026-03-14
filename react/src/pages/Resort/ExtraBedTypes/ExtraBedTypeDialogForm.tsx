@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import type { ExtraBedTypeDto } from '@/types/resort.types';
 
@@ -24,9 +25,22 @@ export const ExtraBedTypeDialogForm = ({
   onFormChange,
   onSave,
 }: ExtraBedTypeDialogFormProps) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
-    <Dialog open={isOpen} onClose={onClose} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center bg-black/50 p-4">
+    <Dialog open={isOpen} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/50" aria-hidden />
+      <div className="flex min-h-screen items-center justify-center p-4">
         <DialogPanel className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
           <div className="mb-4 flex items-center justify-between">
             <DialogTitle as="h3" className="text-lg font-semibold">

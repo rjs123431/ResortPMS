@@ -98,6 +98,23 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MenuCategory",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuCategory", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PaymentMethod",
                 columns: table => new
                 {
@@ -112,6 +129,24 @@ namespace PMS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PaymentMethod", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PosOutlet",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Location = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOutlet", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -739,6 +774,56 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MenuItem",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    IsAvailable = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItem", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MenuItem_MenuCategory_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "MenuCategory",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PosTable",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OutletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TableNumber = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Capacity = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosTable", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosTable_PosOutlet_OutletId",
+                        column: x => x.OutletId,
+                        principalTable: "PosOutlet",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Room",
                 columns: table => new
                 {
@@ -1269,6 +1354,30 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MenuModifier",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MenuItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    PriceAdjustment = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuModifier", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MenuModifier_MenuItem_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "QuotationRoom",
                 columns: table => new
                 {
@@ -1754,6 +1863,62 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PosOrder",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OutletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TableId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    GuestName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    OrderNumber = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    OrderType = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    ServerStaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DiscountPercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    DiscountAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    SeniorCitizenDiscount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    OpenedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ClosedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOrder", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOrder_PosOutlet_OutletId",
+                        column: x => x.OutletId,
+                        principalTable: "PosOutlet",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PosOrder_PosTable_TableId",
+                        column: x => x.TableId,
+                        principalTable: "PosTable",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PosOrder_Staff_ServerStaffId",
+                        column: x => x.ServerStaffId,
+                        principalTable: "Staff",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_PosOrder_Stay_StayId",
+                        column: x => x.StayId,
+                        principalTable: "Stay",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Receipt",
                 columns: table => new
                 {
@@ -2088,6 +2253,79 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PosOrderItem",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PosOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MenuItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    CancelReasonType = table.Column<int>(type: "int", nullable: true),
+                    CancelReason = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOrderItem", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOrderItem_MenuItem_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItem",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PosOrderItem_PosOrder_PosOrderId",
+                        column: x => x.PosOrderId,
+                        principalTable: "PosOrder",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PosOrderPayment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PosOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PaymentMethodId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    PaidAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReferenceNo = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PosOrderPayment", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PosOrderPayment_PaymentMethod_PaymentMethodId",
+                        column: x => x.PaymentMethodId,
+                        principalTable: "PaymentMethod",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PosOrderPayment_PosOrder_PosOrderId",
+                        column: x => x.PosOrderId,
+                        principalTable: "PosOrder",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ReceiptPayment",
                 columns: table => new
                 {
@@ -2410,9 +2648,81 @@ namespace PMS.Migrations
                 column: "StayId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MenuCategory_DisplayOrder",
+                table: "MenuCategory",
+                column: "DisplayOrder");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItem_CategoryId",
+                table: "MenuItem",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuModifier_MenuItemId",
+                table: "MenuModifier",
+                column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PaymentMethod_Name",
                 table: "PaymentMethod",
                 column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrder_OrderNumber",
+                table: "PosOrder",
+                column: "OrderNumber",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrder_OutletId_Status",
+                table: "PosOrder",
+                columns: new[] { "OutletId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrder_ServerStaffId",
+                table: "PosOrder",
+                column: "ServerStaffId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrder_StayId",
+                table: "PosOrder",
+                column: "StayId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrder_TableId",
+                table: "PosOrder",
+                column: "TableId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrderItem_MenuItemId",
+                table: "PosOrderItem",
+                column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrderItem_PosOrderId",
+                table: "PosOrderItem",
+                column: "PosOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrderPayment_PaymentMethodId",
+                table: "PosOrderPayment",
+                column: "PaymentMethodId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOrderPayment_PosOrderId",
+                table: "PosOrderPayment",
+                column: "PosOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosOutlet_Name",
+                table: "PosOutlet",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosTable_OutletId_TableNumber",
+                table: "PosTable",
+                columns: new[] { "OutletId", "TableNumber" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -3176,6 +3486,15 @@ namespace PMS.Migrations
                 name: "Incident");
 
             migrationBuilder.DropTable(
+                name: "MenuModifier");
+
+            migrationBuilder.DropTable(
+                name: "PosOrderItem");
+
+            migrationBuilder.DropTable(
+                name: "PosOrderPayment");
+
+            migrationBuilder.DropTable(
                 name: "PreCheckInExtraBed");
 
             migrationBuilder.DropTable(
@@ -3320,6 +3639,12 @@ namespace PMS.Migrations
                 name: "HousekeepingTask");
 
             migrationBuilder.DropTable(
+                name: "MenuItem");
+
+            migrationBuilder.DropTable(
+                name: "PosOrder");
+
+            migrationBuilder.DropTable(
                 name: "PreCheckIn");
 
             migrationBuilder.DropTable(
@@ -3359,6 +3684,12 @@ namespace PMS.Migrations
                 name: "GuestRequest");
 
             migrationBuilder.DropTable(
+                name: "MenuCategory");
+
+            migrationBuilder.DropTable(
+                name: "PosTable");
+
+            migrationBuilder.DropTable(
                 name: "Staff");
 
             migrationBuilder.DropTable(
@@ -3372,6 +3703,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Stay");
+
+            migrationBuilder.DropTable(
+                name: "PosOutlet");
 
             migrationBuilder.DropTable(
                 name: "Reservation");

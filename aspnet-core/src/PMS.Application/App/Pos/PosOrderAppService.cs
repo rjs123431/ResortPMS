@@ -30,8 +30,8 @@ public interface IPosOrderAppService : IApplicationService
     Task AddItemAsync(AddOrderItemDto input);
     Task AddItemsAsync(AddOrderItemsDto input);
     Task UpdateItemAsync(UpdateOrderItemDto input);
-    Task CancelItemAsync(Guid orderItemId);
-    Task SendToKitchenAsync(Guid orderId);
+    Task CancelItemAsync(CancelOrderItemDto input);
+    Task SendToKitchenAsync(SendToKitchenDto input);
     Task CloseOrderAsync(Guid orderId);
     Task AddPaymentAsync(AddOrderPaymentDto input);
     Task<VerifyStayForRoomChargeDto> VerifyStayByRoomNumberAsync(string roomNumber);
@@ -41,8 +41,8 @@ public interface IPosOrderAppService : IApplicationService
 [AbpAuthorize(PermissionNames.Pages_POS_Orders)]
 public class PosOrderAppService(
     IRepository<PosOrder, Guid> orderRepository,
-    IRepository<OrderItem, Guid> orderItemRepository,
-    IRepository<OrderPayment, Guid> orderPaymentRepository,
+    IRepository<PosOrderItem, Guid> posOrderItemRepository,
+    IRepository<PosOrderPayment, Guid> posOrderPaymentRepository,
     IRepository<PosOutlet, Guid> outletRepository,
     IRepository<PosTable, Guid> tableRepository,
     IRepository<MenuCategory, Guid> menuCategoryRepository,
@@ -132,6 +132,7 @@ public class PosOrderAppService(
         var order = await orderRepository.GetAll()
             .Include(o => o.Outlet)
             .Include(o => o.Table)
+            .Include(o => o.ServerStaff)
             .Include(o => o.Items).ThenInclude(i => i.MenuItem)
             .Include(o => o.Payments).ThenInclude(p => p.PaymentMethod)
             .FirstOrDefaultAsync(o => o.Id == orderId);
@@ -146,6 +147,7 @@ public class PosOrderAppService(
         var order = await orderRepository.GetAll()
             .Include(o => o.Outlet)
             .Include(o => o.Table)
+            .Include(o => o.ServerStaff)
             .Include(o => o.Items).ThenInclude(i => i.MenuItem)
             .Include(o => o.Payments).ThenInclude(p => p.PaymentMethod)
             .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber.Trim());
@@ -158,6 +160,7 @@ public class PosOrderAppService(
         var query = orderRepository.GetAll()
             .Include(o => o.Outlet)
             .Include(o => o.Table)
+            .Include(o => o.ServerStaff)
             .Include(o => o.Items)
             .Where(o => !input.Status.HasValue || o.Status == (PosOrderStatus)input.Status.Value)
             .OrderByDescending(o => o.OpenedAt)
@@ -173,7 +176,10 @@ public class PosOrderAppService(
             OrderType = (int)o.OrderType,
             Status = (int)o.Status,
             ItemsTotal = o.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity * i.Price),
-            OpenedAt = o.OpenedAt
+            OpenedAt = o.OpenedAt,
+            Notes = o.Notes ?? "",
+            ServerStaffId = o.ServerStaffId,
+            ServerStaffName = o.ServerStaff?.FullName ?? ""
         }).ToList();
     }
 
@@ -191,6 +197,8 @@ public class PosOrderAppService(
             OrderNumber = orderNumber,
             OrderType = (PosOrderType)input.OrderType,
             Status = PosOrderStatus.Open,
+            Notes = input.Notes ?? "",
+            ServerStaffId = input.ServerStaffId,
             OpenedAt = Clock.Now
         };
         var id = await orderRepository.InsertAndGetIdAsync(order);
@@ -217,6 +225,8 @@ public class PosOrderAppService(
             OrderNumber = orderNumber,
             OrderType = (PosOrderType)input.OrderType,
             Status = PosOrderStatus.Open,
+            Notes = input.Notes ?? "",
+            ServerStaffId = input.ServerStaffId,
             OpenedAt = Clock.Now
         };
         var orderId = await orderRepository.InsertAndGetIdAsync(order);
@@ -228,9 +238,9 @@ public class PosOrderAppService(
         }
         foreach (var line in input.Items ?? [])
         {
-            await orderItemRepository.InsertAsync(new OrderItem
+            await posOrderItemRepository.InsertAsync(new PosOrderItem
             {
-                OrderId = orderId,
+                PosOrderId = orderId,
                 MenuItemId = line.MenuItemId,
                 Quantity = line.Quantity,
                 Price = line.Price,
@@ -248,9 +258,9 @@ public class PosOrderAppService(
         if (order.Status != PosOrderStatus.Open && order.Status != PosOrderStatus.SentToKitchen && order.Status != PosOrderStatus.Preparing)
             throw new UserFriendlyException("Cannot add items to this order.");
         var menuItem = await menuItemRepository.GetAsync(input.MenuItemId);
-        await orderItemRepository.InsertAsync(new OrderItem
+        await posOrderItemRepository.InsertAsync(new PosOrderItem
         {
-            OrderId = input.OrderId,
+            PosOrderId = input.OrderId,
             MenuItemId = input.MenuItemId,
             Quantity = input.Quantity,
             Price = input.Price,
@@ -270,9 +280,9 @@ public class PosOrderAppService(
         foreach (var line in input.Items)
         {
             await menuItemRepository.GetAsync(line.MenuItemId);
-            await orderItemRepository.InsertAsync(new OrderItem
+            await posOrderItemRepository.InsertAsync(new PosOrderItem
             {
-                OrderId = input.OrderId,
+                PosOrderId = input.OrderId,
                 MenuItemId = line.MenuItemId,
                 Quantity = line.Quantity,
                 Price = line.Price,
@@ -285,7 +295,7 @@ public class PosOrderAppService(
     [UnitOfWork]
     public async Task UpdateItemAsync(UpdateOrderItemDto input)
     {
-        var item = await orderItemRepository.GetAll()
+        var item = await posOrderItemRepository.GetAll()
             .Include(i => i.Order)
             .FirstOrDefaultAsync(i => i.Id == input.OrderItemId);
         if (item == null) throw new UserFriendlyException("Order item not found.");
@@ -295,30 +305,52 @@ public class PosOrderAppService(
             throw new UserFriendlyException("Item is already cancelled.");
         item.Quantity = input.Quantity;
         item.Notes = input.Notes ?? "";
-        await orderItemRepository.UpdateAsync(item);
+        await posOrderItemRepository.UpdateAsync(item);
     }
 
     [UnitOfWork]
-    public async Task CancelItemAsync(Guid orderItemId)
+    public async Task CancelItemAsync(CancelOrderItemDto input)
     {
-        var item = await orderItemRepository.GetAll()
+        var item = await posOrderItemRepository.GetAll()
             .Include(i => i.Order)
-            .FirstOrDefaultAsync(i => i.Id == orderItemId);
+            .FirstOrDefaultAsync(i => i.Id == input.OrderItemId);
         if (item == null) throw new UserFriendlyException("Order item not found.");
         if (item.Order.Status == PosOrderStatus.Closed || item.Order.Status == PosOrderStatus.Cancelled)
             throw new UserFriendlyException("Cannot modify closed order.");
         item.Status = OrderItemStatus.Cancelled;
-        await orderItemRepository.UpdateAsync(item);
+        item.CancelReasonType = (OrderItemCancelReasonType)input.ReasonType;
+        item.CancelReason = input.Reason ?? string.Empty;
+        await posOrderItemRepository.UpdateAsync(item);
     }
 
     [UnitOfWork]
-    public async Task SendToKitchenAsync(Guid orderId)
+    public async Task SendToKitchenAsync(SendToKitchenDto input)
     {
         var order = await orderRepository.GetAll()
             .Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.Id == orderId);
+            .FirstOrDefaultAsync(o => o.Id == input.OrderId);
         if (order == null) throw new UserFriendlyException("Order not found.");
-        if (order.Status != PosOrderStatus.Open) throw new UserFriendlyException("Order already sent to kitchen.");
+        if (order.Status == PosOrderStatus.Closed || order.Status == PosOrderStatus.Cancelled)
+            throw new UserFriendlyException("Cannot send closed or cancelled order to kitchen.");
+
+        var ids = input.OrderItemIds?.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids is { Count: > 0 })
+        {
+            // Send specific items only (e.g. order already sent, now sending new pending items)
+            var itemsToSend = order.Items.Where(i => ids.Contains(i.Id) && i.Status == OrderItemStatus.Pending).ToList();
+            if (itemsToSend.Count == 0)
+                throw new UserFriendlyException("No pending items to send among the selected items.");
+            foreach (var item in itemsToSend)
+                item.Status = OrderItemStatus.SentToKitchen;
+            if (order.Status == PosOrderStatus.Open)
+                order.Status = PosOrderStatus.SentToKitchen;
+            await orderRepository.UpdateAsync(order);
+            return;
+        }
+
+        // Send all pending items (legacy behavior: order must be Open)
+        if (order.Status != PosOrderStatus.Open)
+            throw new UserFriendlyException("Order already sent to kitchen. Send specific items instead.");
         if (!order.Items.Any(i => i.Status == OrderItemStatus.Pending))
             throw new UserFriendlyException("No pending items to send.");
         order.Status = PosOrderStatus.SentToKitchen;
@@ -357,9 +389,9 @@ public class PosOrderAppService(
         var order = await orderRepository.GetAsync(input.OrderId);
         if (order.Status == PosOrderStatus.Closed || order.Status == PosOrderStatus.Cancelled)
             throw new UserFriendlyException("Cannot add payment to closed order.");
-        await orderPaymentRepository.InsertAsync(new OrderPayment
+        await posOrderPaymentRepository.InsertAsync(new PosOrderPayment
         {
-            OrderId = input.OrderId,
+            PosOrderId = input.OrderId,
             PaymentMethodId = input.PaymentMethodId,
             Amount = input.Amount,
             PaidAt = Clock.Now,
@@ -455,7 +487,7 @@ public class PosOrderAppService(
         var items = order.Items.Select(i => new OrderItemDto
         {
             Id = i.Id,
-            OrderId = i.OrderId,
+            OrderId = i.PosOrderId,
             MenuItemId = i.MenuItemId,
             MenuItemName = i.MenuItem?.Name ?? "",
             Quantity = i.Quantity,
@@ -467,7 +499,7 @@ public class PosOrderAppService(
         var payments = order.Payments.Select(p => new OrderPaymentDto
         {
             Id = p.Id,
-            OrderId = p.OrderId,
+            OrderId = p.PosOrderId,
             PaymentMethodId = p.PaymentMethodId,
             PaymentMethodName = p.PaymentMethod?.Name ?? "",
             Amount = p.Amount,
@@ -488,6 +520,12 @@ public class PosOrderAppService(
             OrderNumber = order.OrderNumber,
             OrderType = (int)order.OrderType,
             Status = (int)order.Status,
+            Notes = order.Notes ?? "",
+            ServerStaffId = order.ServerStaffId,
+            ServerStaffName = order.ServerStaff?.FullName ?? "",
+            DiscountPercent = order.DiscountPercent,
+            DiscountAmount = order.DiscountAmount,
+            SeniorCitizenDiscount = order.SeniorCitizenDiscount,
             OpenedAt = order.OpenedAt,
             ClosedAt = order.ClosedAt,
             Items = items,

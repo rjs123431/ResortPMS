@@ -32,14 +32,27 @@ export const CompleteGuestRequestDialog = ({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   const hasOpenTasks = useMemo(
     () => (context?.relatedTasks ?? []).some((task) => task.status !== HousekeepingTaskStatus.Completed),
     [context?.relatedTasks],
   );
 
   return (
-    <Dialog open={open} onClose={onClose} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center bg-black/40 p-4">
+    <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/40" aria-hidden />
+      <div className="flex min-h-screen items-center justify-center p-4">
         <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800">
           <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">Complete Guest Request</DialogTitle>
 

@@ -84,8 +84,8 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<MenuItem> MenuItems { get; set; }
     public DbSet<MenuModifier> MenuModifiers { get; set; }
     public DbSet<PosOrder> PosOrders { get; set; }
-    public DbSet<OrderItem> OrderItems { get; set; }
-    public DbSet<OrderPayment> OrderPayments { get; set; }
+    public DbSet<PosOrderItem> PosOrderItems { get; set; }
+    public DbSet<PosOrderPayment> PosOrderPayments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -165,8 +165,8 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new MenuItemConfiguration());
         modelBuilder.ApplyConfiguration(new MenuModifierConfiguration());
         modelBuilder.ApplyConfiguration(new PosOrderConfiguration());
-        modelBuilder.ApplyConfiguration(new OrderItemConfiguration());
-        modelBuilder.ApplyConfiguration(new OrderPaymentConfiguration());
+        modelBuilder.ApplyConfiguration(new PosOrderItemConfiguration());
+        modelBuilder.ApplyConfiguration(new PosOrderPaymentConfiguration());
     }
 
     public PMSDbContext(DbContextOptions<PMSDbContext> options)

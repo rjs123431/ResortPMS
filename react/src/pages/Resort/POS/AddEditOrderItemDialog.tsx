@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 
 const formatMoney = (value: number) =>
   value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -38,33 +39,36 @@ export const AddEditOrderItemDialog = ({
     }
   }, [open, initialQuantity, initialNotes]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   const handleConfirm = () => {
     if (quantity < 1) return;
     onConfirm(quantity, notes.trim());
     onClose();
   };
 
-  if (!open) return null;
-
   const lineTotal = itemPrice * quantity;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="add-edit-order-item-title"
-    >
-      <div
-        className="w-full max-w-md rounded-xl bg-white shadow-xl dark:bg-gray-800"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
-          <h2 id="add-edit-order-item-title" className="text-lg font-semibold text-gray-900 dark:text-white">
-            {title}
-          </h2>
+    <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 z-0 bg-black/50" aria-hidden />
+      <div className="relative z-10 flex min-h-full items-start justify-center pt-6 pb-6 px-4">
+        <DialogPanel className="w-full max-w-md rounded-xl bg-white shadow-xl dark:bg-gray-800">
+          {/* Header */}
+          <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+            <DialogTitle as="h2" id="add-edit-order-item-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+              {title}
+            </DialogTitle>
           <div className="mt-2 flex items-baseline justify-between gap-2">
             <p className="min-w-0 flex-1 truncate text-base font-medium text-gray-900 dark:text-white">
               {itemName}
@@ -153,7 +157,8 @@ export const AddEditOrderItemDialog = ({
             {isPending ? 'Saving…' : confirmLabel}
           </button>
         </div>
+        </DialogPanel>
       </div>
-    </div>
+    </Dialog>
   );
 };

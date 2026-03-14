@@ -433,6 +433,16 @@ const App: React.FC = () => {
                         </PageTitle>
                       }
                     />
+                    <Route
+                      path="/pos/order/:orderId"
+                      element={
+                        <PageTitle title="POS (F&B)">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
+                            <POSPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>

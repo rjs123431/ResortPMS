@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useQuery } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
@@ -21,9 +21,22 @@ export const SearchStaffDialog = ({ open, onClose, onSelectStaff }: SearchStaffD
 
   const staffItems = staffData?.items ?? [];
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   return (
-    <Dialog open={open} onClose={onClose} className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-start justify-center bg-black/50 p-4 pt-6 md:pt-10">
+    <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/50" aria-hidden />
+      <div className="flex min-h-screen items-start justify-center p-4 pt-6 md:pt-10">
         <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800">
           <div className="mb-4 flex items-center justify-between">
             <DialogTitle as="h3" className="text-lg font-semibold">Search Staff</DialogTitle>
