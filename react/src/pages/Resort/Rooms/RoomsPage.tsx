@@ -4,7 +4,7 @@ import { MainLayout } from '@components/layout/MainLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
-import { RoomOperationalStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/resort.types';
 import type { RoomDto } from '@/types/resort.types';
 import { RoomDialogForm } from './RoomDialogForm';
 
@@ -21,7 +21,6 @@ export const RoomListPage = () => {
     roomNumber: '',
     roomTypeId: '',
     floor: '',
-    operationalStatus: RoomOperationalStatus.Vacant,
     isActive: true,
   });
 
@@ -69,7 +68,6 @@ export const RoomListPage = () => {
       roomNumber: '',
       roomTypeId: '',
       floor: '',
-      operationalStatus: RoomOperationalStatus.Vacant,
       isActive: true,
     });
   };
@@ -119,7 +117,7 @@ export const RoomListPage = () => {
                   <th className="p-2">Room</th>
                   <th className="p-2">Type</th>
                   <th className="p-2">Floor</th>
-                  <th className="p-2">Status</th>
+                  <th className="p-2">Housekeeping</th>
                   <th className="p-2">Actions</th>
                 </tr>
               </thead>
@@ -129,7 +127,7 @@ export const RoomListPage = () => {
                     <td className="p-2">{room.roomNumber}</td>
                     <td className="p-2">{room.roomTypeName}</td>
                     <td className="p-2">{room.floor ?? '-'}</td>
-                    <td className="p-2">{RoomOperationalStatus[room.operationalStatus] ?? '-'}</td>
+                    <td className="p-2">{room.housekeepingStatus != null ? HousekeepingStatus[room.housekeepingStatus] : '-'}</td>
                     <td className="p-2">
                       {canEdit ? (
                         <button type="button" className="rounded bg-slate-700 px-2 py-1 text-white" onClick={() => void loadForEdit(room.id)}>

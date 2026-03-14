@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { RoomOperationalStatus, HousekeepingStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/resort.types';
 import type { RoomDto } from '@/types/resort.types';
 
 type RoomTypeOption = {
@@ -90,25 +90,7 @@ export const RoomDialogForm = ({
               onChange={(e) => onFormChange((s) => ({ ...s, floor: e.target.value }))}
             />
           </div>
-          {!editingId && (
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Operational Status</label>
-              <select
-                className="w-full rounded border p-2 dark:bg-gray-700"
-                value={form.operationalStatus}
-                onChange={(e) => onFormChange((s) => ({ ...s, operationalStatus: Number(e.target.value) as RoomOperationalStatus }))}
-              >
-                {Object.keys(RoomOperationalStatus)
-                  .filter((k) => Number.isNaN(Number(k)))
-                  .map((key) => (
-                    <option key={key} value={RoomOperationalStatus[key as keyof typeof RoomOperationalStatus]}>
-                      {key}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          )}
-          {/* Hide Housekeeping Status on edit and create */}
+          {/* Room occupancy is tracked via daily inventory; housekeeping status only on edit */}
         </div>
         {editingId ? (
           <label className="mt-3 flex items-center gap-2 text-sm">

@@ -8,6 +8,7 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Stays.Dto;
+using PMS.Application.App.RoomDailyInventory;
 using PMS.Authorization;
 using System;
 using System.Collections.Generic;
@@ -55,7 +56,8 @@ public class StayAppService(
     IRepository<Incident, Guid> incidentRepository,
     IRepository<ChargeType, Guid> chargeTypeRepository,
     IRepository<HousekeepingTask, Guid> housekeepingTaskRepository,
-    IRepository<ReservationRoom, Guid> reservationRoomRepository
+    IRepository<ReservationRoom, Guid> reservationRoomRepository,
+    IRoomDailyInventoryService roomDailyInventoryService
 ) : PMSAppServiceBase, IStayAppService
 {
     private static List<StayRoomDto> MapStayRooms(IEnumerable<StayRoom> rooms)
@@ -272,13 +274,15 @@ public class StayAppService(
         };
         var newStayRoomId = await stayRoomRepository.InsertAndGetIdAsync(newStayRoom);
 
-        // Update room statuses
-        fromRoom.OperationalStatus = RoomOperationalStatus.Vacant;
+        // Update room statuses (occupancy is tracked via RoomDailyInventory)
         fromRoom.HousekeepingStatus = HousekeepingStatus.Dirty;
         await roomRepository.UpdateAsync(fromRoom);
 
-        toRoom.OperationalStatus = RoomOperationalStatus.Occupied;
         await roomRepository.UpdateAsync(toRoom);
+
+        var transferEnd = stay.ExpectedCheckOutDateTime.Date.AddDays(1);
+        await roomDailyInventoryService.SetVacantAsync(activeStayRoom.RoomId, releaseNow.Date, transferEnd);
+        await roomDailyInventoryService.SetInHouseAsync(input.ToRoomId, assignNow.Date, transferEnd, stay.Id);
 
         // Log transfer
         await stayRoomTransferRepository.InsertAsync(new StayRoomTransfer
@@ -325,15 +329,6 @@ public class StayAppService(
     {
         var room = await roomRepository.GetAsync(toRoomId);
 
-        if (room.OperationalStatus == RoomOperationalStatus.Occupied)
-            throw new UserFriendlyException(L("TargetRoomIsOccupied"));
-
-        if (room.OperationalStatus == RoomOperationalStatus.OutOfOrder)
-            throw new UserFriendlyException(L("TargetRoomIsOutOfOrder"));
-
-        if (room.OperationalStatus == RoomOperationalStatus.OutOfService)
-            throw new UserFriendlyException(L("TargetRoomIsOutOfService"));
-
         if (room.HousekeepingStatus == HousekeepingStatus.Dirty)
             throw new UserFriendlyException(L("TargetRoomIsDirty"));
 
@@ -350,6 +345,11 @@ public class StayAppService(
 
         var today = Clock.Now.Date;
         var departureDate = stay.ExpectedCheckOutDateTime.Date;
+
+        await roomDailyInventoryService.Ensure365DaysFromTodayAsync([toRoomId]);
+        var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(toRoomId, today, departureDate);
+        if (!available)
+            throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
         var blockingStatuses = new[]
         {
@@ -390,6 +390,13 @@ public class StayAppService(
 
         stay.ExpectedCheckOutDateTime = input.NewDepartureDate.Date.AddHours(12);
         await stayRepository.UpdateAsync(stay);
+
+        var activeStayRooms = await stayRoomRepository.GetAll()
+            .Where(sr => sr.StayId == input.StayId && sr.ReleasedAt == null)
+            .ToListAsync();
+        var newEnd = input.NewDepartureDate.Date.AddDays(1);
+        foreach (var sr in activeStayRooms)
+            await roomDailyInventoryService.SetInHouseAsync(sr.RoomId, sr.ArrivalDate, newEnd, stay.Id);
     }
 
     [AbpAuthorize(PermissionNames.Pages_Stays_PostCharge)]

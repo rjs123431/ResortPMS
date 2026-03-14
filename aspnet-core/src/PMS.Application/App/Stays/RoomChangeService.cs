@@ -132,9 +132,6 @@ public class RoomChangeService(
             .AsNoTracking()
             .Include(r => r.RoomType)
             .Where(r => r.IsActive)
-            .Where(r => r.OperationalStatus != RoomOperationalStatus.OutOfOrder)
-            .Where(r => r.OperationalStatus != RoomOperationalStatus.OutOfService)
-            .Where(r => r.OperationalStatus != RoomOperationalStatus.Occupied)
             .Where(r => !blockedRoomIds.Contains(r.Id));
 
         if (request.PreferredRoomTypeId.HasValue)
@@ -285,13 +282,11 @@ public class RoomChangeService(
         };
         var newStayRoomId = await stayRoomRepository.InsertAndGetIdAsync(newStayRoom);
 
-        // Step 7: Update room statuses
+        // Step 7: Update room statuses (occupancy is tracked via RoomDailyInventory)
         var fromRoom = await roomRepository.GetAsync(activeStayRoom.RoomId);
-        fromRoom.OperationalStatus = RoomOperationalStatus.Vacant;
         fromRoom.HousekeepingStatus = HousekeepingStatus.Dirty;
         await roomRepository.UpdateAsync(fromRoom);
 
-        toRoom.OperationalStatus = RoomOperationalStatus.Occupied;
         await roomRepository.UpdateAsync(toRoom);
 
         // Step 8: Log transfer
@@ -382,15 +377,6 @@ public class RoomChangeService(
     private async Task ValidateRoomAvailabilityAsync(RoomChangeRequest request, Guid toRoomId)
     {
         var room = await roomRepository.GetAsync(toRoomId);
-
-        if (room.OperationalStatus == RoomOperationalStatus.Occupied)
-            throw new UserFriendlyException(L("TargetRoomIsOccupied"));
-
-        if (room.OperationalStatus == RoomOperationalStatus.OutOfOrder)
-            throw new UserFriendlyException(L("TargetRoomIsOutOfOrder"));
-
-        if (room.OperationalStatus == RoomOperationalStatus.OutOfService)
-            throw new UserFriendlyException(L("TargetRoomIsOutOfService"));
 
         if (room.HousekeepingStatus == HousekeepingStatus.Dirty)
             throw new UserFriendlyException(L("TargetRoomIsDirty"));

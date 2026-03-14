@@ -54,8 +54,6 @@ public class HousekeepingAppService(
             .AsNoTracking()
             .Include(r => r.RoomType)
             .Where(r => r.IsActive)
-            .Where(r => r.OperationalStatus != RoomOperationalStatus.OutOfOrder &&
-                        r.OperationalStatus != RoomOperationalStatus.OutOfService)
             .ToListAsync();
 
         // Get pending/in-progress tasks for today
@@ -88,10 +86,10 @@ public class HousekeepingAppService(
 
             string cleaningType = null;
 
-            if (room.OperationalStatus == RoomOperationalStatus.Vacant && room.HousekeepingStatus == HousekeepingStatus.Dirty)
+            if (!occupiedRoomIds.Contains(room.Id) && room.HousekeepingStatus == HousekeepingStatus.Dirty)
                 cleaningType = task?.TaskType == HousekeepingTaskType.CheckoutCleaning
                     ? "Checkout Cleaning" : "Checkout Cleaning";
-            else if (room.OperationalStatus == RoomOperationalStatus.Occupied || occupiedRoomIds.Contains(room.Id))
+            else if (occupiedRoomIds.Contains(room.Id))
                 cleaningType = "Stayover Cleaning";
             else if (room.HousekeepingStatus == HousekeepingStatus.Pickup)
                 cleaningType = "Pickup Cleaning";
@@ -111,7 +109,6 @@ public class HousekeepingAppService(
                 RoomNumber = room.RoomNumber,
                 RoomTypeName = room.RoomType?.Name ?? string.Empty,
                 Floor = room.Floor,
-                OperationalStatus = room.OperationalStatus,
                 HousekeepingStatus = room.HousekeepingStatus,
                 CleaningType = cleaningType,
                 PendingTaskId = task?.Id,

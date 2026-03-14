@@ -57,7 +57,6 @@ public class RoomDto : EntityDto<Guid>
     public Guid RoomTypeId { get; set; }
     public string RoomTypeName { get; set; }
     [StringLength(32)] public string Floor { get; set; }
-    public RoomOperationalStatus OperationalStatus { get; set; }
     public HousekeepingStatus HousekeepingStatus { get; set; }
     public bool IsActive { get; set; }
 }
@@ -76,7 +75,6 @@ public class RoomListDto : EntityDto<Guid>
     public int MaxChildren { get; set; }
     public decimal BaseRate { get; set; }
     public string Floor { get; set; }
-    public RoomOperationalStatus OperationalStatus { get; set; }
     public HousekeepingStatus HousekeepingStatus { get; set; }
     public bool IsActive { get; set; }
 }
@@ -87,13 +85,11 @@ public class CreateRoomDto
     [Required][StringLength(16)] public string RoomNumber { get; set; }
     public Guid RoomTypeId { get; set; }
     [StringLength(32)] public string Floor { get; set; }
-    public RoomOperationalStatus OperationalStatus { get; set; } = RoomOperationalStatus.Vacant;
     public HousekeepingStatus HousekeepingStatus { get; set; } = HousekeepingStatus.Clean;
 }
 
 public class GetRoomsInput : PagedResultFilterRequestDto, IShouldNormalize
 {
-    public RoomOperationalStatus? OperationalStatus { get; set; }
     public HousekeepingStatus? HousekeepingStatus { get; set; }
     public Guid? RoomTypeId { get; set; }
     public bool? IsActive { get; set; }
@@ -108,13 +104,6 @@ public class GetAvailableRoomsInput
     public Guid? ReservationId { get; set; }
     public bool ExcludeReservedWithoutAssignedRoom { get; set; }
     public bool CheckInReadyOnly { get; set; }
-}
-
-public class UpdateRoomOperationalStatusDto
-{
-    [Required] public Guid RoomId { get; set; }
-    public RoomOperationalStatus OperationalStatus { get; set; }
-    public string Remarks { get; set; }
 }
 
 public class UpdateHousekeepingStatusDto
@@ -176,7 +165,6 @@ public class CleaningBoardRoomDto
     public string RoomNumber { get; set; }
     public string RoomTypeName { get; set; }
     public string Floor { get; set; }
-    public RoomOperationalStatus OperationalStatus { get; set; }
     public HousekeepingStatus HousekeepingStatus { get; set; }
     public string CleaningType { get; set; }
     public Guid? PendingTaskId { get; set; }

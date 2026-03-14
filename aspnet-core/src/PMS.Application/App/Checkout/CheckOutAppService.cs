@@ -7,6 +7,7 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Checkout.Dto;
+using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
 using PMS.Authorization;
 using System;
@@ -39,7 +40,8 @@ public class CheckOutAppService(
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IRepository<Staff, Guid> staffRepository,
-    IDocumentNumberService documentNumberService
+    IDocumentNumberService documentNumberService,
+    IRoomDailyInventoryService roomDailyInventoryService
 ) : PMSAppServiceBase, ICheckOutAppService
 {
     public async Task<CheckOutStatementDto> GetStatementAsync(Guid stayId)
@@ -247,8 +249,12 @@ public class CheckOutAppService(
 
             if (activeStayRoom.Room != null)
             {
+                await roomDailyInventoryService.SetVacantAsync(
+                    activeStayRoom.Room.Id,
+                    activeStayRoom.ArrivalDate,
+                    releasedAt.Date.AddDays(1));
+
                 var oldStatus = activeStayRoom.Room.HousekeepingStatus;
-                activeStayRoom.Room.OperationalStatus = RoomOperationalStatus.Vacant;
                 activeStayRoom.Room.HousekeepingStatus = HousekeepingStatus.Dirty;
                 await roomRepository.UpdateAsync(activeStayRoom.Room);
 

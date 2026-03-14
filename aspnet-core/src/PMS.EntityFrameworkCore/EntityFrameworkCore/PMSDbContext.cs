@@ -27,6 +27,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<Room> Rooms { get; set; }
     public DbSet<RoomStatusLog> RoomStatusLogs { get; set; }
     public DbSet<HousekeepingTask> HousekeepingTasks { get; set; }
+    public DbSet<RoomDailyInventory> RoomDailyInventories { get; set; }
     public DbSet<RoomRatePlan> RoomRatePlans { get; set; }
     public DbSet<RoomRatePlanDay> RoomRatePlanDays { get; set; }
     public DbSet<RatePlanDateOverride> RatePlanDateOverrides { get; set; }
@@ -121,6 +122,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new RoomConfiguration());
         modelBuilder.ApplyConfiguration(new RoomStatusLogConfiguration());
         modelBuilder.ApplyConfiguration(new HousekeepingTaskConfiguration());
+        modelBuilder.ApplyConfiguration(new RoomDailyInventoryConfiguration());
         modelBuilder.ApplyConfiguration(new RoomRatePlanConfiguration());
         modelBuilder.ApplyConfiguration(new RoomRatePlanDayConfiguration());
         modelBuilder.ApplyConfiguration(new RatePlanDateOverrideConfiguration());

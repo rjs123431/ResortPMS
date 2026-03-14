@@ -8,6 +8,7 @@ using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.CheckIn.Dto;
 using PMS.Application.App.PropertyTimes;
+using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
 using PMS.Authorization;
 using System;
@@ -40,7 +41,8 @@ public class CheckInAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
     IDocumentNumberService documentNumberService,
-    IPropertyTimesProvider propertyTimesProvider
+    IPropertyTimesProvider propertyTimesProvider,
+    IRoomDailyInventoryService roomDailyInventoryService
 ) : PMSAppServiceBase, ICheckInAppService
 {
     [AbpAuthorize(PermissionNames.Pages_CheckIn_FromReservation)]
@@ -82,9 +84,14 @@ public class CheckInAppService(
 
         var requestedRoomIds = BuildRequestedRoomIds(input.RoomId, input.ReservationRooms);
         var rooms = new List<Room>();
+        await roomDailyInventoryService.Ensure365DaysFromTodayAsync(requestedRoomIds);
         foreach (var roomId in requestedRoomIds)
         {
             var room = roomId == primaryRoom.Id ? primaryRoom : await ValidateAndGetRoomAsync(roomId);
+            var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(
+                room.Id, reservation.ArrivalDate, reservation.DepartureDate);
+            if (!available)
+                throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
             await EnsureRoomIsAvailableForReservationDatesAsync(
                 reservationId: reservation.Id,
                 roomId: room.Id,
@@ -186,9 +193,14 @@ public class CheckInAppService(
         var primaryRoom = await ValidateAndGetRoomAsync(input.RoomId);
         var requestedRoomIds = BuildRequestedRoomIds(input.RoomId, input.ReservationRooms);
         var rooms = new List<Room>();
+        await roomDailyInventoryService.Ensure365DaysFromTodayAsync(requestedRoomIds);
         foreach (var roomId in requestedRoomIds)
         {
             var room = roomId == primaryRoom.Id ? primaryRoom : await ValidateAndGetRoomAsync(roomId);
+            var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(
+                room.Id, Clock.Now.Date, expectedCheckOut.Date);
+            if (!available)
+                throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
             rooms.Add(room);
         }
 
@@ -290,12 +302,6 @@ public class CheckInAppService(
 
         if (room == null)
             throw new UserFriendlyException(L("RoomNotFound"));
-
-        if (room.OperationalStatus == RoomOperationalStatus.Occupied)
-            throw new UserFriendlyException(L("RoomIsAlreadyOccupied"));
-
-        if (room.OperationalStatus == RoomOperationalStatus.OutOfOrder || room.OperationalStatus == RoomOperationalStatus.OutOfService)
-            throw new UserFriendlyException(L("RoomNotAvailableForCheckIn"));
 
         return room;
     }
@@ -409,27 +415,25 @@ public class CheckInAppService(
 
     private async Task EnsureRoomIsAvailableForReservationDatesAsync(Guid reservationId, Guid roomId, DateTime arrivalDate, DateTime departureDate)
     {
-        var arrivalDay = arrivalDate.Date;
-        var departureDay = departureDate.Date;
-        var arrivalNextDay = arrivalDay.AddDays(1);
+        var arrivalDay = arrivalDate;
+        var departureDay = departureDate;
 
         var hasReservationConflict = await reservationRoomRepository.GetAll()
             .AsNoTracking()
+            .Include(rr => rr.Reservation)
             .Where(rr => rr.RoomId == roomId)
             .Where(rr => rr.ReservationId != reservationId)
             .Where(rr => rr.ArrivalDate < departureDay && rr.DepartureDate > arrivalDay)
-            .AnyAsync(rr => rr.Reservation.Status == ReservationStatus.Pending
-                            || rr.Reservation.Status == ReservationStatus.Confirmed
-                            || rr.Reservation.Status == ReservationStatus.CheckedIn);
+            .FirstOrDefaultAsync(rr => rr.Reservation.Status == ReservationStatus.Pending
+                            || rr.Reservation.Status == ReservationStatus.Confirmed);
 
-        if (hasReservationConflict)
+        if (hasReservationConflict != null)
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
         var hasStayConflict = await stayRoomRepository.GetAll()
             .AsNoTracking()
-            .Where(sr => sr.RoomId == roomId)
-            .Where(sr => sr.AssignedAt < departureDay)
-            .Where(sr => (sr.ReleasedAt ?? sr.Stay.ExpectedCheckOutDateTime) >= arrivalNextDay)
+            .Where(sr => sr.RoomId == roomId && !sr.ReleasedAt.HasValue)
+            .Where(sr => sr.ArrivalDate < departureDay && sr.DepartureDate > arrivalDay)
             .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
 
         if (hasStayConflict)
@@ -443,11 +447,13 @@ public class CheckInAppService(
         await reservationRoomRepository.UpdateAsync(reservationRoom);
     }
 
-    private Task UpdateInventoryAfterCheckInAsync(Stay stay, Room room)
+    private async Task UpdateInventoryAfterCheckInAsync(Stay stay, Room room)
     {
-        // Inventory domain is not yet modeled in this repository. Keep this step explicit for flow compliance.
-        Logger.Debug($"Inventory update hook executed for stay {stay.StayNo} room {room.RoomNumber}.");
-        return Task.CompletedTask;
+        var stayRooms = await stayRoomRepository.GetAll()
+            .Where(sr => sr.StayId == stay.Id)
+            .ToListAsync();
+        foreach (var sr in stayRooms)
+            await roomDailyInventoryService.SetInHouseAsync(sr.RoomId, sr.ArrivalDate, sr.DepartureDate, stay.Id);
     }
 
     private static List<Guid> BuildRequestedRoomIds(Guid primaryRoomId, List<CheckInReservationRoomUpdateDto> reservationRooms)
@@ -530,12 +536,7 @@ public class CheckInAppService(
             });
         }
 
-        // Mark assigned rooms as occupied.
-        foreach (var room in effectiveRooms)
-        {
-            room.OperationalStatus = RoomOperationalStatus.Occupied;
-            await roomRepository.UpdateAsync(room);
-        }
+        // Room occupancy is tracked via RoomDailyInventory (SetInHouseAsync); no Room.OperationalStatus.
 
         stay.Id = stayId;
         return stay;

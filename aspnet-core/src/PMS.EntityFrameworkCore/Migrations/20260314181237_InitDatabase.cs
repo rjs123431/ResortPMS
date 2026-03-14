@@ -884,7 +884,6 @@ namespace PMS.Migrations
                     RoomNumber = table.Column<string>(type: "varchar(16)", unicode: false, maxLength: 16, nullable: false),
                     RoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Floor = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: true),
-                    OperationalStatus = table.Column<int>(type: "int", nullable: false),
                     HousekeepingStatus = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1748,6 +1747,31 @@ namespace PMS.Migrations
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ReservationRoom_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomDailyInventory",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InventoryDate = table.Column<DateTime>(type: "date", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ReservationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsSellable = table.Column<bool>(type: "bit", nullable: false),
+                    IsBlocked = table.Column<bool>(type: "bit", nullable: false),
+                    IsOutOfOrder = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomDailyInventory", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomDailyInventory_Room_RoomId",
                         column: x => x.RoomId,
                         principalTable: "Room",
                         principalColumn: "Id",
@@ -3461,6 +3485,11 @@ namespace PMS.Migrations
                 column: "ToRoomTypeId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RoomDailyInventory_RoomId_InventoryDate",
+                table: "RoomDailyInventory",
+                columns: new[] { "RoomId", "InventoryDate" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoomRatePlan_RoomTypeId_Code",
                 table: "RoomRatePlan",
                 columns: new[] { "RoomTypeId", "Code" },
@@ -4043,6 +4072,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "RoomChangeRequest");
+
+            migrationBuilder.DropTable(
+                name: "RoomDailyInventory");
 
             migrationBuilder.DropTable(
                 name: "RoomRatePlanDay");

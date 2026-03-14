@@ -6,7 +6,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
-import type { RoomListDto, StayListDto, ReservationDetailDto, ReservationRoomDetailDto } from '@/types/resort.types';
+import type { RoomListDto } from '@/types/resort.types';
 import { ReservationStatus } from '@/types/resort.types';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 
@@ -43,86 +43,12 @@ function getDateIndexFromPosition(pct: number, n: number): number | null {
   return dateIndex;
 }
 
-type StayRow = StayListDto & {
-  CheckInDateTime?: string;
-  ExpectedCheckOutDateTime?: string;
-  ActualCheckOutDateTime?: string;
-  RoomNumber?: string;
-  StayNo?: string;
-  GuestName?: string;
-  Id?: string;
-};
-
-/** Effective checkout: actual if set, otherwise expected. */
-const getStayCheckOutKey = (stay: StayRow): string => {
-  const raw = stay.actualCheckOutDateTime ?? stay.ActualCheckOutDateTime ?? stay.expectedCheckOutDateTime ?? stay.ExpectedCheckOutDateTime;
-  return toDateKey(raw);
-};
-
-/** Per-room date range from stay.stayRooms (ArrivalDate/DepartureDate) or fallback to stay-level check-in/checkout. */
-const getStayRoomDateRange = (
-  stay: StayRow,
-  roomNum: string
-): { arrivalKey: string; departureKey: string } => {
-  const trim = (s: string) => (s ?? '').trim().toLowerCase();
-  const rooms = stay.stayRooms ?? [];
-  const sr = rooms.find(
-    (r) => trim(r.roomNumber ?? (r as { RoomNumber?: string }).RoomNumber ?? '') === trim(roomNum)
-  );
-  if (sr) {
-    const a = toDateKey(sr.arrivalDate ?? (sr as { ArrivalDate?: string }).ArrivalDate);
-    const d = toDateKey(sr.departureDate ?? (sr as { DepartureDate?: string }).DepartureDate);
-    if (a && d) return { arrivalKey: a, departureKey: d };
-  }
-  const checkIn = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
-  const checkOut = getStayCheckOutKey(stay);
-  return { arrivalKey: checkIn ?? '', departureKey: checkOut ?? '' };
-};
-
-/** Stay occupies this (room, date) using per-room ArrivalDate/DepartureDate when available. */
-const stayRoomCoversDate = (stay: StayRow, roomNum: string, dateKey: string): boolean => {
-  const { arrivalKey, departureKey } = getStayRoomDateRange(stay, roomNum);
-  if (!arrivalKey || !departureKey) return false;
-  return dateKey >= arrivalKey && dateKey <= departureKey;
-};
-
-/** True if grid start date is within or touches stay (any room) period; uses per-room dates when stayRooms present. */
-const stayContainsStartDate = (stay: StayRow, startKey: string): boolean => {
-  const rooms = stay.stayRooms ?? [];
-  if (rooms.length > 0) {
-    return rooms.some((sr) => {
-      const a = toDateKey(sr.arrivalDate ?? (sr as { ArrivalDate?: string }).ArrivalDate);
-      const d = toDateKey(sr.departureDate ?? (sr as { DepartureDate?: string }).DepartureDate);
-      return a && d && startKey >= a && startKey <= d;
-    });
-  }
-  const checkIn = toDateKey(stay.checkInDateTime ?? stay.CheckInDateTime);
-  const checkOut = getStayCheckOutKey(stay);
-  if (!checkIn || !checkOut) return false;
-  return startKey >= checkIn && startKey <= checkOut;
-};
-
-/** Extract room number(s) from stay; prefer stayRooms when present. */
-const getStayRoomNumbers = (stay: StayRow): string[] => {
-  const rooms = stay.stayRooms ?? [];
-  if (rooms.length > 0) {
-    return rooms
-      .map((r) => (r.roomNumber ?? (r as { RoomNumber?: string }).RoomNumber ?? '').trim())
-      .filter(Boolean);
-  }
-  const raw = stay.roomNumber ?? stay.RoomNumber;
-  if (typeof raw !== 'string' || !raw.trim()) return [];
-  return raw.split(',').map((s) => s.trim()).filter(Boolean);
-};
-
-/** Reservation room occupies date if arrival <= date <= departure (departure day inclusive so bar shows on checkout day, then drawn half). */
-const reservationRoomCoversDate = (room: ReservationRoomDetailDto, dateKey: string): boolean => {
-  const arr = toDateKey(room.arrivalDate);
-  const dep = toDateKey(room.departureDate);
-  return dateKey >= arr && dateKey <= dep;
-};
-
-type CellInfo = { type: 'stay'; stayNo: string; guestName: string; stayId: string } | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string } | null;
+type CellInfo =
+  | { type: 'stay'; stayNo: string; guestName: string; stayId: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
+  | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string; reservationStatus?: number; isArrivalDate?: boolean; isDepartureDate?: boolean }
+  | { type: 'blocked'; label: string }
+  | null;
+type CellInfoNonNull = Exclude<CellInfo, null>;
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
@@ -207,48 +133,16 @@ export const RoomRackPage = () => {
     el.scrollBy({ left: delta, behavior: 'smooth' });
   }, []);
 
-  const { data: roomsData } = useQuery({
-    queryKey: ['frontdesk-grid-rooms'],
-    queryFn: () => resortService.getRooms('', 0, 500),
+  const { data: roomRackData } = useQuery({
+    queryKey: ['room-rack-info', startKey, endKey],
+    queryFn: () => resortService.getRoomRackInfo(startKey, endKey),
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
-
-  const roomIds = useMemo(
-    () => (roomsData?.items ?? []).map((r: { id: string }) => r.id),
-    [roomsData?.items]
-  );
-
-  const { data: staysData } = useQuery({
-    queryKey: ['frontdesk-grid-stays-with-rooms', startKey, endKey, roomIds],
-    queryFn: () =>
-      resortService.getInHouseWithRooms({
-        roomDateFrom: startKey,
-        roomDateTo: endKey,
-        roomIds: roomIds.length > 0 ? roomIds : undefined,
-        maxResultCount: 500,
-      }),
-  });
-
-  const { data: reservationsWithRoomsData } = useQuery({
-    queryKey: ['frontdesk-grid-reservations-with-rooms', startKey, endKey, roomIds],
-    queryFn: () =>
-      resortService.getReservationsWithRooms({
-        overlapStartDate: startKey,
-        overlapEndDate: endKey,
-        roomIds: roomIds.length > 0 ? roomIds : undefined,
-        maxResultCount: 300,
-      }),
-  });
-
-  /** Reservations with rooms (pending/confirmed only) for the grid. */
-  const reservationDetails = useMemo(() => {
-    const items = reservationsWithRoomsData?.items ?? [];
-    return items.filter(
-      (r) => r.status === ReservationStatus.Pending || r.status === ReservationStatus.Confirmed
-    );
-  }, [reservationsWithRoomsData?.items]);
 
   const roomsByType = useMemo(() => {
-    const rooms = (roomsData?.items ?? []) as RoomListDto[];
+    const rooms = roomRackData?.rooms ?? [];
     const map = new Map<string, RoomListDto[]>();
     rooms.forEach((r) => {
       const name = r.roomTypeName || 'Unknown';
@@ -258,76 +152,62 @@ export const RoomRackPage = () => {
     });
     map.forEach((list) => list.sort((a, b) => collator.compare(a.roomNumber, b.roomNumber)));
     return Array.from(map.entries()).sort((a, b) => collator.compare(a[0], b[0]));
-  }, [roomsData]);
+  }, [roomRackData?.rooms]);
 
-  const getCellInfo = useMemo((): ((roomNumber: string, dateKey: string) => CellInfo) => {
-    const allStays = (staysData?.items ?? []) as StayRow[];
-    const stays = allStays.filter((stay) => stayContainsStartDate(stay, startKey));
-    const details = reservationDetails ?? [];
-    const resByRoomDate = new Map<string, CellInfo>();
-
-    stays.forEach((stay: StayRow) => {
-      const roomNumbers = getStayRoomNumbers(stay);
-      const stayNo = stay.stayNo ?? stay.StayNo ?? '';
-      const guestName = stay.guestName ?? stay.GuestName ?? '';
-      const stayId = stay.id ?? stay.Id ?? '';
-      if (roomNumbers.length === 0) return;
-      roomNumbers.forEach((roomNum) => {
-        dateColumns.forEach((dateKey) => {
-          if (!stayRoomCoversDate(stay, roomNum, dateKey)) return;
-          const key = `${roomNum}|${dateKey}`;
-          resByRoomDate.set(key, { type: 'stay', stayNo: String(stayNo), guestName: String(guestName), stayId: String(stayId) });
-        });
-      });
+  const cellsByKey = useMemo(() => {
+    const map = new Map<string, import('@/types/resort.types').RoomRackDayCellDto>();
+    (roomRackData?.cells ?? []).forEach((cell) => {
+      const dateKey = toDateKey(cell.inventoryDate);
+      map.set(`${(cell.roomNumber ?? '').trim()}|${dateKey}`, cell);
     });
+    return map;
+  }, [roomRackData?.cells]);
 
-    details.forEach((res: ReservationDetailDto) => {
-      (res.rooms ?? []).forEach((room: ReservationRoomDetailDto) => {
-        if (!room.roomNumber) return;
-        const roomNum = room.roomNumber.trim();
-        dateColumns.forEach((dateKey) => {
-          if (reservationRoomCoversDate(room, dateKey)) {
-            const key = `${roomNum}|${dateKey}`;
-            if (!resByRoomDate.has(key))
-              resByRoomDate.set(key, {
-                type: 'reservation',
-                reservationNo: res.reservationNo,
-                guestName: res.guestName ?? '',
-                reservationId: res.id,
-              });
-          }
-        });
-      });
-    });
-
-    return (roomNumber: string, dateKey: string) => resByRoomDate.get(`${roomNumber.trim()}|${dateKey}`) ?? null;
-  }, [staysData, reservationDetails, dateColumns, startKey]);
+  const getCellsAt = useCallback(
+    (roomNumber: string, dateKey: string): CellInfoNonNull[] => {
+      const cell = cellsByKey.get(`${roomNumber.trim()}|${dateKey}`);
+      if (!cell || cell.status === 1) return [];
+      if (cell.status === 3)
+        return [{
+          type: 'stay',
+          stayNo: cell.stayNo ?? '',
+          guestName: cell.guestName ?? '',
+          stayId: cell.stayId ?? '',
+          isArrivalDate: cell.isArrivalDate,
+          isDepartureDate: cell.isDepartureDate,
+        }];
+      if (cell.status === 2)
+        return [
+          {
+            type: 'reservation',
+            reservationNo: cell.reservationNo ?? '',
+            guestName: cell.guestName ?? '',
+            reservationId: cell.reservationId ?? '',
+            reservationStatus: cell.reservationStatus,
+            isArrivalDate: cell.isArrivalDate,
+            isDepartureDate: cell.isDepartureDate,
+          },
+        ];
+      return [{ type: 'blocked', label: 'Out of order' }];
+    },
+    [cellsByKey]
+  );
 
   const isDateOccupied = useCallback(
     (roomNumber: string, dateIndex: number) => {
       if (dateIndex < 0 || dateIndex >= dateColumns.length) return true;
       const dateKey = dateColumns[dateIndex];
-      const cell = getCellInfo(roomNumber, dateKey);
-      if (!cell) return false;
-      // Checkout/departure day: room is available for new check-in, so do not block selection
-      if (cell.type === 'stay') {
-        const stay = (staysData?.items ?? []).find(
-          (s: StayRow) => s.id === cell.stayId || (s as { Id?: string }).Id === cell.stayId
-        ) as StayRow | undefined;
-        if (stay) {
-          const { departureKey } = getStayRoomDateRange(stay, roomNumber);
-          if (dateKey === departureKey) return false;
-        }
-      } else {
-        const res = (reservationDetails ?? []).find((r) => r.id === cell.reservationId);
-        const roomDetail = res?.rooms?.find(
-          (rm) => (rm.roomNumber ?? '').trim() === roomNumber.trim()
-        );
-        if (roomDetail && dateKey === toDateKey(roomDetail.departureDate)) return false;
-      }
+      const cell = cellsByKey.get(`${roomNumber.trim()}|${dateKey}`);
+      if (!cell || cell.status === 1) return false;
+      if (cell.status === 4 || cell.status === 5 || cell.status === 6) return true;
+      const nextIndex = dateIndex + 1;
+      if (nextIndex >= dateColumns.length) return false;
+      const nextKey = dateColumns[nextIndex];
+      const nextCell = cellsByKey.get(`${roomNumber.trim()}|${nextKey}`);
+      if (!nextCell || nextCell.status === 1) return false;
       return true;
     },
-    [getCellInfo, dateColumns, staysData?.items, reservationDetails]
+    [cellsByKey, dateColumns]
   );
 
   useEffect(() => {
@@ -396,49 +276,28 @@ export const RoomRackPage = () => {
   const roomNumberToType = useMemo(() => {
     const map = new Map<string, string>();
     roomsByType.forEach(([roomTypeName, roomList]) => {
-      roomList.forEach((r) => map.set(r.roomNumber.trim(), roomTypeName));
+      roomList.forEach((r) => map.set((r.roomNumber ?? '').trim(), roomTypeName));
     });
     return map;
   }, [roomsByType]);
 
   const bookingCountByRoomTypeAndDate = useMemo(() => {
     const countBy = new Map<string, number>();
-    const key = (type: string, date: string) => `${type}|${date}`;
-    const add = (type: string, date: string) => {
-      const k = key(type, date);
+    (roomRackData?.cells ?? []).forEach((cell) => {
+      if (cell.status !== 2 && cell.status !== 3) return;
+      const typeName = roomNumberToType.get((cell.roomNumber ?? '').trim());
+      if (!typeName) return;
+      const dateKey = toDateKey(cell.inventoryDate);
+      const k = `${typeName}|${dateKey}`;
       countBy.set(k, (countBy.get(k) ?? 0) + 1);
-    };
-
-    const staysForRange = ((staysData?.items ?? []) as StayRow[]).filter((stay) => stayContainsStartDate(stay, startKey));
-    staysForRange.forEach((stay: StayRow) => {
-      const roomNumbers = getStayRoomNumbers(stay);
-      roomNumbers.forEach((roomNum) => {
-        dateColumns.forEach((dateKey) => {
-          if (!stayRoomCoversDate(stay, roomNum, dateKey)) return;
-          const typeName = roomNumberToType.get(roomNum.trim());
-          if (typeName) add(typeName, dateKey);
-        });
-      });
     });
-
-    (reservationDetails ?? []).forEach((res: ReservationDetailDto) => {
-      if (res.status === ReservationStatus.CheckedIn) return;
-      (res.rooms ?? []).forEach((room: ReservationRoomDetailDto) => {
-        const typeName = (room.roomNumber?.trim() ? roomNumberToType.get(room.roomNumber.trim()) : null) ?? room.roomTypeName?.trim() ?? '';
-        if (!typeName) return;
-        dateColumns.forEach((dateKey) => {
-          if (reservationRoomCoversDate(room, dateKey)) add(typeName, dateKey);
-        });
-      });
-    });
-
     return (roomTypeName: string, dateKey: string) => countBy.get(`${roomTypeName}|${dateKey}`) ?? 0;
-  }, [staysData, reservationDetails, dateColumns, roomNumberToType, startKey]);
+  }, [roomRackData?.cells, roomNumberToType]);
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Rack</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Room occupancy by date. Rows = rooms (by type), columns = dates.</p>
@@ -446,7 +305,7 @@ export const RoomRackPage = () => {
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="mb-4 flex flex-wrap items-center gap-0">
+          <div className="mb-2 flex flex-nowrap items-center gap-2">
             <div className="flex h-9 items-center gap-0 rounded border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400">
                 <CalendarIcon className="h-5 w-5" />
@@ -561,63 +420,76 @@ export const RoomRackPage = () => {
                       const segments: SegmentItem[] = [];
                       let i = 0;
                       while (i < dateColumns.length) {
-                        const cell = getCellInfo(roomNum, dateColumns[i]);
-                        if (!cell) {
+                        const cells = getCellsAt(roomNum, dateColumns[i]);
+                        if (cells.length === 0) {
                           i++;
                           continue;
                         }
-                        const cellId = cell.type === 'stay' ? `s-${cell.stayId}` : `r-${cell.reservationId}`;
+                        const cell = cells[0];
+                        const cellId =
+                          cell.type === 'stay'
+                            ? `s-${cell.stayId}`
+                            : cell.type === 'reservation'
+                              ? `r-${cell.reservationId}`
+                              : `b-${i}`;
                         const startIndex = i;
                         let endIndex = i + 1;
                         while (endIndex < dateColumns.length) {
-                          const nextCell = getCellInfo(roomNum, dateColumns[endIndex]);
-                          const nextId = nextCell?.type === 'stay' ? `s-${nextCell.stayId}` : nextCell?.type === 'reservation' ? `r-${nextCell.reservationId}` : null;
-                          if (nextId !== cellId) break;
+                          const nextCells = getCellsAt(roomNum, dateColumns[endIndex]);
+                          const nextCell = nextCells.find((c) =>
+                            cell.type === 'stay'
+                              ? c.type === 'stay' && c.stayId === cell.stayId
+                              : cell.type === 'reservation'
+                                ? c.type === 'reservation' && c.reservationId === cell.reservationId
+                                : c.type === 'blocked'
+                          );
+                          if (!nextCell) break;
                           endIndex++;
                         }
-                        const guestName = cell.type === 'stay' ? cell.guestName : cell.guestName;
-                        const navPath = cell.type === 'stay' ? `/stays/${cell.stayId}` : `/reservations/${cell.reservationId}`;
-                        let bgClass: string;
-                        let textClass: string;
-                        if (cell.type === 'stay') {
-                          bgClass = 'bg-blue-100 dark:bg-blue-900';
-                          textClass = 'text-blue-900 hover:underline dark:text-blue-100';
-                        } else {
-                          const res = (reservationDetails ?? []).find((r) => r.id === cell.reservationId);
-                          const isPending = res?.status === ReservationStatus.Pending;
-                          bgClass = isPending ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-green-100 dark:bg-green-900';
-                          textClass = isPending ? 'text-yellow-900 hover:underline dark:text-yellow-100' : 'text-green-900 hover:underline dark:text-green-100';
-                        }
-                        let extendsBefore = false;
-                        let extendsAfter = false;
-                        let firstDayHalf = false;
-                        let lastDayHalf = false;
-                        if (cell.type === 'stay') {
-                          const stay = (staysData?.items ?? []).find((s: StayRow) => s.id === cell.stayId || (s as { Id?: string }).Id === cell.stayId) as StayRow | undefined;
-                          if (stay) {
-                            const { arrivalKey: recordStart, departureKey: recordEnd } = getStayRoomDateRange(stay, roomNum);
-                            extendsBefore = recordStart !== '' && recordStart < startKey;
-                            extendsAfter = recordEnd !== '' && recordEnd > endKey;
-                            const firstDateKey = dateColumns[startIndex];
-                            const lastDateKey = dateColumns[endIndex - 1];
-                            if (recordEnd !== '' && firstDateKey === recordEnd) firstDayHalf = true;
-                            if (recordEnd !== '' && lastDateKey === recordEnd) lastDayHalf = true;
-                          }
-                        } else {
-                          const res = (reservationDetails ?? []).find((r) => r.id === cell.reservationId);
-                          const roomDetail = res?.rooms?.find((rm) => (rm.roomNumber ?? '').trim() === roomNum.trim());
-                          if (roomDetail) {
-                            const recordStart = toDateKey(roomDetail.arrivalDate);
-                            const recordEnd = toDateKey(roomDetail.departureDate);
-                            extendsBefore = recordStart !== '' && recordStart < startKey;
-                            extendsAfter = recordEnd !== '' && recordEnd > endKey;
-                            const firstDateKey = dateColumns[startIndex];
-                            const lastDateKey = dateColumns[endIndex - 1];
-                            if (recordEnd !== '' && firstDateKey === recordEnd) firstDayHalf = true;
-                            if (recordEnd !== '' && lastDateKey === recordEnd) lastDayHalf = true;
-                          }
-                        }
-                        segments.push({ id: `${cellId}-${startIndex}`, guestName: guestName || '—', navPath, startIndex, endIndex, bgClass, textClass, extendsBefore, extendsAfter, firstDayHalf: firstDayHalf || undefined, lastDayHalf: lastDayHalf || undefined });
+                        const guestName = cell.type === 'blocked' ? cell.label : cell.guestName;
+                        const navPath =
+                          cell.type === 'stay'
+                            ? `/stays/${cell.stayId}`
+                            : cell.type === 'reservation'
+                              ? `/reservations/${cell.reservationId}`
+                              : '#';
+                        const isConfirmed = cell.type === 'reservation' && cell.reservationStatus === ReservationStatus.Confirmed;
+                        const bgClass =
+                          cell.type === 'stay'
+                            ? 'bg-blue-100 dark:bg-blue-900'
+                            : cell.type === 'reservation'
+                              ? isConfirmed
+                                ? 'bg-green-100 dark:bg-green-900'
+                                : 'bg-yellow-100 dark:bg-yellow-900'
+                              : 'bg-slate-200 dark:bg-slate-600';
+                        const textClass =
+                          cell.type === 'stay'
+                            ? 'text-blue-900 hover:underline dark:text-blue-100'
+                            : cell.type === 'reservation'
+                              ? isConfirmed
+                                ? 'text-green-900 hover:underline dark:text-green-100'
+                                : 'text-yellow-900 hover:underline dark:text-yellow-100'
+                              : 'text-slate-700 dark:text-slate-200 cursor-default';
+                        const isStayOrRes = cell.type === 'stay' || cell.type === 'reservation';
+                        const lastDayKey = dateColumns[endIndex - 1];
+                        const lastDayDto = cellsByKey.get(`${roomNum.trim()}|${lastDayKey}`);
+                        const extendsBefore = isStayOrRes && startIndex === 0 && !cell.isArrivalDate;
+                        const extendsAfter = isStayOrRes && endIndex === dateColumns.length && !(lastDayDto?.isDepartureDate);
+                        const firstDayHalf = isStayOrRes && !!cell.isDepartureDate;
+                        const lastDayHalf = isStayOrRes && !!lastDayDto?.isDepartureDate;
+                        segments.push({
+                          id: `${cellId}-${startIndex}`,
+                          guestName: guestName || '—',
+                          navPath,
+                          startIndex,
+                          endIndex,
+                          bgClass,
+                          textClass,
+                          extendsBefore,
+                          extendsAfter,
+                          firstDayHalf: firstDayHalf || undefined,
+                          lastDayHalf: lastDayHalf || undefined,
+                        });
                         i = endIndex;
                       }
                       return (
@@ -676,24 +548,14 @@ export const RoomRackPage = () => {
                                   style={{
                                     left: `${((hoveredEmptyCell.dateIndex + CHECK_IN_HOUR_FRAC) / n) * 100}%`,
                                     width: `${((1 + CHECK_OUT_HOUR_FRAC - CHECK_IN_HOUR_FRAC) / n) * 100}%`,
-                                    transform: 'skewX(-12deg)',
-                                    transformOrigin: 'bottom left',
                                   }}
                                 />
                               )}
                               {segments.map((seg) => {
-                                const leftPct = seg.extendsBefore ? 0 : seg.firstDayHalf ? (seg.startIndex / n) * 100 : ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                // Check-in 2pm: first day always starts at 2pm (right half of column), never from midnight
+                                const leftPct = seg.firstDayHalf ? (seg.startIndex / n) * 100 : ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
                                 const rightPct = seg.extendsAfter ? 100 : seg.lastDayHalf ? ((seg.endIndex - 0.5) / n) * 100 : ((seg.endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
                                 const widthPct = rightPct - leftPct;
-                                const bothExtend = seg.extendsBefore && seg.extendsAfter;
-                                const onlyLeftExtends = seg.extendsBefore && !seg.extendsAfter;
-                                const onlyRightExtends = !seg.extendsBefore && seg.extendsAfter;
-                                const useFullSkew = !seg.extendsBefore && !seg.extendsAfter;
-                                const clipPath = onlyLeftExtends
-                                  ? 'polygon(0 0, 100% 0, 97% 100%, 0 100%)'
-                                  : onlyRightExtends
-                                    ? 'polygon(3% 0, 100% 0, 100% 100%, 0 100%)'
-                                    : undefined;
                                 return (
                                   <div
                                     key={seg.id}
@@ -701,14 +563,12 @@ export const RoomRackPage = () => {
                                     style={{
                                       left: `${leftPct}%`,
                                       width: `${widthPct}%`,
-                                      ...(bothExtend ? {} : useFullSkew ? { transform: 'skewX(-12deg)', transformOrigin: 'bottom left' } : { clipPath }),
                                     }}
                                   >
                                     <button
                                       type="button"
                                       className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
-                                      style={bothExtend ? undefined : useFullSkew ? { transform: 'skewX(12deg)' } : undefined}
-                                      onClick={() => navigate(seg.navPath)}
+                                      onClick={() => seg.navPath !== '#' && navigate(seg.navPath)}
                                       title={seg.guestName}
                                     >
                                       {seg.guestName}
@@ -730,14 +590,9 @@ export const RoomRackPage = () => {
                                     style={{
                                       left: `${leftPct}%`,
                                       width: `${widthPct}%`,
-                                      transform: 'skewX(-12deg)',
-                                      transformOrigin: 'bottom left',
                                     }}
                                   >
-                                    <span
-                                      className="px-1.5 text-xs font-medium text-primary-800 dark:text-primary-200"
-                                      style={{ transform: 'skewX(12deg)' }}
-                                    >
+                                    <span className="px-1.5 text-xs font-medium text-primary-800 dark:text-primary-200">
                                       {nightLabel}
                                     </span>
                                   </div>

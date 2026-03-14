@@ -12,7 +12,7 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260314161914_InitDatabase")]
+    [Migration("20260314181237_InitDatabase")]
     partial class InitDatabase
     {
         /// <inheritdoc />
@@ -4079,9 +4079,6 @@ namespace PMS.Migrations
                     b.Property<long?>("LastModifierUserId")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("OperationalStatus")
-                        .HasColumnType("int");
-
                     b.Property<string>("RoomNumber")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -4208,6 +4205,43 @@ namespace PMS.Migrations
                     b.HasIndex("ToRoomTypeId");
 
                     b.ToTable("RoomChangeRequest", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.RoomDailyInventory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("InventoryDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsOutOfOrder")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSellable")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("ReservationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("StayId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId", "InventoryDate");
+
+                    b.ToTable("RoomDailyInventory", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.RoomRatePlan", b =>
@@ -6033,6 +6067,17 @@ namespace PMS.Migrations
                     b.Navigation("ToRoom");
 
                     b.Navigation("ToRoomType");
+                });
+
+            modelBuilder.Entity("PMS.App.RoomDailyInventory", b =>
+                {
+                    b.HasOne("PMS.App.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("PMS.App.RoomRatePlan", b =>

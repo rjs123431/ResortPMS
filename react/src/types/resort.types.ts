@@ -122,16 +122,47 @@ export interface RoomListDto {
   maxChildren: number;
   baseRate: number;
   floor?: string;
-  operationalStatus: RoomOperationalStatus;
   housekeepingStatus: HousekeepingStatus;
   isActive: boolean;
+}
+
+/** Room rack: daily inventory status (matches backend RoomDailyInventoryStatus). */
+export enum RoomDailyInventoryStatus {
+  Vacant = 1,
+  Reserved = 2,
+  InHouse = 3,
+  OutOfOrder = 4,
+  Blocked = 5,
+  HouseUse = 6,
+}
+
+export interface RoomRackDayCellDto {
+  roomId: string;
+  roomNumber: string;
+  inventoryDate: string;
+  status: number;
+  reservationId?: string;
+  stayId?: string;
+  reservationNo: string;
+  stayNo: string;
+  guestName: string;
+  /** Reservation status when cell is Reserved (e.g. Confirmed=2 → green, Pending=1 → yellow). */
+  reservationStatus?: number;
+  /** True when this date is the arrival date for the reservation/stay (bar starts at 2pm). */
+  isArrivalDate?: boolean;
+  /** True when this date is the departure date (bar ends at noon, half-day). */
+  isDepartureDate?: boolean;
+}
+
+export interface GetRoomRackResultDto {
+  rooms: RoomListDto[];
+  cells: RoomRackDayCellDto[];
 }
 
 export interface CreateRoomDto {
   roomNumber: string;
   roomTypeId: string;
   floor?: string;
-  operationalStatus?: RoomOperationalStatus;
   housekeepingStatus?: HousekeepingStatus;
 }
 
@@ -194,7 +225,6 @@ export interface CleaningBoardRoomDto {
   roomNumber: string;
   roomTypeName: string;
   floor?: string;
-  operationalStatus: RoomOperationalStatus;
   housekeepingStatus: HousekeepingStatus;
   cleaningType: string;
   pendingTaskId?: string;

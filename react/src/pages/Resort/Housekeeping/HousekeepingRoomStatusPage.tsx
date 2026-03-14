@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
-import { HousekeepingStatus, RoomOperationalStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
 
 const HK_STATUS_BADGE: Record<HousekeepingStatus, string> = {
@@ -9,14 +9,6 @@ const HK_STATUS_BADGE: Record<HousekeepingStatus, string> = {
   [HousekeepingStatus.Dirty]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
   [HousekeepingStatus.Inspected]: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
   [HousekeepingStatus.Pickup]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-};
-
-const OP_STATUS_BADGE: Record<RoomOperationalStatus, string> = {
-  [RoomOperationalStatus.Vacant]: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-  [RoomOperationalStatus.Occupied]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-  [RoomOperationalStatus.Reserved]: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-  [RoomOperationalStatus.OutOfOrder]: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
-  [RoomOperationalStatus.OutOfService]: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
 };
 
 export const HousekeepingRoomStatusPage = () => {
@@ -82,7 +74,6 @@ export const HousekeepingRoomStatusPage = () => {
                     <th className="p-2">Room</th>
                     <th className="p-2">Type</th>
                     <th className="p-2">Floor</th>
-                    <th className="p-2">Op. Status</th>
                     <th className="p-2">HK Status</th>
                     <th className="p-2">Mark As</th>
                   </tr>
@@ -93,11 +84,6 @@ export const HousekeepingRoomStatusPage = () => {
                       <td className="p-2 font-medium">{room.roomNumber}</td>
                       <td className="p-2 text-gray-600 dark:text-gray-300">{room.roomTypeName}</td>
                       <td className="p-2 text-gray-600 dark:text-gray-300">{room.floor ?? '-'}</td>
-                      <td className="p-2">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${OP_STATUS_BADGE[room.operationalStatus]}`}>
-                          {RoomOperationalStatus[room.operationalStatus]}
-                        </span>
-                      </td>
                       <td className="p-2">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${HK_STATUS_BADGE[room.housekeepingStatus]}`}>
                           {HousekeepingStatus[room.housekeepingStatus]}

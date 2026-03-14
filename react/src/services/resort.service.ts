@@ -32,6 +32,7 @@ import {
   ReservationListDto,
   RoomListDto,
   RoomDto,
+  GetRoomRackResultDto,
   RoomTypeDto,
   RoomTypeListDto,
   RoomRatePlanDto,
@@ -39,7 +40,6 @@ import {
   CreateRoomRatePlanDto,
   UpdateRoomRatePlanDto,
   StayListDto,
-  RoomOperationalStatus,
   HousekeepingStatus,
   HousekeepingTaskDto,
   CreateHousekeepingTaskDto,
@@ -186,6 +186,13 @@ export const resortService = {
         SkipCount: skipCount,
         MaxResultCount: maxResultCount,
       },
+    });
+    return response.data.result;
+  },
+
+  getRoomRackInfo: async (startDate: string, endDate: string) => {
+    const response = await api.get<ApiResponse<GetRoomRackResultDto>>('/api/services/app/RoomRack/GetRoomInfo', {
+      params: { startDate, endDate },
     });
     return response.data.result;
   },
@@ -697,10 +704,6 @@ export const resortService = {
   clearStayRoom: async (input: ClearStayRoomDto) => {
     const response = await api.post<ApiResponse<StayRoomRecordDto>>('/api/services/app/CheckOut/ClearStayRoom', input);
     return response.data.result;
-  },
-
-  updateRoomOperationalStatus: async (roomId: string, operationalStatus: RoomOperationalStatus, remarks?: string) => {
-    await api.put('/api/services/app/Room/UpdateOperationalStatus', { roomId, operationalStatus, remarks });
   },
 
   updateRoomHousekeepingStatus: async (roomId: string, housekeepingStatus: HousekeepingStatus, remarks?: string, staffId?: string) => {

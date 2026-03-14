@@ -46,8 +46,10 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       if (!firstName.trim()) throw new Error('First name is required.');
       if (!lastName.trim()) throw new Error('Last name is required.');
       if (!contactNumber.trim()) throw new Error('Contact number is required.');
-      const arrivalDate = payload.checkInDate;
-      const departureDate = payload.checkOutDate;
+      const checkInTime = '14:00:00';
+      const checkOutTime = '12:00:00';
+      const arrivalDate = payload.checkInDate.includes('T') ? payload.checkInDate : `${payload.checkInDate}T${checkInTime}`;
+      const departureDate = payload.checkOutDate.includes('T') ? payload.checkOutDate : `${payload.checkOutDate}T${checkOutTime}`;
       const nights = Math.max(1, Math.ceil((new Date(departureDate).getTime() - new Date(arrivalDate).getTime()) / (24 * 60 * 60 * 1000)));
       const amount = round2(ratePerNight * nights);
       const roomEntry = {
@@ -85,6 +87,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       onClose();
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['frontdesk-grid-reservations-with-rooms'] });
+      void queryClient.invalidateQueries({ queryKey: ['room-rack-info'] });
     },
   });
 

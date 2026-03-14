@@ -65,7 +65,6 @@ public class Room : AuditedEntity<Guid>, IPassivable
     public string RoomNumber { get; set; } = string.Empty;
     public Guid RoomTypeId { get; set; }
     public string Floor { get; set; } = string.Empty;
-    public RoomOperationalStatus OperationalStatus { get; set; } = RoomOperationalStatus.Vacant;
     public HousekeepingStatus HousekeepingStatus { get; set; } = HousekeepingStatus.Clean;
     public bool IsActive { get; set; } = true;
 

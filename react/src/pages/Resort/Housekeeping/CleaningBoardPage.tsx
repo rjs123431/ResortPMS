@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { MainLayout } from '@components/layout/MainLayout';
-import { HousekeepingStatus, RoomOperationalStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
 
 const CLEANING_TYPE_BADGE: Record<string, string> = {
@@ -96,7 +96,6 @@ export const CleaningBoardPage = () => {
                     <th className="p-2">Room</th>
                     <th className="p-2">Type</th>
                     <th className="p-2">Floor</th>
-                    <th className="p-2">Op. Status</th>
                     <th className="p-2">HK Status</th>
                     <th className="p-2">Cleaning Type</th>
                     <th className="p-2">Actions</th>
@@ -108,9 +107,6 @@ export const CleaningBoardPage = () => {
                       <td className="p-2 font-medium">{room.roomNumber}</td>
                       <td className="p-2 text-gray-600 dark:text-gray-300">{room.roomTypeName}</td>
                       <td className="p-2 text-gray-600 dark:text-gray-300">{room.floor ?? '-'}</td>
-                      <td className="p-2">
-                        <span className="text-xs font-medium">{RoomOperationalStatus[room.operationalStatus]}</span>
-                      </td>
                       <td className="p-2">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${HK_STATUS_BADGE[room.housekeepingStatus]}`}>
                           {HousekeepingStatus[room.housekeepingStatus]}

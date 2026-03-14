@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { useQuery } from '@tanstack/react-query';
-import { RoomOperationalStatus, HousekeepingStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@/services/resort.service';
 
 type AssignRoomDialogProps = {
@@ -18,30 +18,18 @@ type AssignRoomDialogProps = {
 };
 
 
-const getRoomStatusLabel = (operationalStatus?: RoomOperationalStatus, housekeepingStatus?: HousekeepingStatus) => {
-  const opLabel = operationalStatus !== undefined ? RoomOperationalStatus[operationalStatus] : 'Unknown';
-  const hkLabel = housekeepingStatus !== undefined ? HousekeepingStatus[housekeepingStatus] : '';
-  return hkLabel ? `${opLabel} / ${hkLabel}` : opLabel;
+const getRoomStatusLabel = (housekeepingStatus?: HousekeepingStatus) => {
+  return housekeepingStatus !== undefined ? HousekeepingStatus[housekeepingStatus] : '—';
 };
 
-const getRoomStatusBadgeClass = (operationalStatus?: RoomOperationalStatus, housekeepingStatus?: HousekeepingStatus) => {
-  // Vacant Dirty: op = Vacant, hk = Dirty
-  if (operationalStatus === RoomOperationalStatus.Vacant && housekeepingStatus === HousekeepingStatus.Dirty) {
+const getRoomStatusBadgeClass = (housekeepingStatus?: HousekeepingStatus) => {
+  if (housekeepingStatus === HousekeepingStatus.Dirty) {
     return 'bg-yellow-200 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
   }
-  switch (operationalStatus) {
-    case RoomOperationalStatus.Vacant:
-      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-    case RoomOperationalStatus.Occupied:
-      return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
-    case RoomOperationalStatus.Reserved:
-      return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300';
-    case RoomOperationalStatus.OutOfOrder:
-    case RoomOperationalStatus.OutOfService:
-      return 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200';
-    default:
-      return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+  if (housekeepingStatus === HousekeepingStatus.Clean) {
+    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
   }
+  return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
 };
 
 export const AssignRoomDialog = ({
@@ -62,7 +50,7 @@ export const AssignRoomDialog = ({
     queryFn: async () => {
       if (!open || !roomTypeId) return [];
       const result = await resortService.getRooms('', 0, 1000);
-      return result.items.filter((r) => r.roomTypeId === roomTypeId && r.operationalStatus === RoomOperationalStatus.Vacant);
+      return result.items.filter((r) => r.roomTypeId === roomTypeId);
     },
     enabled: open && !!roomTypeId,
     staleTime: 10 * 1000,
@@ -153,8 +141,8 @@ export const AssignRoomDialog = ({
                         </td>
                         <td className="p-2">{room.floor || '-'}</td>
                         <td className="p-2">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getRoomStatusBadgeClass(room.operationalStatus, room.housekeepingStatus)}`}>
-                            {getRoomStatusLabel(room.operationalStatus, room.housekeepingStatus)}
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getRoomStatusBadgeClass(room.housekeepingStatus)}`}>
+                            {getRoomStatusLabel(room.housekeepingStatus)}
                           </span>
                         </td>
                         <td className="p-2">

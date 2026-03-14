@@ -9,6 +9,7 @@ using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Reservations.Dto;
 using PMS.Application.App.PropertyTimes;
+using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
 using PMS.Authorization;
 using System;
@@ -47,7 +48,8 @@ public class ReservationAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
     IDocumentNumberService documentNumberService,
-    IPropertyTimesProvider propertyTimesProvider
+    IPropertyTimesProvider propertyTimesProvider,
+    IRoomDailyInventoryService roomDailyInventoryService
 ) : PMSAppServiceBase, IReservationAppService
 {
     [AbpAuthorize(PermissionNames.Pages_Reservations_Create)]
@@ -75,6 +77,8 @@ public class ReservationAppService(
             throw new UserFriendlyException(L("ArrivalDateMustBeFutureOrToday"));
 
         var (checkInTime, checkOutTime) = await propertyTimesProvider.GetDefaultCheckInCheckOutTimesAsync();
+        var arrivalDate = input.ArrivalDate.TimeOfDay == TimeSpan.Zero ? input.ArrivalDate.Date.Add(checkInTime) : input.ArrivalDate;
+        var departureDate = input.DepartureDate.TimeOfDay == TimeSpan.Zero ? input.DepartureDate.Date.Add(checkOutTime) : input.DepartureDate;
 
         var reservationNo = await documentNumberService.GenerateNextDocumentNumberAsync("RESERVATION", "RES-");
         var firstName = guest != null && string.IsNullOrWhiteSpace(input.FirstName) ? guest.FirstName : (input.FirstName ?? string.Empty).Trim();
@@ -92,9 +96,9 @@ public class ReservationAppService(
             Phone = phone,
             Email = email,
             ReservationDate = Clock.Now,
-            ArrivalDate = input.ArrivalDate.Date.Add(checkInTime),
-            DepartureDate = input.DepartureDate.Date.Add(checkOutTime),
-            Nights = (int)(input.DepartureDate.Date - input.ArrivalDate.Date).TotalDays,
+            ArrivalDate = arrivalDate,
+            DepartureDate = departureDate,
+            Nights = (int)(departureDate.Date - arrivalDate.Date).TotalDays,
             Adults = input.Adults,
             Children = input.Children,
             Status = ReservationStatus.Pending,
@@ -121,22 +125,25 @@ public class ReservationAppService(
                 if (roomEntity != null)
                     roomNumber = roomEntity.RoomNumber ?? string.Empty;
 
+                await roomDailyInventoryService.Ensure365DaysFromTodayAsync([roomId]);
+                var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(roomId, arrivalDate, departureDate);
+                if (!available)
+                    throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+
                 var hasReservationConflict = await reservationRoomRepository.GetAll()
                     .Include(rr => rr.Reservation)
                     .Where(rr => rr.RoomId == roomId)
-                    .Where(rr => rr.ArrivalDate < input.DepartureDate.Date && rr.DepartureDate > input.ArrivalDate.Date)
-                    .AnyAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
-                                   rr.Reservation.Status == ReservationStatus.Confirmed ||
-                                   rr.Reservation.Status == ReservationStatus.CheckedIn);
+                    .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
+                    .FirstOrDefaultAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
+                                   rr.Reservation.Status == ReservationStatus.Confirmed);
 
-                if (hasReservationConflict)
+                if (hasReservationConflict != null)
                     throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
                 var hasStayConflict = await stayRoomRepository.GetAll()
                     .Include(sr => sr.Stay)
-                    .Where(sr => sr.RoomId == roomId)
-                    .Where(sr => sr.AssignedAt.Date < input.DepartureDate.Date)
-                    .Where(sr => (sr.ReleasedAt.HasValue ? sr.ReleasedAt.Value.Date : sr.Stay.ExpectedCheckOutDateTime.Date) > input.ArrivalDate.Date)
+                    .Where(sr => sr.RoomId == roomId && !sr.ReleasedAt.HasValue)
+                    .Where(sr => sr.ArrivalDate < departureDate.Date && sr.DepartureDate > arrivalDate.Date)
                     .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
 
                 if (hasStayConflict)
@@ -158,8 +165,8 @@ public class ReservationAppService(
             {
                 RoomTypeId = room.RoomTypeId,
                 RoomId = room.RoomId,
-                ArrivalDate = input.ArrivalDate.Date.Add(checkInTime),
-                DepartureDate = input.DepartureDate.Date.Add(checkOutTime),
+                ArrivalDate = arrivalDate,
+                DepartureDate = departureDate,
                 RatePerNight = room.RatePerNight,
                 NumberOfNights = numberOfNights,
                 Amount = amount,
@@ -177,8 +184,8 @@ public class ReservationAppService(
         foreach (var extraBed in input.ExtraBeds ?? [])
         {
             var quantity = Math.Max(1, extraBed.Quantity);
-            var arrivalDate = extraBed.ArrivalDate.HasValue ? extraBed.ArrivalDate.Value.Date.Add(checkInTime) : input.ArrivalDate.Date.Add(checkInTime);
-            var departureDate = extraBed.DepartureDate.HasValue ? extraBed.DepartureDate.Value.Date.Add(checkOutTime) : input.DepartureDate.Date.Add(checkOutTime);
+            var extraArrival = extraBed.ArrivalDate.HasValue ? extraBed.ArrivalDate.Value.Date.Add(extraBed.ArrivalDate.Value.TimeOfDay == TimeSpan.Zero ? checkInTime : extraBed.ArrivalDate.Value.TimeOfDay) : arrivalDate;
+            var extraDeparture = extraBed.DepartureDate.HasValue ? extraBed.DepartureDate.Value.Date.Add(extraBed.DepartureDate.Value.TimeOfDay == TimeSpan.Zero ? checkOutTime : extraBed.DepartureDate.Value.TimeOfDay) : departureDate;
             var numberOfNights = extraBed.NumberOfNights > 0 ? extraBed.NumberOfNights : reservation.Nights;
             var amount = extraBed.Amount > 0 ? extraBed.Amount : extraBed.RatePerNight * numberOfNights * quantity;
             var discountPercent = extraBed.DiscountPercent;
@@ -193,8 +200,8 @@ public class ReservationAppService(
             reservation.ExtraBeds.Add(new ReservationExtraBed
             {
                 ExtraBedTypeId = extraBed.ExtraBedTypeId,
-                ArrivalDate = arrivalDate,
-                DepartureDate = departureDate,
+                ArrivalDate = extraArrival,
+                DepartureDate = extraDeparture,
                 Quantity = quantity,
                 RatePerNight = extraBed.RatePerNight,
                 NumberOfNights = numberOfNights,
@@ -219,6 +226,10 @@ public class ReservationAppService(
         }
 
         var id = await reservationRepository.InsertAndGetIdAsync(reservation);
+
+        foreach (var rr in reservation.Rooms.Where(rr => rr.RoomId.HasValue))
+            await roomDailyInventoryService.SetReservedAsync(rr.RoomId!.Value, arrivalDate, departureDate, id);
+
         if (guest != null)
             Logger.Info($"Reservation {reservationNo} created for guest {guest.GuestCode}.");
         else
@@ -272,6 +283,15 @@ public class ReservationAppService(
             : $"{reservation.Notes}\n[CANCELLED] {input.Reason}".Trim();
 
         await reservationRepository.UpdateAsync(reservation);
+
+        var rooms = await reservationRoomRepository.GetAll()
+            .Where(rr => rr.ReservationId == reservation.Id && rr.RoomId.HasValue)
+            .ToListAsync();
+        var arr = reservation.ArrivalDate.Date;
+        var dep = reservation.DepartureDate.Date;
+        foreach (var rr in rooms)
+            await roomDailyInventoryService.SetVacantAsync(rr.RoomId!.Value, arr, dep);
+
         Logger.Info($"Reservation {reservation.ReservationNo} cancelled.");
     }
 
@@ -461,7 +481,12 @@ public class ReservationAppService(
 
         var arrivalDate = reservation.ArrivalDate.Date;
         var departureDate = reservation.DepartureDate.Date;
-        var arrivalNextDay = arrivalDate.AddDays(1);
+
+        await roomDailyInventoryService.Ensure365DaysFromTodayAsync([input.RoomId]);
+        var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(
+            input.RoomId, arrivalDate, departureDate, excludeReservationId: reservation.Id);
+        if (!available)
+            throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
         var hasReservationConflict = await reservationRoomRepository.GetAll()
             .AsNoTracking()
@@ -477,17 +502,22 @@ public class ReservationAppService(
 
         var hasStayConflict = await stayRoomRepository.GetAll()
             .AsNoTracking()
-            .Where(sr => sr.RoomId == input.RoomId)
-            .Where(sr => sr.AssignedAt < departureDate)
-            .Where(sr => (sr.ReleasedAt ?? sr.Stay.ExpectedCheckOutDateTime) >= arrivalNextDay)
+            .Where(sr => sr.RoomId == input.RoomId && !sr.ReleasedAt.HasValue)
+            .Where(sr => sr.ArrivalDate < departureDate && sr.DepartureDate > arrivalDate)
             .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
 
         if (hasStayConflict)
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
+        var oldRoomId = reservationRoom.RoomId;
+        if (oldRoomId.HasValue)
+            await roomDailyInventoryService.SetVacantAsync(oldRoomId.Value, arrivalDate, departureDate);
+
         reservationRoom.RoomId = room.Id;
         reservationRoom.RoomNumber = room.RoomNumber;
         await reservationRoomRepository.UpdateAsync(reservationRoom);
+
+        await roomDailyInventoryService.SetReservedAsync(room.Id, arrivalDate, departureDate, reservation.Id);
     }
 
     public async Task<ReservationDto> GetAsync(Guid id)
