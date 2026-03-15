@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using PMS.App;
 using PMS.App.Pos.Dto;
 using PMS.Application.App.Services;
+using PMS.Application.Hubs;
 using PMS.Auditing;
 using PMS.Authorization;
 using System;
@@ -63,10 +64,16 @@ public class PosOrderAppService(
     IRepository<ChargeType, Guid> chargeTypeRepository,
     IDocumentNumberService documentNumberService,
     IMenuItemPriceManager menuItemPriceManager,
-    IFinancialAuditService financialAuditService
+    IFinancialAuditService financialAuditService,
+    IPosHubBroadcaster posHubBroadcaster
 ) : PMSAppServiceBase, IPosOrderAppService
 {
     private const string RestaurantChargeTypeName = "Restaurant";
+
+    private Task NotifyPosOrderChangedAsync(Guid? orderId, Guid? outletId, Guid? tableId, string eventType)
+    {
+        return posHubBroadcaster.NotifyOrderChangedAsync(orderId, outletId, tableId, eventType);
+    }
 
     public async Task<List<PosOutletListDto>> GetOutletsAsync()
     {
@@ -354,6 +361,7 @@ public class PosOrderAppService(
             table.Status = PosTableStatus.Occupied;
             await tableRepository.UpdateAsync(table);
         }
+        await NotifyPosOrderChangedAsync(id, input.OutletId, input.TableId, "OrderCreated");
         return id;
     }
 
@@ -400,6 +408,7 @@ public class PosOrderAppService(
             await posOrderItemRepository.InsertAsync(item);
             await InsertSelectedOptionsAsync(item.Id, line.SelectedOptionIds);
         }
+        await NotifyPosOrderChangedAsync(orderId, input.OutletId, input.TableId, "OrderCreated");
         return orderId;
     }
 
@@ -424,6 +433,7 @@ public class PosOrderAppService(
         await posOrderItemRepository.InsertAsync(item);
         await InsertSelectedOptionsAsync(item.Id, input.SelectedOptionIds);
         await RefreshOrderChargeSettingsAsync(order);
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "ItemAdded");
     }
 
     [UnitOfWork]
@@ -452,6 +462,7 @@ public class PosOrderAppService(
             await InsertSelectedOptionsAsync(item.Id, line.SelectedOptionIds);
         }
         await RefreshOrderChargeSettingsAsync(order);
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "ItemAdded");
     }
 
     [UnitOfWork]
@@ -492,6 +503,7 @@ public class PosOrderAppService(
             order.Status = PosOrderStatus.SentToKitchen;
         CopyChargeSettingsFromOutlet(order, order.Outlet);
         await orderRepository.UpdateAsync(order);
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "SentToKitchen");
     }
 
     private async Task<(decimal Price, List<Guid> ValidOptionIds)> ValidateAndComputePriceAsync(Guid menuItemId, List<Guid>? selectedOptionIds, DateTime asOfDate)
@@ -580,6 +592,7 @@ public class PosOrderAppService(
         item.Notes = input.Notes ?? "";
         await posOrderItemRepository.UpdateAsync(item);
         await RefreshOrderChargeSettingsAsync(item.Order);
+        await NotifyPosOrderChangedAsync(item.Order.Id, item.Order.OutletId, item.Order.TableId, "ItemUpdated");
     }
 
     [UnitOfWork]
@@ -596,6 +609,7 @@ public class PosOrderAppService(
         item.CancelReason = input.Reason ?? string.Empty;
         await posOrderItemRepository.UpdateAsync(item);
         await RefreshOrderChargeSettingsAsync(item.Order);
+        await NotifyPosOrderChangedAsync(item.Order.Id, item.Order.OutletId, item.Order.TableId, "ItemCancelled");
     }
 
     [UnitOfWork]
@@ -623,6 +637,7 @@ public class PosOrderAppService(
             if (order.Status == PosOrderStatus.Open)
                 order.Status = PosOrderStatus.SentToKitchen;
             await orderRepository.UpdateAsync(order);
+            await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "SentToKitchen");
             return;
         }
 
@@ -635,6 +650,7 @@ public class PosOrderAppService(
         foreach (var item in order.Items.Where(i => i.Status == OrderItemStatus.Pending))
             item.Status = OrderItemStatus.SentToKitchen;
         await orderRepository.UpdateAsync(order);
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "SentToKitchen");
     }
 
     [UnitOfWork]
@@ -664,6 +680,7 @@ public class PosOrderAppService(
             order.Table.Status = PosTableStatus.Available;
             await tableRepository.UpdateAsync(order.Table);
         }
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "OrderClosed");
     }
 
     [UnitOfWork]
@@ -685,6 +702,7 @@ public class PosOrderAppService(
             order.Table.Status = PosTableStatus.Available;
             await tableRepository.UpdateAsync(order.Table);
         }
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "OrderCancelled");
     }
 
     [UnitOfWork]
@@ -701,6 +719,7 @@ public class PosOrderAppService(
             PaidAt = Clock.Now,
             ReferenceNo = input.ReferenceNo ?? ""
         });
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "PaymentAdded");
     }
 
     public async Task<VerifyStayForRoomChargeDto> VerifyStayByRoomNumberAsync(string roomNumber)
@@ -790,6 +809,7 @@ public class PosOrderAppService(
             table.Status = PosTableStatus.Available;
             await tableRepository.UpdateAsync(table);
         }
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "ChargeToRoom");
     }
 
     private static void UpdateFolioStatus(Folio folio)
@@ -922,5 +942,6 @@ public class PosOrderAppService(
         order.DiscountAmount = input.DiscountAmount;
         order.SeniorCitizenDiscount = input.SeniorCitizenDiscount;
         await RefreshOrderChargeSettingsAsync(order);
+        await NotifyPosOrderChangedAsync(order.Id, order.OutletId, order.TableId, "DiscountsUpdated");
     }
 }

@@ -172,6 +172,7 @@ namespace PMS.Web.Host.Startup
             {
                 endpoints.MapHub<AbpCommonHub>("/signalr");
                 endpoints.MapHub<PMS.Application.Hubs.PhysicalCountHub>("/signalr-physicalcount");
+                endpoints.MapHub<PMS.Application.Hubs.PosHub>("/signalr-pos");
                 endpoints.MapControllerRoute("default", _hostingEnvironment.IsDevelopment() ? "{controller=UI}/{action=Index}/{id?}" : "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapControllerRoute("defaultWithArea", "{area}/{controller=Home}/{action=Index}/{id?}");
             });

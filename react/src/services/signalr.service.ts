@@ -11,6 +11,10 @@ function getPhysicalCountHubUrl(): string {
   return getSignalRUrl('/signalr-physicalcount');
 }
 
+function getPosHubUrl(): string {
+  return getSignalRUrl('/signalr-pos');
+}
+
 function getSignalRUrl(path: string): string {
   const base = getBaseUrl(path);
   const encryptedToken = authService.getEncryptedToken();
@@ -30,7 +34,9 @@ export class SignalRService {
   private reconnectDelay = 5000; // 5 seconds
   private notificationCallback: ((notification: any) => void) | null = null;
   private housekeepingTaskStatusChangedCallback: ((payload: any) => void) | null = null;
+  private posOrderChangedCallback: ((payload: { orderId?: string; outletId?: string; tableId?: string; eventType?: string }) => void) | null = null;
   private connectionStateCallback: ((connected: boolean) => void) | null = null;
+  private posConnection: signalR.HubConnection | null = null;
 
   async startConnection(): Promise<void> {
     if (this.connection?.state === signalR.HubConnectionState.Connected || this.isConnecting) {
@@ -73,6 +79,25 @@ export class SignalRService {
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
+      const posHubUrl = getPosHubUrl();
+      this.posConnection = new signalR.HubConnectionBuilder()
+        .withUrl(posHubUrl, {
+          skipNegotiation: false,
+          transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.ServerSentEvents | signalR.HttpTransportType.LongPolling,
+        })
+        .withAutomaticReconnect()
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+      this.posConnection.onreconnected(() => {
+        this.posConnection?.off('orderChanged');
+        if (this.posOrderChangedCallback) {
+          this.posConnection?.on('orderChanged', (payload: { orderId?: string; outletId?: string; tableId?: string; eventType?: string }) => {
+            this.posOrderChangedCallback?.(payload);
+          });
+        }
+      });
+
       // Register event handlers BEFORE starting connection
       this.registerEventHandlers();
 
@@ -103,6 +128,7 @@ export class SignalRService {
 
       await this.connection.start();
       await this.dedicatedConnection.start();
+      await this.posConnection.start();
       console.log('SignalR: Connected successfully');
       this.reconnectAttempts = 0;
       this.connectionStateCallback?.(true);
@@ -138,12 +164,17 @@ export class SignalRService {
         if (this.dedicatedConnection) {
           await this.dedicatedConnection.stop();
         }
+        if (this.posConnection) {
+          await this.posConnection.stop();
+        }
         console.log('SignalR: Connection stopped');
       } catch (error) {
         console.error('SignalR: Error stopping connection', error);
       }
       this.connection = null;
       this.dedicatedConnection = null;
+      this.posConnection = null;
+      this.posOrderChangedCallback = null;
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       this.connectionStateCallback?.(false);
@@ -158,6 +189,7 @@ export class SignalRService {
     // Remove existing handlers to avoid duplicates
     this.connection.off('getNotification');
     this.dedicatedConnection?.off('housekeepingTaskStatusChanged');
+    this.posConnection?.off('orderChanged');
 
     // Register notification handler if callback is set
     if (this.notificationCallback) {
@@ -172,6 +204,27 @@ export class SignalRService {
         this.housekeepingTaskStatusChangedCallback?.(payload);
       });
     }
+
+    if (this.posConnection && this.posOrderChangedCallback) {
+      this.posConnection.on('orderChanged', (payload: { orderId?: string; outletId?: string; tableId?: string; eventType?: string }) => {
+        this.posOrderChangedCallback?.(payload);
+      });
+    }
+  }
+
+  onPosOrderChanged(callback: (payload: { orderId?: string; outletId?: string; tableId?: string; eventType?: string }) => void): void {
+    this.posOrderChangedCallback = callback;
+    if (this.posConnection) {
+      this.posConnection.off('orderChanged');
+      this.posConnection.on('orderChanged', (payload: { orderId?: string; outletId?: string; tableId?: string; eventType?: string }) => {
+        this.posOrderChangedCallback?.(payload);
+      });
+    }
+  }
+
+  offPosOrderChanged(): void {
+    this.posOrderChangedCallback = null;
+    this.posConnection?.off('orderChanged');
   }
 
   onNotificationReceived(callback: (notification: any) => void): void {

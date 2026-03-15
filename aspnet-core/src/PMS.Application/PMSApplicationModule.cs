@@ -1,7 +1,9 @@
 using Abp.AutoMapper;
+using Abp.Dependency;
 using Abp.Modules;
 using Abp.Reflection.Extensions;
 using Castle.MicroKernel.Registration;
+using PMS.Application.Hubs;
 using PMS.Authorization;
 using PMS.DataExporting.Csv;
 
@@ -29,6 +31,7 @@ namespace PMS
             var thisAssembly = typeof(PMSApplicationModule).GetAssembly();
 
             IocManager.RegisterAssemblyByConvention(thisAssembly);
+            IocManager.Register(typeof(IPosHubBroadcaster), typeof(PosHubBroadcaster), DependencyLifeStyle.Singleton);
 
             Configuration.Modules.AbpAutoMapper().Configurators.Add(
                 // Scan the assembly for classes which inherit from AutoMapper.Profile
