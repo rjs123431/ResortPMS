@@ -36,6 +36,8 @@ public class PMSAuthorizationProvider : AuthorizationProvider
 
         //administration.CreateChildPermission(PermissionNames.Pages_Admin_Settings, L("Settings"), multiTenancySides: MultiTenancySides.Tenant);
 
+        webApp.CreateChildPermission(PermissionNames.Pages_Reports, L("Reports"), multiTenancySides: MultiTenancySides.Tenant);
+
         // ── PMS HOTEL WORKFLOW ─────────────────────────────────────────────────
 
         // SETUP — Guests

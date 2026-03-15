@@ -40,4 +40,5 @@ export const PermissionNames = {
   Pages_POS_RoomCharge: 'Pages.POS.RoomCharge',
   Pages_POS_Outlets: 'Pages.POS.Outlets',
   Pages_POS_Menu: 'Pages.POS.Menu',
+  Pages_Reports: 'Pages.Reports',
 } as const;

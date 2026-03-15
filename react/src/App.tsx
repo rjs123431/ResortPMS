@@ -64,6 +64,7 @@ const PosPromosPage = lazy(() => import('@pages/Resort/POS/PosPromosPage').then(
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 const AuditTrailPage = lazy(() => import('@pages/Administration/AuditTrailPage').then((m) => ({ default: m.AuditTrailPage })));
+const ReportsPage = lazy(() => import('@pages/Reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -586,6 +587,16 @@ const App: React.FC = () => {
                         <PageTitle title="Audit Trail">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_AuditTrail]}>
                             <AuditTrailPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/reports"
+                      element={
+                        <PageTitle title="Reports &amp; Analytics">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reports]}>
+                            <ReportsPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
