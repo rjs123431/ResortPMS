@@ -5,7 +5,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '@contexts/AuthContext';
 import { ThemeProvider } from '@contexts/ThemeContext';
 import { SignalRProvider } from '@contexts/SignalRContext';
-import { POSSessionProvider } from '@contexts/POSSessionContext';
 import { ProtectedRoute } from '@components/auth/ProtectedRoute';
 import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { LogoSpinner } from '@components/common/LogoSpinner';
@@ -50,17 +49,6 @@ const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/Check
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
-const POSOrderPage = lazy(() => import('@pages/Resort/POS/POSOrderPage').then((m) => ({ default: m.POSOrderPage })));
-const POSPage = lazy(() => import('@pages/Resort/POS/POSPage').then((m) => ({ default: m.POSPage })));
-const POSTablesPage = lazy(() => import('@pages/Resort/POS/POSTablesPage').then((m) => ({ default: m.POSTablesPage })));
-const POSOrdersPage = lazy(() => import('@pages/Resort/POS/POSOrdersPage').then((m) => ({ default: m.POSOrdersPage })));
-const POSReportsPage = lazy(() => import('@pages/Resort/POS/POSReportsPage').then((m) => ({ default: m.POSReportsPage })));
-const POSSettingsPage = lazy(() => import('@pages/Resort/POS/POSSettingsPage').then((m) => ({ default: m.POSSettingsPage })));
-const PosOutletsPage = lazy(() => import('@pages/Resort/POS/PosOutletsPage').then((m) => ({ default: m.PosOutletsPage })));
-const PosMenuPage = lazy(() => import('@pages/Resort/POS/PosMenuPage').then((m) => ({ default: m.PosMenuPage })));
-const PosOptionGroupsPage = lazy(() => import('@pages/Resort/POS/PosOptionGroupsPage').then((m) => ({ default: m.PosOptionGroupsPage })));
-const PosPriceAdjustmentsPage = lazy(() => import('@pages/Resort/POS/PosPriceAdjustmentsPage').then((m) => ({ default: m.PosPriceAdjustmentsPage })));
-const PosPromosPage = lazy(() => import('@pages/Resort/POS/PosPromosPage').then((m) => ({ default: m.PosPromosPage })));
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 const AuditTrailPage = lazy(() => import('@pages/Administration/AuditTrailPage').then((m) => ({ default: m.AuditTrailPage })));
@@ -102,7 +90,6 @@ const App: React.FC = () => {
           <BrowserRouter>
             <AuthProvider>
               <SignalRProvider>
-                <POSSessionProvider>
                 <Suspense fallback={<LoadingScreen />}>
                   <Routes>
                     <Route
@@ -452,116 +439,6 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
-                      path="/pos"
-                      element={
-                        <PageTitle title="POS">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <POSPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/order/:orderId"
-                      element={
-                        <PageTitle title="POS">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <POSOrderPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/tables"
-                      element={
-                        <PageTitle title="POS Tables">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <POSTablesPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/orders"
-                      element={
-                        <PageTitle title="POS Orders">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <POSOrdersPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/reports"
-                      element={
-                        <PageTitle title="POS Reports">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <POSReportsPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/settings"
-                      element={
-                        <PageTitle title="POS Settings">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <POSSettingsPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/outlets"
-                      element={
-                        <PageTitle title="POS Outlets">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <PosOutletsPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/menu"
-                      element={
-                        <PageTitle title="POS Menu">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <PosMenuPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/option-groups"
-                      element={
-                        <PageTitle title="POS Option Groups">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <PosOptionGroupsPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/price-adjustments"
-                      element={
-                        <PageTitle title="POS Price Adjustments">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <PosPriceAdjustmentsPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/pos/promos"
-                      element={
-                        <PageTitle title="POS Promos">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_POS]}>
-                            <PosPromosPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
                       path="/administration/users"
                       element={
                         <PageTitle title="Users">
@@ -615,7 +492,6 @@ const App: React.FC = () => {
                   </Routes>
                 </Suspense>
                 <NotificationToast />
-                </POSSessionProvider>
               </SignalRProvider>
             </AuthProvider>
           </BrowserRouter>

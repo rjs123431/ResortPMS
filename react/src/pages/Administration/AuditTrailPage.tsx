@@ -27,8 +27,9 @@ function formatDate(iso: string) {
       dateStyle: 'short',
       timeStyle: 'medium',
     });
+  } catch {
+    return iso;
   }
-  return iso;
 }
 
 function MutationLogTab() {

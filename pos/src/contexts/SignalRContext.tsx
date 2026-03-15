@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { signalRService } from '@/services/signalr.service';
 import { useAuth } from './AuthContext';
 import { UserNotification } from '@/types/notification.types';
+import { invalidatePosQueries } from '@/lib/posQueries';
+
 interface SignalRContextType {
   isConnected: boolean;
   notifications: UserNotification[];
@@ -40,6 +42,13 @@ export const SignalRProvider = ({ children }: { children: ReactNode }) => {
         void queryClient.invalidateQueries({ queryKey: ['resort-guest-request-completion-context'] });
       });
 
+      signalRService.onPosOrderChanged((payload) => {
+        invalidatePosQueries(queryClient, 'orderDetailListAndTables', {
+          orderId: payload?.orderId,
+          outletId: payload?.outletId,
+        });
+      });
+
       signalRService.startConnection().catch((error) => {
         console.error('Failed to start SignalR connection:', error);
         setIsConnected(false);
@@ -54,6 +63,7 @@ export const SignalRProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       signalRService.offNotificationReceived();
       signalRService.offHousekeepingTaskStatusChanged();
+      signalRService.offPosOrderChanged();
       signalRService.offConnectionStateChange();
     };
   }, [isAuthenticated, queryClient]);
