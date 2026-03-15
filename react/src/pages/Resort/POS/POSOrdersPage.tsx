@@ -7,6 +7,7 @@ import { POSRoomChargeModal } from './POSRoomChargeModal';
 import { CancelOrderDialog } from './CancelOrderDialog';
 import { posService } from '@services/pos.service';
 import { resortService } from '@services/resort.service';
+import { invalidatePosQueries, posKeys } from '@/lib/posQueries';
 import {
   PosOrderType,
   PosOrderStatus,
@@ -60,7 +61,7 @@ export const POSOrdersPage = () => {
   const [selectedStayForCharge, setSelectedStayForCharge] = useState<StayListDto | null>(null);
 
   const { data: orders = [], isFetching } = useQuery({
-    queryKey: ['pos-orders-list', statusFilter],
+    queryKey: posKeys.ordersList(statusFilter),
     queryFn: () =>
       posService.getPosOrders({
         status: statusFilter === '' ? undefined : statusFilter,
@@ -80,8 +81,7 @@ export const POSOrdersPage = () => {
       posService.cancelPosOrder(input),
     onSuccess: () => {
       setCancelOrder(null);
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-list'] });
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables');
       setMessage({ type: 'success', text: 'Order cancelled.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to cancel order.' }),
@@ -93,8 +93,7 @@ export const POSOrdersPage = () => {
     onSuccess: () => {
       setChargeOrder(null);
       setSelectedStayForCharge(null);
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-list'] });
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables');
       setMessage({ type: 'success', text: 'Charged to room.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to charge to room.' }),

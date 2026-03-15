@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { invalidatePosQueries, posKeys } from '@/lib/posQueries';
 import { POSLayout } from '@components/layout/POSLayout';
 import { POSSidebar } from '@components/layout/POSSidebar';
 import { usePOSSession } from '@contexts/POSSessionContext';
@@ -37,17 +38,17 @@ export const POSPage = () => {
   const [openForm, setOpenForm] = useState({ outletId: '', terminalId: 'POS-01', openingCash: 0 });
 
   const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ['pos-my-sessions'],
+    queryKey: posKeys.mySessions(),
     queryFn: () => posService.getMyPosSessions(),
   });
 
   const { data: currentOpenSessionId = null } = useQuery({
-    queryKey: ['pos-my-current-open-session'],
+    queryKey: posKeys.currentSession(),
     queryFn: () => posService.getMyCurrentOpenSessionId(),
   });
 
   const { data: outlets = [] } = useQuery({
-    queryKey: ['pos-outlets'],
+    queryKey: posKeys.outlets(),
     queryFn: () => posService.getPosOutlets(),
     enabled: showOpenDialog,
   });
@@ -58,8 +59,7 @@ export const POSPage = () => {
     onSuccess: () => {
       setShowOpenDialog(false);
       setOpenForm({ outletId: '', terminalId: 'POS-01', openingCash: 0 });
-      void queryClient.invalidateQueries({ queryKey: ['pos-my-sessions'] });
-      void queryClient.invalidateQueries({ queryKey: ['pos-my-current-open-session'] });
+      invalidatePosQueries(queryClient, 'session');
     },
   });
 

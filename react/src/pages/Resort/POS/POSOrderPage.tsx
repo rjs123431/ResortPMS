@@ -5,6 +5,7 @@ import { POSLayout } from '@components/layout/POSLayout';
 import { POSSidebar } from '@components/layout/POSSidebar';
 import { posService } from '@services/pos.service';
 import { resortService } from '@services/resort.service';
+import { invalidatePosQueries, posKeys } from '@/lib/posQueries';
 import {
   PosOrderType,
   PosOrderStatus,
@@ -121,12 +122,12 @@ export const POSOrderPage = () => {
   const [seniorCitizenDiscount, setSeniorCitizenDiscount] = useState<string>('');
 
   const { data: outlets = [] } = useQuery({
-    queryKey: ['pos-outlets'],
+    queryKey: posKeys.outlets(),
     queryFn: () => posService.getPosOutlets(),
   });
 
   const { data: mySessions = [] } = useQuery({
-    queryKey: ['pos-my-sessions'],
+    queryKey: posKeys.mySessions(),
     queryFn: () => posService.getMyPosSessions(),
     enabled: currentSession === null,
   });
@@ -174,13 +175,13 @@ export const POSOrderPage = () => {
   }, [orderIdParam, outlets, currentSession]);
 
   const { data: newOrderTables = [] } = useQuery({
-    queryKey: ['pos-tables', newOrderOutletId],
+    queryKey: posKeys.tables(newOrderOutletId),
     queryFn: () => posService.getPosTables(newOrderOutletId),
     enabled: isNewOrderMode && !!newOrderOutletId,
   });
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['pos-menu-categories'],
+    queryKey: posKeys.menuCategories(),
     queryFn: () => posService.getMenuCategories(),
   });
 
@@ -192,7 +193,7 @@ export const POSOrderPage = () => {
   }, [categories, selectedCategoryId]);
 
   const { data: menuItems = [] } = useQuery({
-    queryKey: ['pos-menu-items'],
+    queryKey: posKeys.menuItems(),
     queryFn: () => posService.getMenuItems(),
   });
 
@@ -202,7 +203,7 @@ export const POSOrderPage = () => {
   });
 
   const { data: currentOrder, refetch: refetchOrder } = useQuery({
-    queryKey: ['pos-order', effectiveOrderId],
+    queryKey: posKeys.order(effectiveOrderId!),
     queryFn: () => posService.getPosOrder(effectiveOrderId!),
     enabled: !!effectiveOrderId && effectiveOrderId !== 'new',
   });
@@ -216,7 +217,7 @@ export const POSOrderPage = () => {
   }, [currentOrder?.id, currentOrder?.discountPercent, currentOrder?.discountAmount, currentOrder?.seniorCitizenDiscount]);
 
   const { data: retrieveOrders = [], isFetching: isFetchingRetrieveOrders } = useQuery({
-    queryKey: ['pos-orders-retrieve', retrieveStatusFilter],
+    queryKey: posKeys.ordersRetrieve(retrieveStatusFilter),
     queryFn: () =>
       posService.getPosOrders({
         status: retrieveStatusFilter === '' ? undefined : retrieveStatusFilter,
@@ -243,7 +244,7 @@ export const POSOrderPage = () => {
       posService.sendOrderToKitchen(orderId, orderItemIds),
     onSuccess: () => {
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
       setMessage({ type: 'success', text: 'Order sent to kitchen.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to send.' }),
@@ -261,7 +262,7 @@ export const POSOrderPage = () => {
       setPaymentAmount('');
       setPaymentMethodId('');
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
       setMessage({ type: 'success', text: 'Payment added.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to add payment.' }),
@@ -275,7 +276,7 @@ export const POSOrderPage = () => {
       setSelectedStayForCharge(null);
       setCurrentOrderId(null);
       navigate('/pos');
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables');
       setMessage({ type: 'success', text: 'Charged to room.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to charge to room.' }),
@@ -283,11 +284,14 @@ export const POSOrderPage = () => {
 
   const closeOrderMutation = useMutation({
     mutationFn: (orderId: string) => posService.closePosOrder(orderId),
-    onSuccess: () => {
+    onSuccess: (_, orderId) => {
       setCurrentOrderId(null);
       navigate('/pos');
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables', {
+        orderId,
+        outletId: currentOrder?.outletId,
+      });
       setMessage({ type: 'success', text: 'Order closed.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to close order.' }),
@@ -302,7 +306,7 @@ export const POSOrderPage = () => {
       }),
     onSuccess: () => {
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-order', effectiveOrderId] });
+      invalidatePosQueries(queryClient, 'orderDetail', { orderId: effectiveOrderId ?? undefined });
       setMessage({ type: 'success', text: 'Discounts updated.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to update discounts.' }),
@@ -314,7 +318,7 @@ export const POSOrderPage = () => {
     onSuccess: () => {
       setRemoveItemDialog(null);
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to cancel item.' }),
   });
@@ -328,7 +332,7 @@ export const POSOrderPage = () => {
       }),
     onSuccess: () => {
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to update item.' }),
   });
@@ -448,8 +452,10 @@ export const POSOrderPage = () => {
     onSuccess: (_, { orderId }) => {
       setPendingOrderItems([]);
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-order', orderId] });
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables', {
+        orderId,
+        outletId: currentOrder?.outletId,
+      });
       setMessage({ type: 'success', text: 'Items saved to order.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to save items.' }),
@@ -475,8 +481,10 @@ export const POSOrderPage = () => {
     onSuccess: () => {
       setPendingOrderItems([]);
       void refetchOrder();
-      void queryClient.invalidateQueries({ queryKey: ['pos-order', effectiveOrderId] });
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables', {
+        orderId: effectiveOrderId ?? undefined,
+        outletId: currentOrder?.outletId,
+      });
       setMessage({ type: 'success', text: 'Items saved and sent to kitchen.' });
     },
     onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to save or send to kitchen.' }),
@@ -544,8 +552,7 @@ export const POSOrderPage = () => {
       setLocalCart(null);
       setCurrentOrderId(orderId);
       navigate(`/pos/order/${orderId}`);
-      void queryClient.invalidateQueries({ queryKey: ['pos-order', orderId] });
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables', { orderId, outletId: localCart?.outletId });
       setMessage({ type: 'success', text: 'Order saved.' });
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save order.' });
@@ -558,8 +565,7 @@ export const POSOrderPage = () => {
       setPendingOrderItems([]);
       setShowRetrieveModal(false);
       navigate(`/pos/order/${order.id}`);
-      void queryClient.invalidateQueries({ queryKey: ['pos-order', order.id] });
-      void queryClient.invalidateQueries({ queryKey: ['pos-orders-retrieve'] });
+      invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: order.id });
       setMessage({ type: 'success', text: `Order #${order.orderNumber} loaded.` });
     },
     [navigate, queryClient]

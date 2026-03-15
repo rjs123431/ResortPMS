@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { POSLayout } from '@components/layout/POSLayout';
 import { POSSidebar } from '@components/layout/POSSidebar';
 import { posService } from '@services/pos.service';
+import { invalidatePosQueries, posKeys } from '@/lib/posQueries';
 import {
   type PosTableWithOrderDto,
   PosOrderType,
@@ -34,13 +35,8 @@ export const POSTablesPage = () => {
   const navigate = useNavigate();
   const [outletId, setOutletId] = useState<string>('');
   const { data: outlets = [] } = useQuery({
-    queryKey: ['pos-outlets'],
+    queryKey: posKeys.outlets(),
     queryFn: () => posService.getPosOutlets(),
-  });
-  const { data: tables = [], isLoading } = useQuery({
-    queryKey: ['pos-tables-with-orders', outletId],
-    queryFn: () => posService.getTablesWithOrders(outletId),
-    enabled: !!outletId,
   });
   const createOrderMutation = useMutation({
     mutationFn: (input: { outletId: string; tableId: string }) =>
@@ -51,8 +47,8 @@ export const POSTablesPage = () => {
         guestName: '',
         notes: '',
       }),
-    onSuccess: (orderId) => {
-      queryClient.invalidateQueries({ queryKey: ['pos-tables-with-orders', outletId] });
+    onSuccess: (orderId, variables) => {
+      invalidatePosQueries(queryClient, 'orderDetailListAndTables', { outletId: variables.outletId });
       navigate(`/pos/order/${orderId}`);
     },
   });
@@ -61,6 +57,14 @@ export const POSTablesPage = () => {
     if (!outletId && outlets.length > 0) setOutletId(outlets[0].id);
   }, [outlets, outletId]);
   const effectiveOutletId = outletId || outlets[0]?.id || '';
+
+  const { data: tables = [], isLoading } = useQuery({
+    queryKey: posKeys.tablesWithOrders(effectiveOutletId),
+    queryFn: () => posService.getTablesWithOrders(effectiveOutletId),
+    enabled: !!effectiveOutletId,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
 
   return (
     <POSLayout sidebar={<POSSidebar />}>
