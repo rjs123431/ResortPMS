@@ -26,6 +26,8 @@ import { AddItemWithOptionsDialog } from './AddItemWithOptionsDialog';
 import { POSPaymentModal } from './POSPaymentModal';
 import { POSRoomChargeModal } from './POSRoomChargeModal';
 import { POSRetrieveOrderModal } from './POSRetrieveOrderModal';
+import { CloseSessionDialog } from './CloseSessionDialog';
+import { notifySuccess, notifyError } from '@/utils/alerts';
 import { PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const formatMoney = (value: number) =>
@@ -97,8 +99,8 @@ export const POSOrderPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRoomChargeModal, setShowRoomChargeModal] = useState(false);
   const [showRetrieveModal, setShowRetrieveModal] = useState(false);
+  const [showCloseSessionDialog, setShowCloseSessionDialog] = useState(false);
   const [retrieveStatusFilter, setRetrieveStatusFilter] = useState<number | ''>('');
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [newOrderOutletId, setNewOrderOutletId] = useState<string>('');
   const [newOrderOrderType, setNewOrderOrderType] = useState<number>(PosOrderType.DineIn);
   const [newOrderTableId, setNewOrderTableId] = useState<string>('');
@@ -143,12 +145,9 @@ export const POSOrderPage = () => {
       initedNewOrderRef.current = false;
       return;
     }
-    if (outlets.length === 0 || initedNewOrderRef.current) return;
+    if (!currentSession || outlets.length === 0 || initedNewOrderRef.current) return;
     initedNewOrderRef.current = true;
-    const outletId =
-      (currentSession && outlets.some((o: PosOutletListDto) => o.id === currentSession.outletId))
-        ? currentSession.outletId
-        : outlets[0]?.id ?? '';
+    const outletId = currentSession.outletId;
     const outlet = outlets.find((o: PosOutletListDto) => o.id === outletId);
     setNewOrderOutletId(outletId);
     setNewOrderOrderType(PosOrderType.DineIn);
@@ -179,6 +178,18 @@ export const POSOrderPage = () => {
     queryFn: () => posService.getPosTables(newOrderOutletId),
     enabled: isNewOrderMode && !!newOrderOutletId,
   });
+
+  const { data: sessionTerminals = [] } = useQuery({
+    queryKey: posKeys.settingsTerminals(currentSession?.outletId ?? ''),
+    queryFn: () => posService.getSettingsTerminals(currentSession!.outletId),
+    enabled: isNewOrderMode && !!currentSession?.outletId,
+  });
+
+  useEffect(() => {
+    if (isNewOrderMode && !currentSession) {
+      navigate('/', { replace: true });
+    }
+  }, [isNewOrderMode, currentSession, navigate]);
 
   const { data: categories = [] } = useQuery({
     queryKey: posKeys.menuCategories(),
@@ -245,9 +256,9 @@ export const POSOrderPage = () => {
     onSuccess: () => {
       void refetchOrder();
       invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
-      setMessage({ type: 'success', text: 'Order sent to kitchen.' });
+      notifySuccess('Order sent to kitchen.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to send.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to send.'),
   });
 
   const addPaymentMutation = useMutation({
@@ -263,9 +274,9 @@ export const POSOrderPage = () => {
       setPaymentMethodId('');
       void refetchOrder();
       invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
-      setMessage({ type: 'success', text: 'Payment added.' });
+      notifySuccess('Payment added.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to add payment.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to add payment.'),
   });
 
   const chargeToRoomMutation = useMutation({
@@ -277,9 +288,9 @@ export const POSOrderPage = () => {
       setCurrentOrderId(null);
       navigate('/');
       invalidatePosQueries(queryClient, 'orderDetailListAndTables');
-      setMessage({ type: 'success', text: 'Charged to room.' });
+      notifySuccess('Charged to room.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to charge to room.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to charge to room.'),
   });
 
   const closeOrderMutation = useMutation({
@@ -292,9 +303,9 @@ export const POSOrderPage = () => {
         orderId,
         outletId: currentOrder?.outletId,
       });
-      setMessage({ type: 'success', text: 'Order closed.' });
+      notifySuccess('Order closed.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to close order.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to close order.'),
   });
 
   const updateOrderDiscountsMutation = useMutation({
@@ -307,9 +318,9 @@ export const POSOrderPage = () => {
     onSuccess: () => {
       void refetchOrder();
       invalidatePosQueries(queryClient, 'orderDetail', { orderId: effectiveOrderId ?? undefined });
-      setMessage({ type: 'success', text: 'Discounts updated.' });
+      notifySuccess('Discounts updated.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to update discounts.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to update discounts.'),
   });
 
   const cancelItemMutation = useMutation({
@@ -320,7 +331,7 @@ export const POSOrderPage = () => {
       void refetchOrder();
       invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to cancel item.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to cancel item.'),
   });
 
   const updateOrderItemMutation = useMutation({
@@ -334,7 +345,7 @@ export const POSOrderPage = () => {
       void refetchOrder();
       invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: effectiveOrderId ?? undefined });
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to update item.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to update item.'),
   });
 
   const isCartMode = localCart !== null && (effectiveOrderId === null || effectiveOrderId === 'new');
@@ -456,9 +467,9 @@ export const POSOrderPage = () => {
         orderId,
         outletId: currentOrder?.outletId,
       });
-      setMessage({ type: 'success', text: 'Items saved to order.' });
+      notifySuccess('Items saved to order.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to save items.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to save items.'),
   });
 
   const handleSavePendingOrderItems = useCallback(() => {
@@ -485,9 +496,9 @@ export const POSOrderPage = () => {
         orderId: effectiveOrderId ?? undefined,
         outletId: currentOrder?.outletId,
       });
-      setMessage({ type: 'success', text: 'Items saved and sent to kitchen.' });
+      notifySuccess('Items saved and sent to kitchen.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to save or send to kitchen.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to save or send to kitchen.'),
   });
 
   const handleSaveAndSendToKitchen = useCallback(() => {
@@ -530,12 +541,18 @@ export const POSOrderPage = () => {
 
   const handleSaveOrder = useCallback(async () => {
     if (!localCart || localCart.items.length === 0) {
-      setMessage({ type: 'error', text: 'Add at least one item before saving.' });
+      notifyError('Add at least one item before saving.');
       return;
     }
+    if (!currentSession) {
+      notifyError('No active session. Open a session first.');
+      return;
+    }
+    const posTerminalId = sessionTerminals.find((t) => t.code === currentSession.terminalId)?.id;
     try {
       const orderId = await posService.createPosOrderWithItems({
-        outletId: localCart.outletId,
+        outletId: currentSession.outletId,
+        posTerminalId: posTerminalId ?? undefined,
         tableId: localCart.tableId || undefined,
         orderType: localCart.orderType,
         guestName: localCart.guestName || undefined,
@@ -553,11 +570,11 @@ export const POSOrderPage = () => {
       setCurrentOrderId(orderId);
       navigate(`/order/${orderId}`);
       invalidatePosQueries(queryClient, 'orderDetailListAndTables', { orderId, outletId: localCart?.outletId });
-      setMessage({ type: 'success', text: 'Order saved.' });
+      notifySuccess('Order saved.');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save order.' });
+      notifyError(err instanceof Error ? err.message : 'Failed to save order.');
     }
-  }, [localCart, navigate, queryClient]);
+  }, [localCart, currentSession, sessionTerminals, navigate, queryClient]);
 
   const handleLoadOrder = useCallback(
     (order: PosOrderListDto) => {
@@ -566,7 +583,7 @@ export const POSOrderPage = () => {
       setShowRetrieveModal(false);
       navigate(`/order/${order.id}`);
       invalidatePosQueries(queryClient, 'orderDetailAndList', { orderId: order.id });
-      setMessage({ type: 'success', text: `Order #${order.orderNumber} loaded.` });
+      notifySuccess(`Order #${order.orderNumber} loaded.`);
     },
     [navigate, queryClient]
   );
@@ -628,52 +645,50 @@ export const POSOrderPage = () => {
     <POSLayout
       sidebar={<POSSidebar />}
       headerCenter={
-        <>
-          {currentSession ? (
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <span className="font-medium text-gray-800 dark:text-gray-200">Session:</span>
-              <span>
-                {currentSession.outletName ?? currentSession.outletId} — {currentSession.terminalName ?? currentSession.terminalId}
-              </span>
-              <span className="text-gray-400 dark:text-gray-500">
-                (opened {currentSession.openedAt ? new Date(currentSession.openedAt).toLocaleString() : ''})
-              </span>
-            </div>
-          ) : null}
-          {message ? (
-            <div
-              className={`rounded px-4 py-2 text-sm ${
-                message.type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-              }`}
-            >
-              {message.text}
-            </div>
-          ) : null}
-        </>
+        currentSession ? (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-medium text-gray-800 dark:text-gray-200">Session:</span>
+            <span>
+              {currentSession.outletName ?? currentSession.outletId} — {currentSession.terminalName ?? currentSession.terminalId}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500">
+              (opened {currentSession.openedAt ? new Date(currentSession.openedAt).toLocaleString() : ''})
+            </span>
+          </div>
+        ) : null
       }
       headerRight={
-        <>
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={handleOpenNewOrder}
-            className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            className="min-h-[44px] min-w-[44px] rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-[0.98] sm:px-4"
           >
             New Order
           </button>
           <button
             type="button"
             onClick={() => setShowRetrieveModal(true)}
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="min-h-[44px] min-w-[44px] rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-[0.98] dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 sm:px-4"
           >
             Retrieve Order
           </button>
-        </>
+          {currentSession && (
+            <button
+              type="button"
+              onClick={() => setShowCloseSessionDialog(true)}
+              className="min-h-[44px] rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 active:scale-[0.98] dark:border-amber-600 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30 sm:px-4"
+            >
+              Close session
+            </button>
+          )}
+        </div>
       }
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="grid min-h-[calc(100vh-6rem)] flex-1 grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr] lg:items-stretch">
+        <div className="grid min-h-[calc(100dvh-6rem)] flex-1 grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr] lg:items-stretch">
           {/* Menu - 2/3 */}
-          <section className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+          <section className="flex min-h-0 flex-col rounded-lg bg-white p-3 shadow dark:bg-gray-800 sm:p-4">
             <div className="mb-3 flex flex-wrap gap-2">
               {categories
                 .slice()
@@ -683,7 +698,7 @@ export const POSOrderPage = () => {
                     key={cat.id}
                     type="button"
                     onClick={() => setSelectedCategoryId(cat.id)}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    className={`min-h-[44px] rounded-lg px-3 py-2.5 text-sm font-medium transition active:scale-[0.98] ${
                       selectedCategoryId === cat.id
                         ? 'bg-indigo-600 text-white dark:bg-indigo-500'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
@@ -693,21 +708,21 @@ export const POSOrderPage = () => {
                   </button>
                 ))}
             </div>
-            <div className="max-h-[70vh] overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto md:max-h-[70vh]">
               {(() => {
                 const effectiveCategoryId = selectedCategoryId ?? categories[0]?.id ?? null;
                 const items = effectiveCategoryId
                   ? menuItems.filter((m: MenuItemListDto) => m.categoryId === effectiveCategoryId)
                   : [];
                 return (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4">
                     {items.map((item: MenuItemListDto) => (
                       <button
                         key={item.id}
                         type="button"
                         disabled={!canAddItems || !item.isAvailable}
                         onClick={() => openAddItemDialog(item)}
-                        className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-center transition hover:bg-indigo-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-indigo-900/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-[80px] flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-center transition hover:bg-indigo-50 active:scale-[0.98] dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-indigo-900/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <div className="flex aspect-square w-full shrink-0 items-center justify-center bg-gray-200 dark:bg-gray-600">
                           <svg className="h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
@@ -737,7 +752,7 @@ export const POSOrderPage = () => {
           </section>
 
           {/* Right: Current Order / Cart - 1/3 */}
-          <section className="flex min-h-0 flex-col rounded-lg bg-white p-4 shadow dark:bg-gray-800 lg:min-h-full">
+          <section className="flex min-h-0 flex-col rounded-lg bg-white p-3 shadow dark:bg-gray-800 sm:p-4 lg:min-h-full">
             <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {isCartMode ? 'New Order (unsaved)' : currentOrder ? `Order #${currentOrder.orderNumber}` : 'No Current Order'}
@@ -765,28 +780,6 @@ export const POSOrderPage = () => {
             </div>
             {isNewOrderMode && localCart && (
               <div className="mb-3 shrink-0 space-y-3 rounded border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-600 dark:bg-gray-700/50">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Outlet</label>
-                  <select
-                    value={newOrderOutletId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      const outlet = outlets.find((o: PosOutletListDto) => o.id === id);
-                      setNewOrderOutletId(id);
-                      setNewOrderTableId('');
-                      setLocalCart((prev) =>
-                        prev ? { ...prev, outletId: id, outletName: outlet?.name ?? '', tableId: '', tableNumber: '' } : null
-                      );
-                    }}
-                    className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  >
-                    {outlets.map((o: PosOutletListDto) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <div>
                   <span className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Order type</span>
                   <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -1141,7 +1134,7 @@ export const POSOrderPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setLocalCart(null); setMessage(null); }}
+                    onClick={() => setLocalCart(null)}
                     className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
                     Cancel
@@ -1156,7 +1149,7 @@ export const POSOrderPage = () => {
                     <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Discounts</p>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-500 dark:text-gray-400">Discount %</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400">Disc. %</label>
                         <input
                           type="number"
                           min="0"
@@ -1168,7 +1161,7 @@ export const POSOrderPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 dark:text-gray-400">Discount ₱</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400">Disc. ₱</label>
                         <input
                           type="number"
                           min="0"
@@ -1179,7 +1172,7 @@ export const POSOrderPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 dark:text-gray-400">SC Discount ₱</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400">SC Disc. ₱</label>
                         <input
                           type="number"
                           min="0"
@@ -1426,6 +1419,18 @@ export const POSOrderPage = () => {
         }}
         isPending={cancelItemMutation.isPending}
       />
+
+      {currentSession && (
+        <CloseSessionDialog
+          open={showCloseSessionDialog}
+          onClose={() => setShowCloseSessionDialog(false)}
+          session={currentSession}
+          onSuccess={() => {
+            setCurrentSession(null);
+            navigate('/');
+          }}
+        />
+      )}
     </POSLayout>
   );
 };

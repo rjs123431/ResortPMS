@@ -19,6 +19,7 @@ import type {
   VerifyStayForRoomChargeDto,
   PosSessionListDto,
   OpenPosSessionInput,
+  ClosePosSessionInput,
   PosOutletDto,
   CreatePosOutletDto,
   UpdatePosOutletDto,
@@ -198,6 +199,14 @@ export const posService = {
       input
     );
     return response.data.result;
+  },
+
+  /** Close the current POS session (end of shift). */
+  closePosSession: async (input: ClosePosSessionInput): Promise<void> => {
+    await api.post('/api/services/app/PosSession/CloseSession', {
+      sessionId: input.sessionId ?? null,
+      closingCash: input.closingCash,
+    });
   },
 
   // ── POS Settings (outlets, tables, menu CRUD) ─────────────────────────────

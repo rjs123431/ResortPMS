@@ -343,6 +343,7 @@ public class PosOrderAppService(
         var order = new PosOrder
         {
             OutletId = input.OutletId,
+            PosTerminalId = input.PosTerminalId,
             TableId = input.TableId,
             StayId = null,
             GuestName = input.GuestName ?? "",
@@ -373,6 +374,7 @@ public class PosOrderAppService(
         var order = new PosOrder
         {
             OutletId = input.OutletId,
+            PosTerminalId = input.PosTerminalId,
             TableId = input.TableId,
             StayId = null,
             GuestName = input.GuestName ?? "",

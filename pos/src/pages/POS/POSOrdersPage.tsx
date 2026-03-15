@@ -14,6 +14,7 @@ import {
   type PosOrderListDto,
 } from '@/types/pos.types';
 import type { StayListDto } from '@/types/resort.types';
+import { notifySuccess, notifyError } from '@/utils/alerts';
 
 const formatMoney = (value: number) =>
   value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -55,7 +56,6 @@ export const POSOrdersPage = () => {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<number | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [chargeOrder, setChargeOrder] = useState<PosOrderListDto | null>(null);
   const [cancelOrder, setCancelOrder] = useState<PosOrderListDto | null>(null);
   const [selectedStayForCharge, setSelectedStayForCharge] = useState<StayListDto | null>(null);
@@ -82,9 +82,9 @@ export const POSOrdersPage = () => {
     onSuccess: () => {
       setCancelOrder(null);
       invalidatePosQueries(queryClient, 'orderDetailListAndTables');
-      setMessage({ type: 'success', text: 'Order cancelled.' });
+      notifySuccess('Order cancelled.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to cancel order.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to cancel order.'),
   });
 
   const chargeToRoomMutation = useMutation({
@@ -94,9 +94,9 @@ export const POSOrdersPage = () => {
       setChargeOrder(null);
       setSelectedStayForCharge(null);
       invalidatePosQueries(queryClient, 'orderDetailListAndTables');
-      setMessage({ type: 'success', text: 'Charged to room.' });
+      notifySuccess('Charged to room.');
     },
-    onError: (err: Error) => setMessage({ type: 'error', text: err.message || 'Failed to charge to room.' }),
+    onError: (err: Error) => notifyError(err.message || 'Failed to charge to room.'),
   });
 
   const filteredOrders = useMemo(() => {
@@ -123,22 +123,7 @@ export const POSOrdersPage = () => {
   };
 
   return (
-    <POSLayout
-      sidebar={<POSSidebar />}
-      headerCenter={
-        message ? (
-          <div
-            className={`rounded px-4 py-2 text-sm ${
-              message.type === 'success'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-            }`}
-          >
-            {message.text}
-          </div>
-        ) : undefined
-      }
-    >
+    <POSLayout sidebar={<POSSidebar />}>
       <div className="rounded-lg bg-white shadow dark:bg-gray-800">
         <div className="border-b border-gray-200 p-4 dark:border-gray-700">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Orders</h1>

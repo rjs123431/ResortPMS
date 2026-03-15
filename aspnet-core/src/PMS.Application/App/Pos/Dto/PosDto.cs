@@ -240,6 +240,7 @@ public class OrderPaymentDto : EntityDto<Guid>
 public class CreatePosOrderDto
 {
     [Required] public Guid OutletId { get; set; }
+    public Guid? PosTerminalId { get; set; }
     public Guid? TableId { get; set; }
     [Required] public int OrderType { get; set; } // PosOrderType
     [StringLength(256)] public string GuestName { get; set; } = string.Empty;
@@ -260,6 +261,7 @@ public class CreatePosOrderLineDto
 public class CreatePosOrderWithItemsDto
 {
     [Required] public Guid OutletId { get; set; }
+    public Guid? PosTerminalId { get; set; }
     public Guid? TableId { get; set; }
     [Required] public int OrderType { get; set; } // PosOrderType
     [StringLength(256)] public string GuestName { get; set; } = string.Empty;
@@ -358,6 +360,13 @@ public class OpenPosSessionInput
     [Required] public Guid OutletId { get; set; }
     [Required] [StringLength(32)] public string TerminalId { get; set; } = string.Empty;
     [Range(0, double.MaxValue)] public decimal OpeningCash { get; set; }
+}
+
+public class ClosePosSessionInput
+{
+    /// <summary>Session to close. If null, closes the current user's open session.</summary>
+    public Guid? SessionId { get; set; }
+    [Range(0, double.MaxValue)] public decimal ClosingCash { get; set; }
 }
 
 // ── POS Settings (CRUD for outlets, tables, menu) ───────────────────────────

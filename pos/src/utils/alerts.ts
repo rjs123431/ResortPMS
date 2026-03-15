@@ -15,7 +15,7 @@ type ConfirmOptions = Omit<
 
 const toast = Swal.mixin({
   toast: true,
-  position: 'bottom-end',
+  position: 'top',
   showConfirmButton: false,
   timer: 3000,
   timerProgressBar: true,

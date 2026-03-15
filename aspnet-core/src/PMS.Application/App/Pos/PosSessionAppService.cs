@@ -20,6 +20,7 @@ public interface IPosSessionAppService : IApplicationService
     Task<List<PosSessionListDto>> GetMySessionsAsync();
     Task<Guid?> GetMyCurrentOpenSessionIdAsync();
     Task<Guid> OpenSessionAsync(OpenPosSessionInput input);
+    Task CloseSessionAsync(ClosePosSessionInput input);
 }
 
 [AbpAuthorize(PermissionNames.Pages_POS)]
@@ -97,5 +98,39 @@ public class PosSessionAppService(
         };
         await sessionRepository.InsertAsync(session);
         return session.Id;
+    }
+
+    public async Task CloseSessionAsync(ClosePosSessionInput input)
+    {
+        var userId = AbpSession.UserId;
+        if (!userId.HasValue)
+            throw new UserFriendlyException("You must be logged in to close a POS session.");
+
+        PosSession session;
+        if (input.SessionId.HasValue)
+        {
+            session = await sessionRepository.FirstOrDefaultAsync(s => s.Id == input.SessionId.Value);
+            if (session == null)
+                throw new UserFriendlyException("Session not found.");
+            if (session.UserId != userId.Value)
+                throw new UserFriendlyException("You can only close your own session.");
+        }
+        else
+        {
+            session = await sessionRepository.FirstOrDefaultAsync(s =>
+                s.UserId == userId.Value && s.Status == PosSessionStatus.Open);
+            if (session == null)
+                throw new UserFriendlyException("You have no open POS session to close.");
+        }
+
+        if (session.Status != PosSessionStatus.Open)
+            throw new UserFriendlyException("This session is already closed.");
+
+        session.ClosingCash = input.ClosingCash;
+        session.ExpectedCash = input.ClosingCash; // optional: could be computed from orders later
+        session.CashDifference = 0;
+        session.ClosedAt = Clock.Now;
+        session.Status = PosSessionStatus.Closed;
+        await sessionRepository.UpdateAsync(session);
     }
 }

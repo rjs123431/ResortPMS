@@ -259,6 +259,7 @@ export interface UpdateOrderDiscountsDto {
 
 export interface CreatePosOrderDto {
   outletId: string;
+  posTerminalId?: string;
   tableId?: string;
   orderType: number;
   guestName?: string;
@@ -276,6 +277,7 @@ export interface CreatePosOrderLineDto {
 
 export interface CreatePosOrderWithItemsDto {
   outletId: string;
+  posTerminalId?: string;
   tableId?: string;
   orderType: number;
   guestName?: string;
@@ -352,6 +354,11 @@ export interface OpenPosSessionInput {
   outletId: string;
   terminalId: string;
   openingCash: number;
+}
+
+export interface ClosePosSessionInput {
+  sessionId?: string;
+  closingCash: number;
 }
 
 // ── POS Settings (CRUD) ─────────────────────────────────────────────────────

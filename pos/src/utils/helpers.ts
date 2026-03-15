@@ -7,9 +7,9 @@ export const formatDate = (date: string | Date): string => {
   });
 };
 
-export const formatCurrency = (amount: number, currency = 'USD'): string => {
-  const code = currency && String(currency).trim() ? currency : 'USD';
-  return new Intl.NumberFormat('en-US', {
+export const formatCurrency = (amount: number, currency = 'PHP'): string => {
+  const code = currency && String(currency).trim() ? currency : 'PHP';
+  return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: code,
   }).format(amount);

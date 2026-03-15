@@ -211,7 +211,7 @@ function TableCard({
           )}
           <Link
             to={`/order/${table.activeOrder.orderId}`}
-            className="mt-2 flex w-full justify-center rounded-lg bg-primary-600 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-primary-600 py-2.5 text-sm font-medium text-white hover:bg-primary-700 active:scale-[0.98]"
           >
             View order
           </Link>
@@ -224,7 +224,7 @@ function TableCard({
             type="button"
             onClick={onNewOrder}
             disabled={isCreating}
-            className="w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-600 transition hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-400 dark:hover:border-primary-500 dark:hover:bg-primary-900/20 dark:hover:text-primary-300"
+            className="min-h-[44px] w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-600 transition hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 active:scale-[0.98] disabled:opacity-50 dark:border-gray-600 dark:text-gray-400 dark:hover:border-primary-500 dark:hover:bg-primary-900/20 dark:hover:text-primary-300"
           >
             {isCreating ? 'Creating…' : 'New order'}
           </button>
