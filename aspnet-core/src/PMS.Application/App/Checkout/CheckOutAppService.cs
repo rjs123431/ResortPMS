@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using PMS.App.Checkout.Dto;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
+using PMS.Auditing;
 using PMS.Authorization;
 using System;
 using System.Linq;
@@ -41,7 +42,9 @@ public class CheckOutAppService(
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IRepository<Staff, Guid> staffRepository,
     IDocumentNumberService documentNumberService,
-    IRoomDailyInventoryService roomDailyInventoryService
+    IRoomDailyInventoryService roomDailyInventoryService,
+    IMutationAuditService mutationAuditService,
+    IFinancialAuditService financialAuditService
 ) : PMSAppServiceBase, ICheckOutAppService
 {
     public async Task<CheckOutStatementDto> GetStatementAsync(Guid stayId)
@@ -171,7 +174,7 @@ public class CheckOutAppService(
         {
             if (payment.Amount <= 0) throw new UserFriendlyException(L("PaymentAmountMustBePositive"));
 
-            await folioPaymentRepository.InsertAsync(new FolioPayment
+            var folioPayment = new FolioPayment
             {
                 FolioId = folio.Id,
                 PaymentMethodId = payment.PaymentMethodId,
@@ -179,7 +182,10 @@ public class CheckOutAppService(
                 PaidDate = Clock.Now,
                 ReferenceNo = payment.ReferenceNo ?? string.Empty,
                 Notes = "Checkout settlement"
-            });
+            };
+            var paymentId = await folioPaymentRepository.InsertAndGetIdAsync(folioPayment);
+            await financialAuditService.RecordPaymentCreatedAsync(
+                paymentId, folio.Id, folio.StayId, folioPayment.Amount, "Checkout settlement", null);
             totalNewPayments += payment.Amount;
         }
 
@@ -200,6 +206,15 @@ public class CheckOutAppService(
         folio.Balance = balanceDue;
         folio.Status = FolioStatus.Settled;
         await folioRepository.UpdateAsync(folio);
+
+        await mutationAuditService.RecordAsync(
+            "Folio",
+            folio.Id.ToString(),
+            "Updated",
+            null,
+            new { Status = (int)FolioStatus.Settled },
+            "ProcessCheckOutAsync",
+            "Folio closed at checkout");
 
         // Create checkout record
         var checkOutRecordId = await checkOutRecordRepository.InsertAndGetIdAsync(new CheckOutRecord
@@ -302,7 +317,7 @@ public class CheckOutAppService(
             throw new UserFriendlyException(L("FolioAlreadyClosedOrWrittenOff"));
 
         // Post write-off as adjusting transaction
-        await folioTransactionRepository.InsertAsync(new FolioTransaction
+        var writeOffTx = new FolioTransaction
         {
             FolioId = folio.Id,
             TransactionDate = Clock.Now,
@@ -313,11 +328,23 @@ public class CheckOutAppService(
             Amount = folio.Balance,
             NetAmount = folio.Balance,
             IsVoided = false
-        });
+        };
+        var writeOffTxId = await folioTransactionRepository.InsertAndGetIdAsync(writeOffTx);
+        await financialAuditService.RecordTransactionCreatedAsync(
+            writeOffTxId, folio.Id, folio.StayId, folio.Balance, $"Write-off: {input.Reason}", new { input.Reason });
 
         folio.Balance = 0;
         folio.Status = FolioStatus.WrittenOff;
         await folioRepository.UpdateAsync(folio);
+
+        await mutationAuditService.RecordAsync(
+            "Folio",
+            folio.Id.ToString(),
+            "Updated",
+            null,
+            new { Status = (int)FolioStatus.WrittenOff },
+            "WriteOffBalanceAsync",
+            "Folio written off");
 
         Logger.Warn($"Folio {folio.FolioNo} written off. Reason: {input.Reason}.");
     }

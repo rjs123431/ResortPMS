@@ -72,6 +72,30 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "FinancialAuditLog",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: true),
+                    EventType = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: false),
+                    ReferenceType = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: false),
+                    ReferenceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FolioId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    Currency = table.Column<string>(type: "varchar(8)", unicode: false, maxLength: 8, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: false),
+                    DetailsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserId = table.Column<long>(type: "bigint", nullable: true),
+                    ExecutionTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CorrelationId = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FinancialAuditLog", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Guest",
                 columns: table => new
                 {
@@ -131,6 +155,30 @@ namespace PMS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_MenuItemPromo", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MutationAuditLog",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<int>(type: "int", nullable: true),
+                    EntityType = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    EntityId = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: false),
+                    Action = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    OldValueJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NewValueJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserId = table.Column<long>(type: "bigint", nullable: true),
+                    ImpersonatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    ExecutionTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CorrelationId = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    MethodName = table.Column<string>(type: "varchar(256)", unicode: false, maxLength: 256, nullable: true),
+                    Extra = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MutationAuditLog", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -2965,6 +3013,21 @@ namespace PMS.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_FinancialAuditLog_ReferenceType_ReferenceId",
+                table: "FinancialAuditLog",
+                columns: new[] { "ReferenceType", "ReferenceId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FinancialAuditLog_TenantId_ExecutionTime",
+                table: "FinancialAuditLog",
+                columns: new[] { "TenantId", "ExecutionTime" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FinancialAuditLog_TenantId_FolioId",
+                table: "FinancialAuditLog",
+                columns: new[] { "TenantId", "FolioId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Folio_FolioNo",
                 table: "Folio",
                 column: "FolioNo",
@@ -3123,6 +3186,16 @@ namespace PMS.Migrations
                 name: "IX_MenuModifier_MenuItemId",
                 table: "MenuModifier",
                 column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MutationAuditLog_TenantId_EntityType_EntityId",
+                table: "MutationAuditLog",
+                columns: new[] { "TenantId", "EntityType", "EntityId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MutationAuditLog_TenantId_ExecutionTime",
+                table: "MutationAuditLog",
+                columns: new[] { "TenantId", "ExecutionTime" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_OptionGroup_DisplayOrder",
@@ -3999,6 +4072,9 @@ namespace PMS.Migrations
                 name: "DocumentSequence");
 
             migrationBuilder.DropTable(
+                name: "FinancialAuditLog");
+
+            migrationBuilder.DropTable(
                 name: "FolioAdjustment");
 
             migrationBuilder.DropTable(
@@ -4030,6 +4106,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "MenuModifier");
+
+            migrationBuilder.DropTable(
+                name: "MutationAuditLog");
 
             migrationBuilder.DropTable(
                 name: "PosOrderItemOption");

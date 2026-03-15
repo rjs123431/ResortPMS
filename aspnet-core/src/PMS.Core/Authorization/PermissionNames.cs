@@ -27,6 +27,7 @@ namespace PMS.Authorization
         public const string Pages_Admin_Users_Edit = "Pages.Admin.Users.Edit";
 
         public const string Pages_Admin_Settings = "Pages.Admin.Settings";
+        public const string Pages_Admin_AuditTrail = "Pages.Admin.AuditTrail";
 
         // ── PMS HOTEL WORKFLOW ──────────────────────────────────────────────────────
 

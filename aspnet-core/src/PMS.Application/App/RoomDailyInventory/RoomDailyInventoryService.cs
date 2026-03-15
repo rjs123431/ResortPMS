@@ -96,6 +96,28 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> TryReserveInventoryAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid reservationId)
+    {
+        var start = arrivalDate.Date;
+        var end = departureDate.Date;
+        if (start >= end) return false;
+
+        var expectedNights = (int)(end - start).TotalDays;
+        await EnsureInventoryForDateRangeAsync([roomId], start, end);
+
+        var ctx = await _dbContextProvider.GetDbContextAsync();
+        var vacant = (int)RoomDailyInventoryStatus.Vacant;
+        var reserved = (int)RoomDailyInventoryStatus.Reserved;
+
+        var rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
+            @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = {1}, StayId = NULL
+              WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4} AND Status = {5}",
+            reserved, reservationId, roomId, start, end, vacant);
+
+        return rowsAffected == expectedNights;
+    }
+
     public async Task SetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId)
     {
         var start = arrivalDate.Date;

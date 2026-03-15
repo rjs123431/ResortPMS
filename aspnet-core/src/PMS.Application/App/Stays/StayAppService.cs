@@ -9,6 +9,7 @@ using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Stays.Dto;
 using PMS.Application.App.RoomDailyInventory;
+using PMS.Auditing;
 using PMS.Authorization;
 using System;
 using System.Collections.Generic;
@@ -51,7 +52,8 @@ public class StayAppService(
     IRepository<ChargeType, Guid> chargeTypeRepository,
     IRepository<HousekeepingTask, Guid> housekeepingTaskRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
-    IRoomDailyInventoryService roomDailyInventoryService
+    IRoomDailyInventoryService roomDailyInventoryService,
+    IFinancialAuditService financialAuditService
 ) : PMSAppServiceBase, IStayAppService
 {
     private static List<StayRoomDto> MapStayRooms(IEnumerable<StayRoom> rooms)
@@ -373,6 +375,9 @@ public class StayAppService(
         UpdateFolioStatus(folio);
         await folioRepository.UpdateAsync(folio);
 
+        await financialAuditService.RecordTransactionCreatedAsync(
+            txId, folio.Id, folio.StayId, netAmount, transaction.Description ?? string.Empty, null);
+
         return txId;
     }
 
@@ -399,6 +404,9 @@ public class StayAppService(
         folio.Balance -= input.Amount;
         UpdateFolioStatus(folio);
         await folioRepository.UpdateAsync(folio);
+
+        await financialAuditService.RecordPaymentCreatedAsync(
+            payId, folio.Id, folio.StayId, payment.Amount, payment.Notes ?? string.Empty, null);
 
         return payId;
     }
@@ -458,6 +466,9 @@ public class StayAppService(
         folio.Balance += input.Amount;
         UpdateFolioStatus(folio);
         await folioRepository.UpdateAsync(folio);
+
+        await financialAuditService.RecordTransactionCreatedAsync(
+            txId, folio.Id, folio.StayId, input.Amount, transaction.Description ?? string.Empty, new { RefundType = refundType.ToString() });
 
         return txId;
     }

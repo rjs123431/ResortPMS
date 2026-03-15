@@ -10,6 +10,7 @@ using PMS.App.CheckIn.Dto;
 using PMS.Application.App.PropertyTimes;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
+using PMS.Auditing;
 using PMS.Authorization;
 using System;
 using System.Collections.Generic;
@@ -42,7 +43,9 @@ public class CheckInAppService(
     IRepository<RoomType, Guid> roomTypeRepository,
     IDocumentNumberService documentNumberService,
     IPropertyTimesProvider propertyTimesProvider,
-    IRoomDailyInventoryService roomDailyInventoryService
+    IRoomDailyInventoryService roomDailyInventoryService,
+    IMutationAuditService mutationAuditService,
+    IFinancialAuditService financialAuditService
 ) : PMSAppServiceBase, ICheckInAppService
 {
     [AbpAuthorize(PermissionNames.Pages_CheckIn_FromReservation)]
@@ -508,6 +511,15 @@ public class CheckInAppService(
         };
 
         var stayId = await stayRepository.InsertAndGetIdAsync(stay);
+        stay.Id = stayId;
+
+        await mutationAuditService.RecordAsync(
+            "Stay",
+            stayId.ToString(),
+            "Created",
+            null,
+            new { stay.StayNo, stay.GuestName, stay.CheckInDateTime, stay.ExpectedCheckOutDateTime, stay.Status },
+            "CreateStayAsync");
 
         if (guest != null)
         {
@@ -538,7 +550,6 @@ public class CheckInAppService(
 
         // Room occupancy is tracked via RoomDailyInventory (SetInHouseAsync); no Room.OperationalStatus.
 
-        stay.Id = stayId;
         return stay;
     }
 
@@ -557,6 +568,14 @@ public class CheckInAppService(
         var folioId = await folioRepository.InsertAndGetIdAsync(folio);
         folio.Id = folioId;
 
+        await mutationAuditService.RecordAsync(
+            "Folio",
+            folio.Id.ToString(),
+            "Created",
+            null,
+            new { folio.FolioNo, folio.StayId, folio.Status },
+            "CreateFolioAsync");
+
         // Ensure principal row exists before inserting FolioPayment dependents.
         await CurrentUnitOfWork.SaveChangesAsync();
 
@@ -568,7 +587,7 @@ public class CheckInAppService(
         // Post reservation deposits as folio payments
         foreach (var deposit in reservation.Deposits.Where(d => !d.IsDeleted))
         {
-            await folioPaymentRepository.InsertAsync(new FolioPayment
+            var payment = new FolioPayment
             {
                 FolioId = folio.Id,
                 PaymentMethodId = deposit.PaymentMethodId,
@@ -576,7 +595,11 @@ public class CheckInAppService(
                 PaidDate = Clock.Now,
                 ReferenceNo = deposit.ReferenceNo,
                 Notes = $"Transfer from reservation deposit {reservation.ReservationNo}"
-            });
+            };
+            var paymentId = await folioPaymentRepository.InsertAndGetIdAsync(payment);
+            await financialAuditService.RecordPaymentCreatedAsync(
+                paymentId, folio.Id, folio.StayId, payment.Amount,
+                $"Transfer from reservation deposit {reservation.ReservationNo}", null);
         }
 
         folio.Balance -= depositTotal;
@@ -599,14 +622,15 @@ public class CheckInAppService(
             if (netAmount <= 0)
                 continue;
 
-            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            var roomDesc = $"Room charge - {roomLine.RoomTypeName}" +
+                           (string.IsNullOrWhiteSpace(roomLine.RoomNumber) ? string.Empty : $" ({roomLine.RoomNumber})");
+            var txId = await folioTransactionRepository.InsertAndGetIdAsync(new FolioTransaction
             {
                 FolioId = folio.Id,
                 TransactionDate = Clock.Now,
                 TransactionType = FolioTransactionType.Charge,
                 ChargeTypeId = roomChargeTypeId,
-                Description = $"Room charge - {roomLine.RoomTypeName}" +
-                              (string.IsNullOrWhiteSpace(roomLine.RoomNumber) ? string.Empty : $" ({roomLine.RoomNumber})"),
+                Description = roomDesc,
                 Quantity = 1,
                 UnitPrice = netAmount,
                 Amount = roomLine.Amount > 0 ? roomLine.Amount : netAmount,
@@ -614,6 +638,7 @@ public class CheckInAppService(
                 NetAmount = netAmount,
                 IsVoided = false
             });
+            await financialAuditService.RecordTransactionCreatedAsync(txId, folio.Id, folio.StayId, netAmount, roomDesc, null);
 
             totalPostedCharges += netAmount;
         }
@@ -628,14 +653,15 @@ public class CheckInAppService(
                 continue;
 
             var extraBedName = extraBedLine.ExtraBedType?.Name ?? "Extra bed";
+            var extraDesc = $"Extra bed charge - {extraBedName}";
 
-            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            var extraTxId = await folioTransactionRepository.InsertAndGetIdAsync(new FolioTransaction
             {
                 FolioId = folio.Id,
                 TransactionDate = Clock.Now,
                 TransactionType = FolioTransactionType.Charge,
                 ChargeTypeId = extraBedChargeTypeId,
-                Description = $"Extra bed charge - {extraBedName}",
+                Description = extraDesc,
                 Quantity = extraBedLine.Quantity > 0 ? extraBedLine.Quantity : 1,
                 UnitPrice = extraBedLine.RatePerNight,
                 Amount = extraBedLine.Amount > 0 ? extraBedLine.Amount : netAmount,
@@ -643,6 +669,7 @@ public class CheckInAppService(
                 NetAmount = netAmount,
                 IsVoided = false
             });
+            await financialAuditService.RecordTransactionCreatedAsync(extraTxId, folio.Id, folio.StayId, netAmount, extraDesc, null);
 
             totalPostedCharges += netAmount;
         }
@@ -674,7 +701,7 @@ public class CheckInAppService(
             if (netAmount <= 0)
                 continue;
 
-            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            var walkInExtraTxId = await folioTransactionRepository.InsertAndGetIdAsync(new FolioTransaction
             {
                 FolioId = folio.Id,
                 TransactionDate = Clock.Now,
@@ -688,6 +715,7 @@ public class CheckInAppService(
                 NetAmount = netAmount,
                 IsVoided = false
             });
+            await financialAuditService.RecordTransactionCreatedAsync(walkInExtraTxId, folio.Id, folio.StayId, netAmount, "Extra bed charge", null);
 
             totalPostedCharges += netAmount;
         }
@@ -766,13 +794,14 @@ public class CheckInAppService(
             if (netAmount <= 0)
                 continue;
 
-            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            var walkInRoomDesc = $"Room charge - {roomType.Name} ({room.RoomNumber})";
+            var walkInRoomTxId = await folioTransactionRepository.InsertAndGetIdAsync(new FolioTransaction
             {
                 FolioId = folio.Id,
                 TransactionDate = Clock.Now,
                 TransactionType = FolioTransactionType.Charge,
                 ChargeTypeId = roomChargeTypeId,
-                Description = $"Room charge - {roomType.Name} ({room.RoomNumber})",
+                Description = walkInRoomDesc,
                 Quantity = 1,
                 UnitPrice = unitPrice,
                 Amount = amount,
@@ -780,6 +809,7 @@ public class CheckInAppService(
                 NetAmount = netAmount,
                 IsVoided = false
             });
+            await financialAuditService.RecordTransactionCreatedAsync(walkInRoomTxId, folio.Id, folio.StayId, netAmount, walkInRoomDesc, null);
 
             totalPostedCharges += netAmount;
         }
@@ -827,7 +857,7 @@ public class CheckInAppService(
     {
         var effectivePaidDate = paidDate ?? Clock.Now;
 
-        await folioPaymentRepository.InsertAsync(new FolioPayment
+        var payment = new FolioPayment
         {
             FolioId = folio.Id,
             PaymentMethodId = paymentMethodId,
@@ -835,11 +865,13 @@ public class CheckInAppService(
             PaidDate = effectivePaidDate,
             ReferenceNo = reference ?? string.Empty,
             Notes = notes ?? string.Empty
-        });
+        };
+        var advancePaymentId = await folioPaymentRepository.InsertAndGetIdAsync(payment);
+        await financialAuditService.RecordPaymentCreatedAsync(advancePaymentId, folio.Id, folio.StayId, amount, notes ?? string.Empty, null);
 
         if (transactionType.HasValue)
         {
-            await folioTransactionRepository.InsertAsync(new FolioTransaction
+            var advTxId = await folioTransactionRepository.InsertAndGetIdAsync(new FolioTransaction
             {
                 FolioId = folio.Id,
                 TransactionDate = effectivePaidDate,
@@ -851,6 +883,7 @@ public class CheckInAppService(
                 NetAmount = amount,
                 IsVoided = false
             });
+            await financialAuditService.RecordTransactionCreatedAsync(advTxId, folio.Id, folio.StayId, amount, notes ?? string.Empty, null);
         }
 
         folio.Balance -= amount;

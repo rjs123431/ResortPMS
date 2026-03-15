@@ -1,5 +1,6 @@
 using Abp.Zero.EntityFrameworkCore;
 using PMS.App;
+using PMS.Auditing;
 using PMS.Authorization.Roles;
 using PMS.Authorization.Users;
 using PMS.EntityFrameworkCore.Configurations;
@@ -17,6 +18,10 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public virtual DbSet<GlobalNotification> GlobalNotifications { get; set; }
 
     public DbSet<DocumentSequence> DocumentSequences { get; set; }
+
+    // Full mutation + financial audit (separate from ABP default audit)
+    public DbSet<MutationAuditLog> MutationAuditLogs { get; set; }
+    public DbSet<FinancialAuditLog> FinancialAuditLogs { get; set; }
 
     // Guest Management
     public DbSet<Guest> Guests { get; set; }
@@ -195,6 +200,10 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new PosOrderItemOptionConfiguration());
         modelBuilder.ApplyConfiguration(new PosOrderPaymentConfiguration());
         modelBuilder.ApplyConfiguration(new PosSessionConfiguration());
+
+        // Audit (mutation + financial trail)
+        modelBuilder.ApplyConfiguration(new MutationAuditLogConfiguration());
+        modelBuilder.ApplyConfiguration(new FinancialAuditLogConfiguration());
     }
 
     public PMSDbContext(DbContextOptions<PMSDbContext> options)

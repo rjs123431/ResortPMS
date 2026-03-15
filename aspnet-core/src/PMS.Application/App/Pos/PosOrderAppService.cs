@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using PMS.App;
 using PMS.App.Pos.Dto;
 using PMS.Application.App.Services;
+using PMS.Auditing;
 using PMS.Authorization;
 using System;
 using System.Collections.Generic;
@@ -60,7 +61,8 @@ public class PosOrderAppService(
     IRepository<Stay, Guid> stayRepository,
     IRepository<ChargeType, Guid> chargeTypeRepository,
     IDocumentNumberService documentNumberService,
-    IMenuItemPriceManager menuItemPriceManager
+    IMenuItemPriceManager menuItemPriceManager,
+    IFinancialAuditService financialAuditService
 ) : PMSAppServiceBase, IPosOrderAppService
 {
     private const string RestaurantChargeTypeName = "Restaurant";
@@ -716,7 +718,9 @@ public class PosOrderAppService(
             DiscountAmount = 0,
             NetAmount = total
         };
-        await folioTransactionRepository.InsertAsync(transaction);
+        var roomChargeTxId = await folioTransactionRepository.InsertAndGetIdAsync(transaction);
+        await financialAuditService.RecordTransactionCreatedAsync(
+            roomChargeTxId, folio.Id, folio.StayId, total, description, new { OrderId = order.Id, OrderNumber = order.OrderNumber });
         folio.Balance += total;
         UpdateFolioStatus(folio);
         await folioRepository.UpdateAsync(folio);

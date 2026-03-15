@@ -24,6 +24,13 @@ public interface IRoomDailyInventoryService
     Task SetReservedAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid reservationId);
 
     /// <summary>
+    /// Atomically reserves inventory only where status is Vacant. Returns true if exactly (end - start) days
+    /// were updated; false if another request reserved some nights (prevents overbooking). Must run inside
+    /// the caller's unit of work so that a subsequent reservation insert failure rolls back this update.
+    /// </summary>
+    Task<bool> TryReserveInventoryAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid reservationId);
+
+    /// <summary>
     /// Sets daily inventory to InHouse for the room and date range.
     /// </summary>
     Task SetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId);

@@ -11,6 +11,7 @@ using PMS.App.Reservations.Dto;
 using PMS.Application.App.PropertyTimes;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
+using PMS.Auditing;
 using PMS.Authorization;
 using System;
 using System.Linq;
@@ -48,7 +49,8 @@ public class ReservationAppService(
     IRepository<RoomType, Guid> roomTypeRepository,
     IDocumentNumberService documentNumberService,
     IPropertyTimesProvider propertyTimesProvider,
-    IRoomDailyInventoryService roomDailyInventoryService
+    IRoomDailyInventoryService roomDailyInventoryService,
+    IMutationAuditService mutationAuditService
 ) : PMSAppServiceBase, IReservationAppService
 {
     [AbpAuthorize(PermissionNames.Pages_Reservations_Create)]
@@ -80,13 +82,27 @@ public class ReservationAppService(
         var departureDate = input.DepartureDate.TimeOfDay == TimeSpan.Zero ? input.DepartureDate.Date.Add(checkOutTime) : input.DepartureDate;
 
         var reservationNo = await documentNumberService.GenerateNextDocumentNumberAsync("RESERVATION", "RES-");
+        var reservationId = Guid.NewGuid();
+
         var firstName = guest != null && string.IsNullOrWhiteSpace(input.FirstName) ? guest.FirstName : (input.FirstName ?? string.Empty).Trim();
         var lastName = guest != null && string.IsNullOrWhiteSpace(input.LastName) ? guest.LastName : (input.LastName ?? string.Empty).Trim();
         var phone = guest != null && string.IsNullOrWhiteSpace(input.Phone) ? (guest.Phone ?? string.Empty) : (input.Phone ?? string.Empty).Trim();
         var email = guest != null && string.IsNullOrWhiteSpace(input.Email) ? (guest.Email ?? string.Empty) : (input.Email ?? string.Empty).Trim();
 
+        // Atomically reserve inventory for each assigned room to prevent double booking under concurrency
+        foreach (var room in input.Rooms)
+        {
+            if (!room.RoomId.HasValue) continue;
+            var roomId = room.RoomId.Value;
+            await roomDailyInventoryService.Ensure365DaysFromTodayAsync([roomId]);
+            var reserved = await roomDailyInventoryService.TryReserveInventoryAsync(roomId, arrivalDate, departureDate, reservationId);
+            if (!reserved)
+                throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+        }
+
         var reservation = new Reservation
         {
+            Id = reservationId,
             ReservationNo = reservationNo,
             GuestId = input.GuestId,
             GuestName = $"{firstName} {lastName}".Trim(),
@@ -119,34 +135,10 @@ public class ReservationAppService(
             string roomNumber = string.Empty;
             if (room.RoomId.HasValue)
             {
-                var roomId = room.RoomId.Value;
-                var roomEntity = await roomRepository.FirstOrDefaultAsync(roomId);
+                var roomEntity = await roomRepository.FirstOrDefaultAsync(room.RoomId.Value);
                 if (roomEntity != null)
                     roomNumber = roomEntity.RoomNumber ?? string.Empty;
-
-                await roomDailyInventoryService.Ensure365DaysFromTodayAsync([roomId]);
-                var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(roomId, arrivalDate, departureDate);
-                if (!available)
-                    throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
-
-                var hasReservationConflict = await reservationRoomRepository.GetAll()
-                    .Include(rr => rr.Reservation)
-                    .Where(rr => rr.RoomId == roomId)
-                    .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
-                    .FirstOrDefaultAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
-                                   rr.Reservation.Status == ReservationStatus.Confirmed);
-
-                if (hasReservationConflict != null)
-                    throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
-
-                var hasStayConflict = await stayRoomRepository.GetAll()
-                    .Include(sr => sr.Stay)
-                    .Where(sr => sr.RoomId == roomId && !sr.ReleasedAt.HasValue)
-                    .Where(sr => sr.ArrivalDate < departureDate.Date && sr.DepartureDate > arrivalDate.Date)
-                    .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
-
-                if (hasStayConflict)
-                    throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+                // Inventory already reserved atomically via TryReserveInventoryAsync above
             }
 
             var numberOfNights = reservation.Nights;
@@ -224,16 +216,21 @@ public class ReservationAppService(
             }
         }
 
-        var id = await reservationRepository.InsertAndGetIdAsync(reservation);
+        await reservationRepository.InsertAsync(reservation);
 
-        foreach (var rr in reservation.Rooms.Where(rr => rr.RoomId.HasValue))
-            await roomDailyInventoryService.SetReservedAsync(rr.RoomId!.Value, arrivalDate, departureDate, id);
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Created",
+            null,
+            new { reservation.ReservationNo, reservation.GuestName, reservation.ArrivalDate, reservation.DepartureDate, reservation.Status },
+            nameof(CreateAsync));
 
         if (guest != null)
             Logger.Info($"Reservation {reservationNo} created for guest {guest.GuestCode}.");
         else
             Logger.Info($"Reservation {reservationNo} created (walk-in: {reservation.GuestName}).");
-        return id;
+        return reservation.Id;
     }
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
@@ -262,6 +259,14 @@ public class ReservationAppService(
         reservation.SpecialRequests = input.SpecialRequests ?? string.Empty;
 
         await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            null,
+            new { reservation.ReservationNo, reservation.ArrivalDate, reservation.DepartureDate, reservation.Status },
+            nameof(UpdateAsync));
     }
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Cancel)]
@@ -276,6 +281,7 @@ public class ReservationAppService(
         if (reservation.Status == ReservationStatus.Cancelled)
             throw new UserFriendlyException(L("ReservationAlreadyCancelled"));
 
+        var previousStatus = reservation.Status;
         reservation.Status = ReservationStatus.Cancelled;
         reservation.Notes = string.IsNullOrWhiteSpace(input.Reason)
             ? reservation.Notes
@@ -291,6 +297,15 @@ public class ReservationAppService(
         foreach (var rr in rooms)
             await roomDailyInventoryService.SetVacantAsync(rr.RoomId!.Value, arr, dep);
 
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            new { PreviousStatus = (int)previousStatus },
+            new { Status = (int)ReservationStatus.Cancelled, Reason = input.Reason },
+            nameof(CancelAsync),
+            "Cancelled");
+
         Logger.Info($"Reservation {reservation.ReservationNo} cancelled.");
     }
 
@@ -305,6 +320,14 @@ public class ReservationAppService(
 
         reservation.Status = ReservationStatus.Confirmed;
         await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            null,
+            new { Status = (int)ReservationStatus.Confirmed },
+            nameof(ConfirmAsync));
     }
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
@@ -318,6 +341,14 @@ public class ReservationAppService(
 
         reservation.Status = ReservationStatus.NoShow;
         await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            null,
+            new { Status = (int)ReservationStatus.NoShow },
+            nameof(MarkNoShowAsync));
     }
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Deposit)]
@@ -508,7 +539,13 @@ public class ReservationAppService(
         if (hasStayConflict)
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
+        await roomDailyInventoryService.Ensure365DaysFromTodayAsync([room.Id]);
+        var reserved = await roomDailyInventoryService.TryReserveInventoryAsync(room.Id, arrivalDate, departureDate, reservation.Id);
+        if (!reserved)
+            throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+
         var oldRoomId = reservationRoom.RoomId;
+        var oldRoomNumber = reservationRoom.RoomNumber;
         if (oldRoomId.HasValue)
             await roomDailyInventoryService.SetVacantAsync(oldRoomId.Value, arrivalDate, departureDate);
 
@@ -516,7 +553,14 @@ public class ReservationAppService(
         reservationRoom.RoomNumber = room.RoomNumber;
         await reservationRoomRepository.UpdateAsync(reservationRoom);
 
-        await roomDailyInventoryService.SetReservedAsync(room.Id, arrivalDate, departureDate, reservation.Id);
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            new { RoomId = oldRoomId, RoomNumber = oldRoomNumber },
+            new { RoomId = room.Id, RoomNumber = room.RoomNumber },
+            nameof(AssignRoomAsync),
+            "AssignRoom");
     }
 
     public async Task<ReservationDto> GetAsync(Guid id)
