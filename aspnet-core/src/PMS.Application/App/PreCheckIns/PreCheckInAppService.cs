@@ -24,7 +24,6 @@ public interface IPreCheckInAppService : IApplicationService
     Task<Guid> CreateAsync(CreatePreCheckInDto input);
     Task<Guid> UpdateAsync(UpdatePreCheckInDto input);
     Task CancelAsync(Guid id);
-    Task<PreCheckInDto> GetByNumberAsync(string preCheckInNo);
     Task<PreCheckInDto> GetByReservationIdAsync(Guid reservationId);
     Task MarkReadyAsync(Guid id);
     Task MarkCheckedInAsync(Guid id);
@@ -47,19 +46,6 @@ public class PreCheckInAppService(
             .Include(p => p.Rooms)
             .Include(p => p.ExtraBeds)
             .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (preCheckIn == null)
-            throw new UserFriendlyException(L("PreCheckInNotFound"));
-
-        return ObjectMapper.Map<PreCheckInDto>(preCheckIn);
-    }
-
-    public async Task<PreCheckInDto> GetByNumberAsync(string preCheckInNo)
-    {
-        var preCheckIn = await preCheckInRepository.GetAll()
-            .Include(p => p.Rooms)
-            .Include(p => p.ExtraBeds)
-            .FirstOrDefaultAsync(p => p.PreCheckInNo == preCheckInNo);
 
         if (preCheckIn == null)
             throw new UserFriendlyException(L("PreCheckInNotFound"));

@@ -20,7 +20,6 @@ public interface IGuestAppService : IApplicationService
     Task<PagedResultDto<GuestListDto>> GetAllAsync(GetGuestsInput input);
     Task<Guid> CreateAsync(CreateGuestDto input);
     Task UpdateAsync(GuestDto input);
-    Task<GuestDto> GetByCodeAsync(string guestCode);
 }
 
 [AbpAuthorize(PermissionNames.Pages_Guests)]
@@ -49,18 +48,6 @@ public class GuestAppService(
         var guest = await guestRepository.GetAll()
             .Include(g => g.Identifications)
             .FirstOrDefaultAsync(g => g.Id == id);
-
-        if (guest == null)
-            throw new UserFriendlyException(L("GuestNotFound"));
-
-        return ObjectMapper.Map<GuestDto>(guest);
-    }
-
-    public async Task<GuestDto> GetByCodeAsync(string guestCode)
-    {
-        var guest = await guestRepository.GetAll()
-            .Include(g => g.Identifications)
-            .FirstOrDefaultAsync(g => g.GuestCode == guestCode.Trim().ToUpper());
 
         if (guest == null)
             throw new UserFriendlyException(L("GuestNotFound"));

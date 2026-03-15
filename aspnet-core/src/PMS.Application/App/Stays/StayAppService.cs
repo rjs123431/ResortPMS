@@ -20,23 +20,19 @@ namespace PMS.App.Stays;
 
 public interface IStayAppService : IApplicationService
 {
-    Task<StayDto> GetAsync(Guid stayId);
     Task<List<GuestRequestListDto>> GetGuestRequestsAsync(Guid stayId);
     Task<GuestRequestCompletionContextDto> GetGuestRequestCompletionContextAsync(Guid guestRequestId);
     Task<PagedResultDto<StayListDto>> GetInHouseAsync(GetStaysInput input);
     Task<PagedResultDto<StayListDto>> GetInHouseWithRoomsAsync(GetInHouseWithRoomsInput input);
     Task TransferRoomAsync(TransferRoomDto input);
-    Task ExtendStayAsync(ExtendStayDto input);
     Task<Guid> AddGuestRequestAsync(AddGuestRequestDto input);
     Task CompleteGuestRequestAsync(CompleteGuestRequestDto input);
-    Task<Guid> AddIncidentAsync(AddIncidentDto input);
 
     // Folio operations
     Task<FolioDto> GetFolioAsync(Guid stayId);
     Task<Guid> PostChargeAsync(PostChargeDto input);
     Task<Guid> PostPaymentAsync(PostPaymentDto input);
     Task<Guid> PostRefundAsync(PostRefundDto input);
-    Task VoidTransactionAsync(VoidTransactionDto input);
     Task<FolioSummaryDto> GetFolioSummaryAsync(Guid stayId);
     Task SettleFolioAsync(SettleFolioDto input);
 }
@@ -51,9 +47,7 @@ public class StayAppService(
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<StayRoomTransfer, Guid> stayRoomTransferRepository,
     IRepository<RoomChangeRequest, Guid> roomChangeRequestRepository,
-    IRepository<StayExtension, Guid> stayExtensionRepository,
     IRepository<GuestRequest, Guid> guestRequestRepository,
-    IRepository<Incident, Guid> incidentRepository,
     IRepository<ChargeType, Guid> chargeTypeRepository,
     IRepository<HousekeepingTask, Guid> housekeepingTaskRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
@@ -78,26 +72,6 @@ public class StayAppService(
                 DepartureDate = sr.DepartureDate,
             })
             .ToList();
-    }
-
-    public async Task<StayDto> GetAsync(Guid stayId)
-    {
-        var stay = await stayRepository.GetAll()
-            .Include(s => s.Guest)
-            .Include(s => s.AssignedRoom).ThenInclude(r => r.RoomType)
-            .Include(s => s.Guests).ThenInclude(sg => sg.Guest)
-            .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
-            .Include(s => s.Rooms).ThenInclude(sr => sr.RoomType)
-            .FirstOrDefaultAsync(s => s.Id == stayId);
-
-        if (stay == null) throw new UserFriendlyException(L("StayNotFound"));
-        var dto = ObjectMapper.Map<StayDto>(stay);
-        if (stay.Rooms != null && stay.Rooms.Count > 0)
-        {
-            dto.RoomNumber = string.Join(", ", stay.Rooms.Select(sr => sr.Room?.RoomNumber ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)));
-            dto.StayRooms = MapStayRooms(stay.Rooms);
-        }
-        return dto;
     }
 
     public async Task<PagedResultDto<StayListDto>> GetInHouseAsync(GetStaysInput input)
@@ -367,38 +341,6 @@ public class StayAppService(
             throw new UserFriendlyException(L("TargetRoomHasBlockingReservation"));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Stays_Extend)]
-    [UnitOfWork]
-    public async Task ExtendStayAsync(ExtendStayDto input)
-    {
-        var stay = await stayRepository.GetAsync(input.StayId);
-
-        if (stay.Status != StayStatus.InHouse && stay.Status != StayStatus.CheckedIn)
-            throw new UserFriendlyException(L("CannotExtendNonActiveStay"));
-
-        if (input.NewDepartureDate.Date <= stay.ExpectedCheckOutDateTime.Date)
-            throw new UserFriendlyException(L("NewDepartureDateMustBeAfterCurrent"));
-
-        await stayExtensionRepository.InsertAsync(new StayExtension
-        {
-            StayId = input.StayId,
-            OldDepartureDate = stay.ExpectedCheckOutDateTime,
-            NewDepartureDate = input.NewDepartureDate.Date.AddHours(12),
-            ApprovedBy = input.ApprovedBy ?? string.Empty,
-            Reason = input.Reason ?? string.Empty
-        });
-
-        stay.ExpectedCheckOutDateTime = input.NewDepartureDate.Date.AddHours(12);
-        await stayRepository.UpdateAsync(stay);
-
-        var activeStayRooms = await stayRoomRepository.GetAll()
-            .Where(sr => sr.StayId == input.StayId && sr.ReleasedAt == null)
-            .ToListAsync();
-        var newEnd = input.NewDepartureDate.Date.AddDays(1);
-        foreach (var sr in activeStayRooms)
-            await roomDailyInventoryService.SetInHouseAsync(sr.RoomId, sr.ArrivalDate, newEnd, stay.Id);
-    }
-
     [AbpAuthorize(PermissionNames.Pages_Stays_PostCharge)]
     [UnitOfWork]
     public async Task<Guid> PostChargeAsync(PostChargeDto input)
@@ -518,28 +460,6 @@ public class StayAppService(
         await folioRepository.UpdateAsync(folio);
 
         return txId;
-    }
-
-    [AbpAuthorize(PermissionNames.Pages_Stays_VoidTransaction)]
-    [UnitOfWork]
-    public async Task VoidTransactionAsync(VoidTransactionDto input)
-    {
-        var folio = await GetOpenFolioOrThrowAsync(input.StayId);
-
-        if (!string.IsNullOrWhiteSpace(input.TransactionId.ToString()))
-        {
-            var tx = await folioTransactionRepository.GetAsync(input.TransactionId);
-            if (tx.FolioId != folio.Id) throw new UserFriendlyException(L("TransactionNotFound"));
-            if (tx.IsVoided) throw new UserFriendlyException(L("TransactionAlreadyVoided"));
-
-            tx.IsVoided = true;
-            tx.VoidReason = input.Reason;
-            await folioTransactionRepository.UpdateAsync(tx);
-
-            folio.Balance -= tx.NetAmount;
-            UpdateFolioStatus(folio);
-            await folioRepository.UpdateAsync(folio);
-        }
     }
 
     public async Task<FolioDto> GetFolioAsync(Guid stayId)
@@ -680,17 +600,6 @@ public class StayAppService(
             GuestRequestType.StayoverCleaning => HousekeepingTaskType.StayoverCleaning,
             _ => null,
         };
-    }
-
-    [UnitOfWork]
-    public async Task<Guid> AddIncidentAsync(AddIncidentDto input)
-    {
-        return await incidentRepository.InsertAndGetIdAsync(new Incident
-        {
-            StayId = input.StayId,
-            Description = input.Description,
-            ReportedAt = Clock.Now
-        });
     }
 
     [UnitOfWork]

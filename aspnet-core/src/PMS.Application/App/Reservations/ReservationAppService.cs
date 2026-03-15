@@ -34,7 +34,6 @@ public interface IReservationAppService : IApplicationService
     Task UpdateGuestAgeAsync(UpdateReservationGuestAgeDto input);
     Task RemoveGuestAsync(RemoveReservationGuestDto input);
     Task AssignRoomAsync(AssignReservationRoomDto input);
-    Task<ReservationDto> GetByNumberAsync(string reservationNo);
 }
 
 [AbpAuthorize(PermissionNames.Pages_Reservations)]
@@ -546,28 +545,6 @@ public class ReservationAppService(
             guest.GuestName = source?.Guest == null
                 ? guest.GuestName
                 : $"{source.Guest.FirstName} {source.Guest.LastName}".Trim();
-        }
-
-        return dto;
-    }
-
-    public async Task<ReservationDto> GetByNumberAsync(string reservationNo)
-    {
-        var reservation = await reservationRepository.GetAll()
-            .Include(r => r.Guest)
-            .Include(r => r.Rooms).ThenInclude(rr => rr.RoomType)
-            .Include(r => r.ExtraBeds).ThenInclude(eb => eb.ExtraBedType)
-            .Include(r => r.Deposits).ThenInclude(d => d.PaymentMethod)
-            .FirstOrDefaultAsync(r => r.ReservationNo == reservationNo.Trim().ToUpper());
-
-        if (reservation == null)
-            throw new UserFriendlyException(L("ReservationNotFound"));
-
-        var dto = ObjectMapper.Map<ReservationDto>(reservation);
-        foreach (var extraBed in dto.ExtraBeds)
-        {
-            var source = reservation.ExtraBeds.FirstOrDefault(x => x.Id == extraBed.Id);
-            extraBed.ExtraBedTypeName = source?.ExtraBedType?.Name ?? string.Empty;
         }
 
         return dto;

@@ -24,7 +24,6 @@ public interface IQuotationAppService : IApplicationService
     Task<Guid> CreateAsync(CreateQuotationDto input);
     Task<Guid> UpdateAsync(UpdateQuotationDto input);
     Task CancelAsync(Guid id);
-    Task<QuotationDto> GetByNumberAsync(string quotationNo);
 }
 
 [AbpAuthorize(PermissionNames.Pages_Reservations)]
@@ -43,19 +42,6 @@ public class QuotationAppService(
             .Include(q => q.Rooms)
             .Include(q => q.ExtraBeds)
             .FirstOrDefaultAsync(q => q.Id == id);
-
-        if (quotation == null)
-            throw new UserFriendlyException(L("QuotationNotFound"));
-
-        return ObjectMapper.Map<QuotationDto>(quotation);
-    }
-
-    public async Task<QuotationDto> GetByNumberAsync(string quotationNo)
-    {
-        var quotation = await quotationRepository.GetAll()
-            .Include(q => q.Rooms)
-            .Include(q => q.ExtraBeds)
-            .FirstOrDefaultAsync(q => q.QuotationNo == quotationNo);
 
         if (quotation == null)
             throw new UserFriendlyException(L("QuotationNotFound"));

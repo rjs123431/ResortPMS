@@ -251,6 +251,8 @@ export const RoomRackPage = () => {
         const lastNight = new Date(dateColumns[endIndex] + 'T12:00:00');
         lastNight.setDate(lastNight.getDate() + 1);
         const checkOutDate = toDateKey(lastNight);
+        const room = roomRackData?.rooms?.find((r) => r.id === sel.roomId);
+        const baseRate = room?.baseRate ?? 0;
         setQuickReservationPayload({
           checkInDate,
           checkOutDate,
@@ -258,6 +260,7 @@ export const RoomRackPage = () => {
           roomTypeId: sel.roomTypeId,
           roomNumber: sel.roomNumber,
           roomId: sel.roomId,
+          baseRate,
         });
         setQuickReservationOpen(true);
         // keep selection so highlight remains visible while dialog is open
@@ -271,7 +274,7 @@ export const RoomRackPage = () => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, [isDragging, dateColumns, isDateOccupied]);
+  }, [isDragging, dateColumns, isDateOccupied, roomRackData?.rooms]);
 
   const roomNumberToType = useMemo(() => {
     const map = new Map<string, string>();

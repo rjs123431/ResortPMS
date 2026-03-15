@@ -172,25 +172,11 @@ public class AvailableRoomForChangeDto
     public bool IsSameType { get; set; }
 }
 
-public class ExtendStayDto
-{
-    [Required] public Guid StayId { get; set; }
-    [Required] public DateTime NewDepartureDate { get; set; }
-    [StringLength(128)] public string ApprovedBy { get; set; }
-    [StringLength(512)] public string Reason { get; set; }
-}
-
 public class AddGuestRequestDto
 {
     [Required] public Guid StayId { get; set; }
     [Required] public List<GuestRequestType> RequestTypes { get; set; } = [];
     [StringLength(1024)] public string Description { get; set; }
-}
-
-public class AddIncidentDto
-{
-    [Required] public Guid StayId { get; set; }
-    [Required][StringLength(2048)] public string Description { get; set; }
 }
 
 public class GuestRequestListDto : EntityDto<Guid>
@@ -306,13 +292,6 @@ public class PostRefundDto
     [Required] public Guid StayId { get; set; }
     [Range(0.01, double.MaxValue)] public decimal Amount { get; set; }
     [StringLength(512)] public string Description { get; set; }
-}
-
-public class VoidTransactionDto
-{
-    [Required] public Guid StayId { get; set; }
-    [Required] public Guid TransactionId { get; set; }
-    [Required][StringLength(512)] public string Reason { get; set; }
 }
 
 public class SettleFolioDto

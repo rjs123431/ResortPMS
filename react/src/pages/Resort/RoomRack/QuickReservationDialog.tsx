@@ -10,6 +10,8 @@ export type QuickReservationPayload = {
   roomTypeId: string;
   roomNumber: string;
   roomId: string;
+  /** Base rate per night for this room type (from room rack). */
+  baseRate?: number;
 };
 
 type QuickReservationDialogProps = {
@@ -39,6 +41,12 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (open && payload?.baseRate != null && payload.baseRate >= 0) {
+      setRatePerNight(payload.baseRate);
+    }
+  }, [open, payload?.baseRate]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
