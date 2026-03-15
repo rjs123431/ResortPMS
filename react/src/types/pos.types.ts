@@ -56,6 +56,26 @@ export interface PosTableListDto {
   status: number;
 }
 
+export interface PosTableActiveOrderDto {
+  orderId: string;
+  orderNumber: string;
+  status: number;
+  itemsCount: number;
+  orderTotal: number;
+  openedAt: string;
+  guestName?: string | null;
+}
+
+export interface PosTableWithOrderDto {
+  id: string;
+  outletId: string;
+  outletName: string;
+  tableNumber: string;
+  capacity: number;
+  status: number;
+  activeOrder?: PosTableActiveOrderDto | null;
+}
+
 export interface MenuCategoryListDto {
   id: string;
   name: string;

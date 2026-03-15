@@ -23,6 +23,28 @@ public class PosTableListDto : EntityDto<Guid>
     public int Status { get; set; } // PosTableStatus
 }
 
+/// <summary>Table with optional active (non-closed) order summary for floor view.</summary>
+public class PosTableWithOrderDto : EntityDto<Guid>
+{
+    public Guid OutletId { get; set; }
+    public string OutletName { get; set; } = string.Empty;
+    public string TableNumber { get; set; } = string.Empty;
+    public int Capacity { get; set; }
+    public int Status { get; set; } // PosTableStatus
+    public PosTableActiveOrderDto? ActiveOrder { get; set; }
+}
+
+public class PosTableActiveOrderDto
+{
+    public Guid OrderId { get; set; }
+    public string OrderNumber { get; set; } = string.Empty;
+    public int Status { get; set; } // PosOrderStatus
+    public int ItemsCount { get; set; }
+    public decimal OrderTotal { get; set; }
+    public DateTime OpenedAt { get; set; }
+    public string? GuestName { get; set; }
+}
+
 // Menu
 public class MenuCategoryListDto : EntityDto<Guid>
 {

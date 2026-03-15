@@ -21,6 +21,7 @@ public interface IPosOrderAppService : IApplicationService
 {
     Task<List<PosOutletListDto>> GetOutletsAsync();
     Task<List<PosTableListDto>> GetTablesAsync(Guid outletId);
+    Task<List<PosTableWithOrderDto>> GetTablesWithOrdersAsync(Guid outletId);
     Task<List<MenuCategoryListDto>> GetMenuCategoriesAsync();
     Task<List<MenuItemListDto>> GetMenuItemsAsync(Guid? categoryId = null);
     Task<PosOrderDto> GetOrderAsync(Guid orderId);
@@ -101,6 +102,60 @@ public class PosOrderAppService(
             })
             .ToListAsync();
         return list;
+    }
+
+    public async Task<List<PosTableWithOrderDto>> GetTablesWithOrdersAsync(Guid outletId)
+    {
+        var tables = await tableRepository.GetAll()
+            .Where(t => t.OutletId == outletId)
+            .Include(t => t.Outlet)
+            .OrderBy(t => t.TableNumber)
+            .ToListAsync();
+        var tableIds = tables.Select(t => t.Id).ToList();
+        var activeOrders = await orderRepository.GetAll()
+            .Where(o => o.TableId.HasValue && tableIds.Contains(o.TableId.Value))
+            .Where(o => o.Status != PosOrderStatus.Closed && o.Status != PosOrderStatus.Cancelled)
+            .Include(o => o.Items)
+            .OrderByDescending(o => o.OpenedAt)
+            .ToListAsync();
+        var orderByTable = activeOrders
+            .GroupBy(o => o.TableId!.Value)
+            .ToDictionary(g => g.Key, g => g.First());
+        var result = new List<PosTableWithOrderDto>();
+        foreach (var t in tables)
+        {
+            var dto = new PosTableWithOrderDto
+            {
+                Id = t.Id,
+                OutletId = t.OutletId,
+                OutletName = t.Outlet?.Name ?? string.Empty,
+                TableNumber = t.TableNumber,
+                Capacity = t.Capacity,
+                Status = (int)t.Status,
+            };
+            if (orderByTable.TryGetValue(t.Id, out var order))
+            {
+                var itemsTotal = order.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity * i.Price);
+                var discountFromPercent = itemsTotal * order.DiscountPercent / 100m;
+                var totalAfterDiscount = itemsTotal - discountFromPercent - order.DiscountAmount - order.SeniorCitizenDiscount;
+                if (totalAfterDiscount < 0) totalAfterDiscount = 0;
+                var (serviceChargeAmount, roomServiceChargeAmount) = ComputeServiceChargesFromOrder(order, totalAfterDiscount);
+                var orderTotal = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
+                var itemsCount = order.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity);
+                dto.ActiveOrder = new PosTableActiveOrderDto
+                {
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Status = (int)order.Status,
+                    ItemsCount = itemsCount,
+                    OrderTotal = orderTotal,
+                    OpenedAt = order.OpenedAt,
+                    GuestName = order.GuestName,
+                };
+            }
+            result.Add(dto);
+        }
+        return result;
     }
 
     public async Task<List<MenuCategoryListDto>> GetMenuCategoriesAsync()

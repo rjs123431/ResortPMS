@@ -3,6 +3,7 @@ import type { ApiResponse } from '@/types/resort.types';
 import type {
   PosOutletListDto,
   PosTableListDto,
+  PosTableWithOrderDto,
   MenuCategoryListDto,
   MenuItemListDto,
   PosOrderDto,
@@ -55,6 +56,14 @@ export const posService = {
     const response = await api.get<ApiResponse<PosTableListDto[]>>('/api/services/app/PosOrder/GetTables', {
       params: { outletId },
     });
+    return response.data.result;
+  },
+
+  getTablesWithOrders: async (outletId: string) => {
+    const response = await api.get<ApiResponse<PosTableWithOrderDto[]>>(
+      '/api/services/app/PosOrder/GetTablesWithOrders',
+      { params: { outletId } }
+    );
     return response.data.result;
   },
 
