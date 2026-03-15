@@ -10,6 +10,8 @@ export type POSPaymentModalProps = {
   setPaymentMethodId: (id: string) => void;
   paymentAmount: string;
   setPaymentAmount: (value: string) => void;
+  referenceNo: string;
+  setReferenceNo: (value: string) => void;
   paymentMethods: PaymentMethodOption[];
   onAddPayment: () => void;
   isPending: boolean;
@@ -22,6 +24,8 @@ export const POSPaymentModal = ({
   setPaymentMethodId,
   paymentAmount,
   setPaymentAmount,
+  referenceNo,
+  setReferenceNo,
   paymentMethods,
   onAddPayment,
   isPending,
@@ -41,10 +45,10 @@ export const POSPaymentModal = ({
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 z-0 bg-black/50 pointer-events-none" aria-hidden />
-      <div className="relative z-10 flex min-h-full items-center justify-center p-4 pointer-events-none">
+      <div className="relative z-10 flex min-h-full items-start justify-center pt-6 pb-6 px-4 pointer-events-none">
         <DialogPanel className="w-full max-w-sm rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">
-            Add Payment
+            Settle
           </DialogTitle>
           <div className="mt-3 space-y-2">
             <div>
@@ -73,6 +77,17 @@ export const POSPaymentModal = ({
                 className="mt-1 w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Reference No</label>
+              <input
+                type="text"
+                value={referenceNo}
+                onChange={(e) => setReferenceNo(e.target.value)}
+                placeholder="e.g. cheque no, card last 4"
+                maxLength={64}
+                className="mt-1 w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400"
+              />
+            </div>
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <button
@@ -88,7 +103,7 @@ export const POSPaymentModal = ({
               disabled={!paymentMethodId || Number(paymentAmount) <= 0 || isPending}
               className="rounded bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              Add Payment
+              Settle
             </button>
           </div>
         </DialogPanel>

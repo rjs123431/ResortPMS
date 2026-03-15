@@ -54,15 +54,15 @@ export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, he
           <Link
             to="/"
             className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 sm:px-3"
-            aria-label="POS home"
+            aria-label="POS Home"
           >
             {currentSession ? (
               <span className="flex flex-col items-baseline leading-tight">
                 <span className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
                   {currentSession.outletName ?? currentSession.outletId}
-                </span>
-                <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
-                  {currentSession.terminalName ?? currentSession.terminalId}
+                  <sub className="px-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {currentSession.terminalName ?? currentSession.terminalId}
+                  </sub>
                 </span>
               </span>
             ) : (
@@ -71,7 +71,6 @@ export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, he
           </Link>
         </div>
         <div className="flex min-w-0 flex-1 justify-center overflow-hidden">
-          <div className="truncate text-center text-sm sm:text-base">{headerCenter}</div>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {headerRight}
@@ -85,16 +84,14 @@ export const POSLayout: React.FC<POSLayoutProps> = ({ children, headerCenter, he
           aria-hidden="true"
           tabIndex={-1}
           onClick={() => setSidebarOpen(false)}
-          className={`fixed inset-0 z-40 bg-black/50 transition-opacity lg:hidden ${
-            sidebarOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-          }`}
+          className={`fixed inset-0 z-40 bg-black/50 transition-opacity lg:hidden ${sidebarOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+            }`}
         />
 
         {/* Sidebar: overlay on mobile/tablet, inline on lg+ */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white shadow-xl transition-transform duration-200 ease-out dark:border-gray-700 dark:bg-gray-800 lg:static lg:z-auto lg:mt-0 lg:w-28 lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white shadow-xl transition-transform duration-200 ease-out dark:border-gray-700 dark:bg-gray-800 lg:static lg:z-auto lg:mt-0 lg:w-28 lg:shrink-0 lg:translate-x-0 lg:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
           style={{ top: 'var(--sat)' }}
         >
           <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700 lg:hidden">

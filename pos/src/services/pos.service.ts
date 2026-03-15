@@ -95,8 +95,16 @@ export const posService = {
   },
 
   getPosOrders: async (input?: GetPosOrdersInput) => {
+    const params =
+      input == null
+        ? {}
+        : {
+            status: input.status,
+            statuses: input.statuses?.length ? input.statuses.join(',') : undefined,
+            maxResultCount: input.maxResultCount,
+          };
     const response = await api.get<ApiResponse<PosOrderListDto[]>>('/api/services/app/PosOrder/GetOrders', {
-      params: input ?? {},
+      params,
     });
     return response.data.result;
   },

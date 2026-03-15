@@ -191,6 +191,7 @@ export interface PosOrderListDto {
   orderType: number;
   status: number;
   itemsTotal: number;
+  balanceDue: number;
   openedAt: string;
   notes: string;
   serverStaffId?: string;
@@ -199,6 +200,8 @@ export interface PosOrderListDto {
 
 export interface GetPosOrdersInput {
   status?: number | null;
+  /** When non-empty, filter by these statuses (takes precedence over status). */
+  statuses?: number[];
   maxResultCount?: number;
 }
 

@@ -6,8 +6,6 @@ import {
   ClipboardDocumentListIcon,
   ChartBarIcon,
   Cog6ToothIcon,
-  BuildingStorefrontIcon,
-  RectangleStackIcon,
 } from '@heroicons/react/24/outline';
 
 const navItems = [
@@ -15,8 +13,6 @@ const navItems = [
   { to: '/tables', label: 'Tables', title: 'Manage tables of an outlet', Icon: TableCellsIcon },
   { to: '/orders', label: 'Orders', title: 'View list of orders, manage it', Icon: ClipboardDocumentListIcon },
   { to: '/reports', label: 'Reports', title: 'Show reports', Icon: ChartBarIcon },
-  { to: '/outlets', label: 'Outlets', title: 'Manage outlets, terminals, tables', Icon: BuildingStorefrontIcon },
-  { to: '/menu', label: 'Menu', title: 'Manage menu categories and items', Icon: RectangleStackIcon },
   { to: '/settings', label: 'Settings', title: 'POS settings', Icon: Cog6ToothIcon },
 ] as const;
 

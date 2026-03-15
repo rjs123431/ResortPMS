@@ -148,6 +148,7 @@ public class PosOrderListDto : EntityDto<Guid>
     public int OrderType { get; set; }
     public int Status { get; set; }
     public decimal ItemsTotal { get; set; }
+    public decimal BalanceDue { get; set; }
     public DateTime OpenedAt { get; set; }
     public string Notes { get; set; } = string.Empty;
     public Guid? ServerStaffId { get; set; }
@@ -156,7 +157,9 @@ public class PosOrderListDto : EntityDto<Guid>
 
 public class GetPosOrdersInput
 {
-    public int? Status { get; set; } // PosOrderStatus, null = all
+    public int? Status { get; set; } // PosOrderStatus, single filter (legacy)
+    /// <summary>Comma-separated status IDs, e.g. "0,1,2,3,4". When non-empty, filter by these; otherwise Status or no filter.</summary>
+    public string? Statuses { get; set; }
     public int MaxResultCount { get; set; } = 50;
 }
 

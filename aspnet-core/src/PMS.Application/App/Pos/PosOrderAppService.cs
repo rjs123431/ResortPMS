@@ -309,29 +309,47 @@ public class PosOrderAppService(
 
     public async Task<List<PosOrderListDto>> GetOrdersAsync(GetPosOrdersInput input)
     {
-        var query = orderRepository.GetAll()
+        IQueryable<PosOrder> query = orderRepository.GetAll()
             .Include(o => o.Outlet)
             .Include(o => o.Table)
             .Include(o => o.ServerStaff)
             .Include(o => o.Items)
-            .Where(o => !input.Status.HasValue || o.Status == (PosOrderStatus)input.Status.Value)
-            .OrderByDescending(o => o.OpenedAt)
-            .Take(Math.Min(input.MaxResultCount, 100));
+            .Include(o => o.Payments);
+        var statusList = !string.IsNullOrWhiteSpace(input.Statuses)
+            ? input.Statuses!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => int.TryParse(s, out var n) ? n : (int?)null).Where(n => n.HasValue).Select(n => n!.Value).ToList()
+            : null;
+        if (statusList is { Count: > 0 })
+            query = query.Where(o => statusList.Contains((int)o.Status));
+        else if (input.Status.HasValue)
+            query = query.Where(o => o.Status == (PosOrderStatus)input.Status.Value);
+        query = query.OrderByDescending(o => o.OpenedAt).Take(Math.Min(input.MaxResultCount, 100));
         var orders = await query.ToListAsync();
-        return orders.Select(o => new PosOrderListDto
+        return orders.Select(o =>
         {
-            Id = o.Id,
-            OrderNumber = o.OrderNumber,
-            OutletName = o.Outlet?.Name ?? "",
-            TableNumber = o.Table?.TableNumber ?? "",
-            GuestName = o.GuestName ?? "",
-            OrderType = (int)o.OrderType,
-            Status = (int)o.Status,
-            ItemsTotal = o.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity * i.Price),
-            OpenedAt = o.OpenedAt,
-            Notes = o.Notes ?? "",
-            ServerStaffId = o.ServerStaffId,
-            ServerStaffName = o.ServerStaff?.FullName ?? ""
+            var itemsTotal = o.Items.Where(i => i.Status != OrderItemStatus.Cancelled).Sum(i => i.Quantity * i.Price);
+            var discountFromPercent = itemsTotal * o.DiscountPercent / 100m;
+            var totalAfterDiscount = itemsTotal - discountFromPercent - o.DiscountAmount - o.SeniorCitizenDiscount;
+            if (totalAfterDiscount < 0) totalAfterDiscount = 0;
+            var (serviceChargeAmount, roomServiceChargeAmount) = ComputeServiceChargesFromOrder(o, totalAfterDiscount);
+            var orderTotal = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
+            var paymentsTotal = o.Payments.Sum(p => p.Amount);
+            var balanceDue = orderTotal - paymentsTotal;
+            return new PosOrderListDto
+            {
+                Id = o.Id,
+                OrderNumber = o.OrderNumber,
+                OutletName = o.Outlet?.Name ?? "",
+                TableNumber = o.Table?.TableNumber ?? "",
+                GuestName = o.GuestName ?? "",
+                OrderType = (int)o.OrderType,
+                Status = (int)o.Status,
+                ItemsTotal = itemsTotal,
+                BalanceDue = balanceDue,
+                OpenedAt = o.OpenedAt,
+                Notes = o.Notes ?? "",
+                ServerStaffId = o.ServerStaffId,
+                ServerStaffName = o.ServerStaff?.FullName ?? ""
+            };
         }).ToList();
     }
 
@@ -756,6 +774,7 @@ public class PosOrderAppService(
     {
         var order = await orderRepository.GetAll()
             .Include(o => o.Items)
+            .Include(o => o.Payments)
             .FirstOrDefaultAsync(o => o.Id == input.OrderId);
         if (order == null) throw new UserFriendlyException("Order not found.");
         if (order.Status == PosOrderStatus.Closed) throw new UserFriendlyException("Order is already closed.");
@@ -764,8 +783,10 @@ public class PosOrderAppService(
         var totalAfterDiscount = itemsTotal - discountFromPercent - order.DiscountAmount - order.SeniorCitizenDiscount;
         if (totalAfterDiscount < 0) totalAfterDiscount = 0;
         var (serviceChargeAmount, roomServiceChargeAmount) = ComputeServiceChargesFromOrder(order, totalAfterDiscount);
-        var total = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
-        if (total <= 0) throw new UserFriendlyException("Order has no chargeable amount.");
+        var orderTotal = totalAfterDiscount + serviceChargeAmount + roomServiceChargeAmount;
+        var paymentsTotal = order.Payments.Sum(p => p.Amount);
+        var balanceDue = orderTotal - paymentsTotal;
+        if (balanceDue <= 0) throw new UserFriendlyException("Order has no balance due to charge. It is already fully paid.");
         var stay = await stayRepository.GetAll()
             .FirstOrDefaultAsync(s => (s.Status == StayStatus.InHouse || s.Status == StayStatus.CheckedIn)
                 && s.Rooms.Any(sr => sr.ReleasedAt == null && sr.Room.RoomNumber == input.RoomNumber.Trim()));
@@ -788,16 +809,16 @@ public class PosOrderAppService(
             ChargeTypeId = chargeType.Id,
             Description = description,
             Quantity = 1,
-            UnitPrice = total,
-            Amount = total,
+            UnitPrice = balanceDue,
+            Amount = balanceDue,
             TaxAmount = 0,
             DiscountAmount = 0,
-            NetAmount = total
+            NetAmount = balanceDue
         };
         var roomChargeTxId = await folioTransactionRepository.InsertAndGetIdAsync(transaction);
         await financialAuditService.RecordTransactionCreatedAsync(
-            roomChargeTxId, folio.Id, folio.StayId, total, description, new { OrderId = order.Id, OrderNumber = order.OrderNumber });
-        folio.Balance += total;
+            roomChargeTxId, folio.Id, folio.StayId, balanceDue, description, new { OrderId = order.Id, OrderNumber = order.OrderNumber });
+        folio.Balance += balanceDue;
         UpdateFolioStatus(folio);
         await folioRepository.UpdateAsync(folio);
         order.StayId = stay.Id;

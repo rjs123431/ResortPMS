@@ -8,7 +8,8 @@ const formatMoney = (value: number) =>
 export type POSRoomChargeModalProps = {
   open: boolean;
   onClose: () => void;
-  orderItemsTotal: number;
+  /** Amount to charge (balance due). */
+  amountToCharge: number;
   inHouseStays: StayListDto[];
   isFetchingStays: boolean;
   selectedStay: StayListDto | null;
@@ -20,7 +21,7 @@ export type POSRoomChargeModalProps = {
 export const POSRoomChargeModal = ({
   open,
   onClose,
-  orderItemsTotal,
+  amountToCharge,
   inHouseStays,
   isFetchingStays,
   selectedStay,
@@ -53,7 +54,7 @@ export const POSRoomChargeModal = ({
               Select a stay to charge this order to the guest folio.
             </p>
             <p className="mt-2 text-base font-semibold text-gray-900 dark:text-white">
-              Amount to charge: ₱{formatMoney(orderItemsTotal)}
+              Amount to charge: ₱{formatMoney(amountToCharge)}
             </p>
           </div>
           <div className="flex-1 overflow-auto p-4">

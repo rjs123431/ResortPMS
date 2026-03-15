@@ -255,7 +255,7 @@ export const POSOrdersPage = () => {
           setChargeOrder(null);
           setSelectedStayForCharge(null);
         }}
-        orderItemsTotal={chargeOrder?.itemsTotal ?? 0}
+        amountToCharge={chargeOrder?.balanceDue ?? 0}
         inHouseStays={inHouseStays}
         isFetchingStays={isFetchingStays}
         selectedStay={selectedStayForCharge}

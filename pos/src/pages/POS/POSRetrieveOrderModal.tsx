@@ -27,18 +27,28 @@ export type POSRetrieveOrderModalProps = {
   open: boolean;
   onClose: () => void;
   orders: PosOrderListDto[];
-  statusFilter: number | '';
-  onStatusFilterChange: (value: number | '') => void;
+  statusFilters: number[];
+  onStatusFiltersChange: (statuses: number[]) => void;
   onLoadOrder: (order: PosOrderListDto) => void;
   isFetching: boolean;
 };
+
+const ALL_STATUSES = [
+  PosOrderStatus.Open,
+  PosOrderStatus.SentToKitchen,
+  PosOrderStatus.Preparing,
+  PosOrderStatus.Served,
+  PosOrderStatus.Billed,
+  PosOrderStatus.Closed,
+  PosOrderStatus.Cancelled,
+] as const;
 
 export const POSRetrieveOrderModal = ({
   open,
   onClose,
   orders,
-  statusFilter,
-  onStatusFilterChange,
+  statusFilters,
+  onStatusFiltersChange,
   onLoadOrder,
   isFetching,
 }: POSRetrieveOrderModalProps) => {
@@ -93,21 +103,29 @@ export const POSRetrieveOrderModal = ({
               </button>
             </div>
             <div>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                <select
-                  value={statusFilter === '' ? '' : statusFilter}
-                  onChange={(e) => onStatusFilterChange(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">All</option>
-                  {Object.entries(ORDER_STATUS_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
-                    </option>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</span>
+                <div className="flex flex-wrap gap-3">
+                  {ALL_STATUSES.map((status) => (
+                    <label key={status} className="flex cursor-pointer items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={statusFilters.includes(status)}
+                        onChange={() => {
+                          if (statusFilters.includes(status)) {
+                            onStatusFiltersChange(statusFilters.filter((s) => s !== status));
+                          } else {
+                            onStatusFiltersChange([...statusFilters, status].sort((a, b) => a - b));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+                      />
+                      {ORDER_STATUS_LABELS[status]}
+                    </label>
                   ))}
-                </select>
-
+                </div>
+              </div>
+              <div className="mt-3">
                 <input
                   type="text"
                   value={searchQuery}
