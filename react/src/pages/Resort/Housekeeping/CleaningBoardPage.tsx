@@ -1,7 +1,4 @@
-import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import { MainLayout } from '@components/layout/MainLayout';
 import { HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
@@ -29,8 +26,8 @@ const toDateInputValue = (value: Date) => {
 
 export const CleaningBoardPage = () => {
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const selectedDateKey = toDateInputValue(selectedDate);
+  const today = new Date();
+  const selectedDateKey = toDateInputValue(today);
 
   const { data: boardData, isLoading } = useQuery({
     queryKey: ['housekeeping-cleaning-board', selectedDateKey],
@@ -72,16 +69,6 @@ export const CleaningBoardPage = () => {
         </div>
 
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date: Date | null) => setSelectedDate(date ?? new Date())}
-              dateFormat="yyyy-MM-dd"
-              className="w-full max-w-xs rounded border p-2 dark:bg-gray-700"
-            />
-          </div>
-
           {isLoading ? <p className="text-sm text-gray-500">Loading cleaning board...</p> : null}
 
           {!isLoading && rooms.length === 0 ? (
@@ -96,7 +83,7 @@ export const CleaningBoardPage = () => {
                     <th className="p-2">Room</th>
                     <th className="p-2">Type</th>
                     <th className="p-2">Floor</th>
-                    <th className="p-2">HK Status</th>
+                    <th className="p-2">Status</th>
                     <th className="p-2">Cleaning Type</th>
                     <th className="p-2">Actions</th>
                   </tr>

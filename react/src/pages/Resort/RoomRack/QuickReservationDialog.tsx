@@ -276,7 +276,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                 className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Create a draft reservation with no room assigned"
               >
-                Temp reservation
+                Temp Reserve
               </button>
               <button
                 type="button"
@@ -284,7 +284,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                 disabled={!canSubmit || createMutation.isPending}
                 className="rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {createMutation.isPending ? 'Creating…' : 'Create reservation'}
+                Reserve
               </button>
             </div>
           </DialogPanel>
