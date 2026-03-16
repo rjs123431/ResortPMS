@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@contexts/AuthContext';
 import { authService } from '@services/auth.service';
 import { useSignalR } from '@contexts/SignalRContext';
+import { ThemeToggle } from '@components/common/ThemeToggle';
 import { HeaderNotifications } from './HeaderNotifications';
 import { TopNav } from './TopNav';
 
@@ -85,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen = fal
                     className="h-8 sm:h-10 w-auto object-contain max-h-full"
                   />
                 </div>
-                <h1 className="text-base sm:text-xl font-bold text-white truncate">PMS</h1>
+                <h1 className="text-base sm:text-xl font-bold text-white truncate">ResortPMS</h1>
               </Link>
               {onMenuClick != null && (
                 <button
@@ -111,29 +112,29 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen = fal
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:space-x-4 flex-shrink-0">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {user && (
               <>
+                <ThemeToggle variant="inline" />
                 <HeaderNotifications />
-                <div className="relative" ref={dropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/30 text-white font-medium text-sm uppercase transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/50 touch-manipulation"
-                  aria-label="User menu"
-                  title={isConnected ? 'Real-time notifications active' : 'Real-time notifications inactive'}
-                >
-                  {(() => {
-                    const first = (user.name || '').trim().charAt(0) || '';
-                    const last = (user.surname || '').trim().charAt(0) || '';
-                    const initials = (first + last).toUpperCase() || '?';
-                    return initials;
-                  })()}
-                  {/* SignalR connection indicator */}
-                  {isConnected && (
-                    <span className="absolute bottom-0.5 right-0.5 inline-block w-2 h-2 bg-green-400 rounded-full ring-2 ring-[#016fb3]"></span>
-                  )}
-                </button>
+                <div className="relative ms-0" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/60 text-white font-medium text-sm uppercase transition-colors focus:outline-none focus:ring-white/50 touch-manipulation"
+                    aria-label="User menu"
+                  >
+                    {(() => {
+                      const first = (user.name || '').trim().charAt(0) || '';
+                      const last = (user.surname || '').trim().charAt(0) || '';
+                      const initials = (first + last).toUpperCase() || '?';
+                      return initials;
+                    })()}
+                    {/* SignalR connection indicator */}
+                    {isConnected && (
+                      <span className="absolute bottom-0.5 right-0.5 inline-block w-2 h-2 bg-green-400 rounded-full ring-2 ring-[#016fb3]"></span>
+                    )}
+                  </button>
 
                   {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">

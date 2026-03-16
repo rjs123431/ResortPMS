@@ -128,16 +128,16 @@ export const HeaderNotifications = () => {
   const notifications = data?.items || [];
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative ms-0" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-white hover:text-white/90 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50 rounded touch-manipulation"
+        className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-transparent text-white hover:bg-white/10 border border-white/40 focus:outline-none focus:ring-white/50 touch-manipulation"
         aria-label="Notifications"
       >
-        <BellIcon className="w-6 h-6" />
+        <BellIcon className="w-5 h-5 sm:w-6 sm:h-6" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-0 translate-y-0 bg-yellow-500 rounded-full min-w-[1.25rem]">
+          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-yellow-500 rounded-full min-w-[1.25rem] translate-x-0.5 -translate-y-0.5">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

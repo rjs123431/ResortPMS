@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ThemeToggle } from '@components/common/ThemeToggle';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 
@@ -29,7 +28,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) =
     () => [
       {
         path: '/',
-        label: 'Back to Resort',
+        label: 'Back to Home page',
         icon: (
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -187,9 +186,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) =
       >
         <div className="flex h-full flex-col">
           <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden py-2 sm:py-3">{visibleMenuItems.map((item) => renderMenuItem(item))}</nav>
-          <div className="flex-shrink-0 px-4 pb-6 pt-2">
-            <ThemeToggle variant="inline" />
-          </div>
         </div>
       </aside>
     </>

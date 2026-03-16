@@ -14,19 +14,21 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'floating' }
   };
 
   const isFloating = variant === 'floating';
-  const positionClass = isFloating
-    ? 'fixed bottom-6 left-6 z-50'
-    : '';
+  const positionClass = isFloating ? 'fixed bottom-6 left-6 z-50' : '';
+  const sizeClass = isFloating ? 'p-3' : 'w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center';
+  const styleClass = isFloating
+    ? 'bg-primary-600 text-white shadow-lg hover:bg-primary-700 border border-white/40'
+    : 'bg-transparent text-white hover:bg-white/10 border border-white/40';
 
   return (
     <button
       onClick={handleClick}
-      className={`${positionClass} p-3 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 transition-colors touch-manipulation`}
+      className={`${positionClass} ${sizeClass} rounded-full ${styleClass} transition-colors touch-manipulation`}
       aria-label="Toggle theme"
       title={`Current theme: ${theme}. Click to toggle.`}
     >
       {theme === 'light' ? (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -35,7 +37,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'floating' }
           />
         </svg>
       ) : (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
