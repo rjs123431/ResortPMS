@@ -7,6 +7,8 @@ using Abp.Domain.Repositories;
 using Abp.Linq.Extensions;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
+using PMS.App;
+using PMS.Application.App.RoomDailyInventory;
 using PMS.App.RoomRatePlans;
 using PMS.App.Rooms.Dto;
 using PMS.Authorization;
@@ -94,6 +96,8 @@ public class RoomAppService(
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<PreCheckInRoom, Guid> preCheckInRoomRepository,
+    IRepository<RoomDailyInventory, Guid> roomDailyInventoryRepository,
+    IRoomDailyInventoryService roomDailyInventoryService,
     IRoomRatePlanAppService roomRatePlanAppService
 ) : PMSAppServiceBase, IRoomAppService
 {
@@ -133,7 +137,7 @@ public class RoomAppService(
         return new PagedResultDto<RoomListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<RoomListDto>>(items));
     }
 
-    public async Task<System.Collections.Generic.List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input)
+    public async Task<List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input)
     {
         var hasDateRange = input.ArrivalDate.HasValue && input.DepartureDate.HasValue;
         var excludeReservedWithoutAssignedRoom = hasDateRange && input.ExcludeReservedWithoutAssignedRoom;
@@ -168,53 +172,27 @@ public class RoomAppService(
             var arrivalDate = input.ArrivalDate!.Value.Date;
             var departureDate = input.DepartureDate!.Value.Date;
 
-            var blockingReservationStatuses = new[]
+            // Use RoomDailyInventory as source of truth: ensure inventory exists, then exclude rooms that have any night not available.
+            var candidateRoomIds = await query.Select(r => r.Id).ToListAsync();
+            if (candidateRoomIds.Count > 0)
             {
-                ReservationStatus.Pending,
-                ReservationStatus.Confirmed,
-                ReservationStatus.CheckedIn,
-            };
+                await roomDailyInventoryService.EnsureInventoryForDateRangeAsync(candidateRoomIds, arrivalDate, departureDate);
 
-            var activeStayStatuses = new[] { StayStatus.CheckedIn, StayStatus.InHouse };
+                // Blocked = any night in range where status is not Vacant and not (Reserved by this reservation).
+                var blockedRoomIds = await roomDailyInventoryRepository.GetAll()
+                    .AsNoTracking()
+                    .Where(i => candidateRoomIds.Contains(i.RoomId)
+                        && i.InventoryDate >= arrivalDate
+                        && i.InventoryDate < departureDate
+                        && i.Status != RoomDailyInventoryStatus.Vacant
+                        && (i.Status != RoomDailyInventoryStatus.Reserved || i.ReservationId != input.ReservationId))
+                    .Select(i => i.RoomId)
+                    .Distinct()
+                    .ToListAsync();
 
-            // Materialize blocked room IDs first — correlated cross-repository subqueries
-            // cannot be translated by EF Core; using Contains on pre-fetched ID lists instead.
-            var blockedByReservation = await reservationRoomRepository.GetAll()
-                .AsNoTracking()
-                .Where(rr => rr.RoomId.HasValue)
-                .WhereIf(input.ReservationId.HasValue, rr => rr.ReservationId != input.ReservationId!.Value)
-                .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
-                .Where(rr => blockingReservationStatuses.Contains(rr.Reservation.Status))
-                .Select(rr => rr.RoomId!.Value)
-                .Distinct()
-                .ToListAsync();
-
-            var blockedByStay = await stayRoomRepository.GetAll()
-                .AsNoTracking()
-                .Where(sr => !sr.ReleasedAt.HasValue)
-                .Where(sr => sr.ArrivalDate < departureDate && sr.DepartureDate > arrivalDate)
-                .Where(sr => activeStayStatuses.Contains(sr.Stay.Status))
-                .Select(sr => sr.RoomId)
-                .Distinct()
-                .ToListAsync();
-
-            if (blockedByReservation.Count > 0)
-                query = query.Where(r => !blockedByReservation.Contains(r.Id));
-
-            if (blockedByStay.Count > 0)
-                query = query.Where(r => !blockedByStay.Contains(r.Id));
-
-            var blockedByPreCheckIn = await preCheckInRoomRepository.GetAll()
-                .AsNoTracking()
-                .Where(pcr => pcr.RoomId.HasValue)
-                .Where(pcr => pcr.PreCheckIn.Status == PreCheckInStatus.Pending)
-                .Where(pcr => pcr.PreCheckIn.ArrivalDate < departureDate && pcr.PreCheckIn.DepartureDate > arrivalDate)
-                .Select(pcr => pcr.RoomId!.Value)
-                .Distinct()
-                .ToListAsync();
-
-            if (blockedByPreCheckIn.Count > 0)
-                query = query.Where(r => !blockedByPreCheckIn.Contains(r.Id));
+                if (blockedRoomIds.Count > 0)
+                    query = query.Where(r => !blockedRoomIds.Contains(r.Id));
+            }
         }
 
         var items = await query.OrderBy(r => r.RoomNumber).ToListAsync();
@@ -227,8 +205,7 @@ public class RoomAppService(
             var blockingReservationStatuses = new[]
             {
                 ReservationStatus.Pending,
-                ReservationStatus.Confirmed,
-                ReservationStatus.CheckedIn,
+                ReservationStatus.Confirmed
             };
 
             var unassignedCountsByRoomType = await reservationRoomRepository.GetAll()

@@ -549,29 +549,31 @@ public class ReservationAppService(
         var arrivalDate = reservation.ArrivalDate.Date;
         var departureDate = reservation.DepartureDate.Date;
 
+        var arrivalDateTime = reservation.ArrivalDate;
+        var departureDateTime = reservation.DepartureDate;
+
         await roomDailyInventoryService.Ensure365DaysFromTodayAsync([input.RoomId]);
         var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(
             input.RoomId, arrivalDate, departureDate, excludeReservationId: reservation.Id);
         if (!available)
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
-        var ReservationConflict = await reservationRoomRepository.GetAll()
+        var hasReservationConflict = await reservationRoomRepository.GetAll()
             .AsNoTracking()
             .Include(rr => rr.Reservation)
             .Where(rr => rr.RoomId == input.RoomId)
             .Where(rr => rr.ReservationId != input.ReservationId)
-            .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
-            .FirstOrDefaultAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
+            .Where(rr => rr.ArrivalDate < departureDateTime && rr.DepartureDate > arrivalDateTime)
+            .AnyAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
                            rr.Reservation.Status == ReservationStatus.Confirmed);
 
-        var hasReservationConflict = ReservationConflict != null;
         if (hasReservationConflict)
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
         var hasStayConflict = await stayRoomRepository.GetAll()
             .AsNoTracking()
             .Where(sr => sr.RoomId == input.RoomId && !sr.ReleasedAt.HasValue)
-            .Where(sr => sr.ArrivalDate < departureDate && sr.DepartureDate > arrivalDate)
+            .Where(sr => sr.ArrivalDate < departureDateTime && sr.DepartureDate > arrivalDateTime)
             .AnyAsync(sr => sr.Stay.Status == StayStatus.CheckedIn || sr.Stay.Status == StayStatus.InHouse);
 
         if (hasStayConflict)

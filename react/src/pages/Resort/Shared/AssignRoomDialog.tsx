@@ -4,6 +4,19 @@ import { useQuery } from '@tanstack/react-query';
 import { HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@/services/resort.service';
 
+/** Format date for API (YYYY-MM-DD). */
+const toDateOnly = (d: string | undefined | null): string | undefined => {
+  if (d == null || !d.trim()) return undefined;
+  const s = d.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const date = new Date(s);
+  if (Number.isNaN(date.getTime())) return undefined;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 type AssignRoomDialogProps = {
   open: boolean;
   isChangeRoom: boolean;
@@ -12,6 +25,10 @@ type AssignRoomDialogProps = {
   selectedRoomId: string;
   excludeRoomIds?: string[];
   allowDirtySelection?: boolean;
+  /** When set, fetches available rooms from room daily inventory for this date range and reservation (reservation assign flow). */
+  arrivalDate?: string | null;
+  departureDate?: string | null;
+  reservationId?: string | null;
   onSelectRoom: (roomId: string) => void;
   onClose: () => void;
   onConfirm?: () => void;
@@ -40,15 +57,38 @@ export const AssignRoomDialog = ({
   selectedRoomId,
   excludeRoomIds = [],
   allowDirtySelection = false,
+  arrivalDate,
+  departureDate,
+  reservationId,
   onSelectRoom,
   onClose,
 }: AssignRoomDialogProps) => {
   const excludeSet = new Set(excludeRoomIds);
+  const arrival = toDateOnly(arrivalDate ?? undefined);
+  const departure = toDateOnly(departureDate ?? undefined);
+  const useInventoryAvailability = Boolean(open && roomTypeId && arrival && departure);
 
   const { data: rooms = [], isLoading } = useQuery({
-    queryKey: ['assign-room-dialog-rooms', roomTypeId, open],
+    queryKey: [
+      'assign-room-dialog-rooms',
+      roomTypeId,
+      open,
+      useInventoryAvailability ? arrival : null,
+      useInventoryAvailability ? departure : null,
+      useInventoryAvailability ? reservationId : null,
+    ],
     queryFn: async () => {
       if (!open || !roomTypeId) return [];
+      if (useInventoryAvailability && arrival && departure) {
+        return resortService.getAvailableRooms(
+          roomTypeId,
+          arrival,
+          departure,
+          reservationId ?? undefined,
+          false,
+          false
+        );
+      }
       const result = await resortService.getRooms('', 0, 1000);
       return result.items.filter((r) => r.roomTypeId === roomTypeId);
     },

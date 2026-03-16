@@ -885,6 +885,9 @@ export const ReservationDetailPage = () => {
           roomTypeName={assignDialogRoomLine?.roomTypeName}
           roomTypeId={assignDialogRoomLine?.roomTypeId}
           selectedRoomId={assignDialogSelectedRoomId}
+          arrivalDate={assignDialogRoomLine?.arrivalDate}
+          departureDate={assignDialogRoomLine?.departureDate}
+          reservationId={id}
           excludeRoomIds={(reservationDetail?.rooms ?? [])
             .filter((room) => room.id !== assignDialogReservationRoomId && Boolean(room.roomId))
             .map((room) => room.roomId as string)}
