@@ -49,7 +49,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   }, [open, payload?.baseRate]);
 
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (isTemp: boolean) => {
       if (!payload) throw new Error('Missing reservation data.');
       if (!firstName.trim()) throw new Error('First name is required.');
       if (!lastName.trim()) throw new Error('Last name is required.');
@@ -73,12 +73,24 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         seniorCitizenDiscountAmount: 0,
         netAmount: amount,
       };
+      const tempRoomEntry = {
+        roomTypeId: payload.roomTypeId,
+        ratePerNight: round2(ratePerNight),
+        numberOfNights: nights,
+        amount,
+        discountPercent: 0,
+        discountAmount: 0,
+        seniorCitizenCount: 0,
+        seniorCitizenPercent: 20,
+        seniorCitizenDiscountAmount: 0,
+        netAmount: amount,
+      };
       return resortService.createReservation({
         arrivalDate,
         departureDate,
         adults,
         children,
-        totalAmount: amount,
+        totalAmount: isTemp ? 0 : amount,
         depositPercentage: 0,
         depositRequired: 0,
         notes: notes.trim() || undefined,
@@ -86,7 +98,8 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         lastName: lastName.trim(),
         phone: contactNumber.trim(),
         email: email.trim() || undefined,
-        rooms: [roomEntry],
+        isTempReservation: isTemp,
+        rooms: isTemp ? [tempRoomEntry] : [roomEntry],
         extraBeds: [],
         additionalGuestIds: [],
       });
@@ -100,7 +113,11 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   });
 
   const handleCreateReservation = () => {
-    createMutation.mutate();
+    createMutation.mutate(false);
+  };
+
+  const handleCreateTempReservation = () => {
+    createMutation.mutate(true);
   };
 
   if (!payload) return null;
@@ -244,7 +261,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
               </p>
             )}
 
-            <div className="mt-6 flex gap-2 justify-end">
+            <div className="mt-6 flex flex-wrap gap-2 justify-end">
               <button
                 type="button"
                 onClick={onClose}
@@ -254,8 +271,17 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
               </button>
               <button
                 type="button"
+                onClick={handleCreateTempReservation}
+                disabled={!canSubmit || createMutation.isPending}
+                className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Create a draft reservation with no room assigned"
+              >
+                Temp reservation
+              </button>
+              <button
+                type="button"
                 onClick={handleCreateReservation}
-                disabled={!canSubmit}
+                disabled={!canSubmit || createMutation.isPending}
                 className="rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {createMutation.isPending ? 'Creating…' : 'Create reservation'}

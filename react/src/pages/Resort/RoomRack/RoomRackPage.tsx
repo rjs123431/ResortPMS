@@ -307,7 +307,8 @@ export const RoomRackPage = () => {
   const bookingCountByRoomTypeAndDate = useMemo(() => {
     const countBy = new Map<string, number>();
     (roomRackData?.cells ?? []).forEach((cell) => {
-      if (cell.status !== 2 && cell.status !== 3) return;
+      if (cell.status !== 2) return;
+      if (cell.countInBookings === false) return;
       const typeName = roomNumberToType.get((cell.roomNumber ?? '').trim());
       if (!typeName) return;
       const dateKey = toDateKey(cell.inventoryDate);
@@ -320,32 +321,21 @@ export const RoomRackPage = () => {
   const bookingsListByRoomTypeAndDate = useMemo(() => {
     const listBy = new Map<string, BookingsDialogItem[]>();
     (roomRackData?.cells ?? []).forEach((cell) => {
-      if (cell.status !== 2 && cell.status !== 3) return;
+      if (cell.status !== 2 || cell.countInBookings === false) return;
+      if (!cell.reservationId) return;
       const typeName = roomNumberToType.get((cell.roomNumber ?? '').trim());
       if (!typeName) return;
       const dateKey = toDateKey(cell.inventoryDate);
       const k = `${typeName}|${dateKey}`;
       const list = listBy.get(k) ?? [];
-      const roomNum = (cell.roomNumber ?? '').trim();
-      const guest = cell.guestName ?? '—';
-      if (cell.status === 2 && cell.reservationId) {
-        list.push({
-          type: 'reservation',
-          id: cell.reservationId,
-          number: cell.reservationNo ?? '',
-          guestName: guest,
-          roomNumber: roomNum,
-          status: cell.reservationStatus,
-        });
-      } else if (cell.status === 3 && cell.stayId) {
-        list.push({
-          type: 'stay',
-          id: cell.stayId,
-          number: cell.stayNo ?? '',
-          guestName: guest,
-          roomNumber: roomNum,
-        });
-      }
+      list.push({
+        type: 'reservation',
+        id: cell.reservationId,
+        number: cell.reservationNo ?? '',
+        guestName: cell.guestName ?? '—',
+        roomNumber: (cell.roomNumber ?? '').trim(),
+        status: cell.reservationStatus,
+      });
       listBy.set(k, list);
     });
     return (roomTypeName: string, dateKey: string) => listBy.get(`${roomTypeName}|${dateKey}`) ?? [];

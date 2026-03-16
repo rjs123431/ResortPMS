@@ -152,6 +152,8 @@ export interface RoomRackDayCellDto {
   isArrivalDate?: boolean;
   /** True when this date is the departure date (bar ends at noon, half-day). */
   isDepartureDate?: boolean;
+  /** When true, cell is included in "No. of bookings" count (stays, drafts, or reservations with at least one unassigned room). */
+  countInBookings?: boolean;
 }
 
 export interface GetRoomRackResultDto {
@@ -380,6 +382,8 @@ export interface CreateReservationDto {
   lastName?: string;
   phone?: string;
   email?: string;
+  /** When true, creates a draft reservation with no room assignment (rooms must be empty). */
+  isTempReservation?: boolean;
   rooms: ReservationRoomDto[];
   extraBeds: ReservationExtraBedDto[];
   additionalGuestIds: string[];

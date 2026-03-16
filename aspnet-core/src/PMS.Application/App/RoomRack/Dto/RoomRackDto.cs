@@ -29,6 +29,8 @@ public class RoomRackDayCellDto
     public bool IsArrivalDate { get; set; }
     /// <summary>True when this date is the departure date for the reservation/stay in this room (used to draw half-day on last day).</summary>
     public bool IsDepartureDate { get; set; }
+    /// <summary>When true, this cell is included in the "No. of bookings" count. False when reservation has rooms and all have RoomId set (fully assigned); true for stays, drafts, and reservations with at least one unassigned room.</summary>
+    public bool CountInBookings { get; set; }
 }
 
 /// <summary>Result of GetRoomInfoAsync: rooms list and daily inventory cells for the date range.</summary>

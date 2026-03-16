@@ -92,6 +92,16 @@ public class RoomRackAppService(
             .ToListAsync();
 
         var resMap = reservationList.ToDictionary(x => x.Id, x => (x.ReservationNo ?? string.Empty, x.GuestName ?? string.Empty, (int)x.Status));
+
+        var reservationRoomIds = await reservationRoomRepository.GetAll()
+            .AsNoTracking()
+            .Where(rr => allResIds.Contains(rr.ReservationId))
+            .Select(rr => new { rr.ReservationId, rr.RoomId })
+            .ToListAsync();
+        var allRoomsHaveRoomIdByRes = reservationRoomIds
+            .GroupBy(x => x.ReservationId)
+            .ToDictionary(g => g.Key, g => g.All(x => x.RoomId.HasValue));
+
         var stayMap = stayList.ToDictionary(x => x.Id, x => (x.StayNo ?? string.Empty, x.GuestName ?? string.Empty));
         var roomById = rooms.ToDictionary(r => r.Id);
 
@@ -172,6 +182,29 @@ public class RoomRackAppService(
                 isDeparture = invDate == stayDates.Item2;
             }
 
+            // Do not display NoShow, Cancelled, CheckedIn, or Completed reservations in the grid — show as Vacant
+            if (status == (int)RoomDailyInventoryStatus.Reserved && resStatus.HasValue &&
+                (resStatus.Value == (int)PMS.App.ReservationStatus.Cancelled ||
+                 resStatus.Value == (int)PMS.App.ReservationStatus.NoShow ||
+                 resStatus.Value == (int)PMS.App.ReservationStatus.CheckedIn ||
+                 resStatus.Value == (int)PMS.App.ReservationStatus.Completed))
+            {
+                status = (int)RoomDailyInventoryStatus.Vacant;
+                reservationId = null;
+                stayId = null;
+                resNo = string.Empty;
+                stayNo = string.Empty;
+                guestName = string.Empty;
+                resStatus = null;
+                isArrival = false;
+                isDeparture = false;
+            }
+
+            // Bookings count/dialog: reservations only (exclude stays/in-house)
+            var countInBookings = status == (int)RoomDailyInventoryStatus.Reserved && reservationId.HasValue
+                && (resStatus == (int)PMS.App.ReservationStatus.Draft
+                    || !allRoomsHaveRoomIdByRes.GetValueOrDefault(reservationId.Value, true));
+
             return new RoomRackDayCellDto
             {
                 RoomId = i.RoomId,
@@ -186,6 +219,7 @@ public class RoomRackAppService(
                 ReservationStatus = resStatus,
                 IsArrivalDate = isArrival,
                 IsDepartureDate = isDeparture,
+                CountInBookings = countInBookings,
             };
         }).ToList();
 

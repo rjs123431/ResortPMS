@@ -78,7 +78,9 @@ public class CreateReservationDto : IValidatableObject
     [Required][StringLength(128)] public string LastName { get; set; }
     [Required][StringLength(64)] public string Phone { get; set; }
     [StringLength(256)] public string Email { get; set; }
-    [Required][MinLength(1)] public List<CreateReservationRoomDto> Rooms { get; set; } = [];
+    /// <summary>When true, creates a draft reservation with room type/dates/rates but no room assignment (RoomId and RoomNumber are not saved; no inventory reserved).</summary>
+    public bool IsTempReservation { get; set; }
+    public List<CreateReservationRoomDto> Rooms { get; set; } = [];
     public List<CreateReservationExtraBedDto> ExtraBeds { get; set; } = [];
     public List<Guid> AdditionalGuestIds { get; set; } = [];
 
@@ -86,6 +88,18 @@ public class CreateReservationDto : IValidatableObject
     {
         if (DepartureDate.Date <= ArrivalDate.Date)
             yield return new ValidationResult("DepartureDate must be after ArrivalDate.", [nameof(DepartureDate)]);
+        if (IsTempReservation)
+        {
+            if (Rooms == null || Rooms.Count == 0)
+                yield return new ValidationResult("Temp reservation must have at least one room (room type and dates).", [nameof(Rooms)]);
+            else if (Rooms.Any(r => r.RoomId.HasValue))
+                yield return new ValidationResult("Temp reservation rooms must not have a room assignment (RoomId).", [nameof(Rooms)]);
+        }
+        else
+        {
+            if (Rooms == null || Rooms.Count == 0)
+                yield return new ValidationResult("At least one room is required when not creating a temp reservation.", [nameof(Rooms)]);
+        }
     }
 }
 

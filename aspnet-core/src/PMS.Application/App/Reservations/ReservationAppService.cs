@@ -89,15 +89,21 @@ public class ReservationAppService(
         var phone = guest != null && string.IsNullOrWhiteSpace(input.Phone) ? (guest.Phone ?? string.Empty) : (input.Phone ?? string.Empty).Trim();
         var email = guest != null && string.IsNullOrWhiteSpace(input.Email) ? (guest.Email ?? string.Empty) : (input.Email ?? string.Empty).Trim();
 
-        // Atomically reserve inventory for each assigned room to prevent double booking under concurrency
-        foreach (var room in input.Rooms)
+        var isTempReservation = input.IsTempReservation;
+        var nights = (int)(departureDate.Date - arrivalDate.Date).TotalDays;
+
+        if (!isTempReservation)
         {
-            if (!room.RoomId.HasValue) continue;
-            var roomId = room.RoomId.Value;
-            await roomDailyInventoryService.Ensure365DaysFromTodayAsync([roomId]);
-            var reserved = await roomDailyInventoryService.TryReserveInventoryAsync(roomId, arrivalDate, departureDate, reservationId);
-            if (!reserved)
-                throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+            // Atomically reserve inventory for each assigned room to prevent double booking under concurrency
+            foreach (var room in input.Rooms)
+            {
+                if (!room.RoomId.HasValue) continue;
+                var roomId = room.RoomId.Value;
+                await roomDailyInventoryService.Ensure365DaysFromTodayAsync([roomId]);
+                var reserved = await roomDailyInventoryService.TryReserveInventoryAsync(roomId, arrivalDate, departureDate, reservationId);
+                if (!reserved)
+                    throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+            }
         }
 
         var reservation = new Reservation
@@ -113,19 +119,19 @@ public class ReservationAppService(
             ReservationDate = Clock.Now,
             ArrivalDate = arrivalDate,
             DepartureDate = departureDate,
-            Nights = (int)(departureDate.Date - arrivalDate.Date).TotalDays,
+            Nights = nights,
             Adults = input.Adults,
             Children = input.Children,
-            Status = ReservationStatus.Pending,
-            TotalAmount = input.TotalAmount,
+            Status = isTempReservation ? ReservationStatus.Draft : ReservationStatus.Pending,
+            TotalAmount = isTempReservation ? 0 : input.TotalAmount,
             DepositPercentage = input.DepositPercentage,
-            DepositRequired = input.DepositRequired,
+            DepositRequired = isTempReservation ? 0 : input.DepositRequired,
             Notes = input.Notes ?? string.Empty,
             ReservationConditions = input.ReservationConditions ?? string.Empty,
             SpecialRequests = input.SpecialRequests ?? string.Empty,
         };
 
-        // Attach room entries
+// Attach room entries (temp: room type/dates/rates only, no RoomId or RoomNumber; normal: include assignment and reserve inventory)
         foreach (var room in input.Rooms)
         {
             var roomType = await roomTypeRepository.FirstOrDefaultAsync(room.RoomTypeId);
@@ -133,12 +139,18 @@ public class ReservationAppService(
                 throw new UserFriendlyException(L("RoomTypeNotFound"));
 
             string roomNumber = string.Empty;
-            if (room.RoomId.HasValue)
+            Guid? roomId = room.RoomId;
+            if (!isTempReservation && room.RoomId.HasValue)
             {
                 var roomEntity = await roomRepository.FirstOrDefaultAsync(room.RoomId.Value);
                 if (roomEntity != null)
                     roomNumber = roomEntity.RoomNumber ?? string.Empty;
                 // Inventory already reserved atomically via TryReserveInventoryAsync above
+            }
+            else if (isTempReservation)
+            {
+                roomId = null;
+                roomNumber = string.Empty;
             }
 
             var numberOfNights = reservation.Nights;
@@ -155,7 +167,7 @@ public class ReservationAppService(
             reservation.Rooms.Add(new ReservationRoom
             {
                 RoomTypeId = room.RoomTypeId,
-                RoomId = room.RoomId,
+                RoomId = roomId,
                 ArrivalDate = arrivalDate,
                 DepartureDate = departureDate,
                 RatePerNight = room.RatePerNight,
@@ -172,38 +184,41 @@ public class ReservationAppService(
             });
         }
 
-        foreach (var extraBed in input.ExtraBeds ?? [])
+        if (!isTempReservation)
         {
-            var quantity = Math.Max(1, extraBed.Quantity);
-            var extraArrival = extraBed.ArrivalDate.HasValue ? extraBed.ArrivalDate.Value.Date.Add(extraBed.ArrivalDate.Value.TimeOfDay == TimeSpan.Zero ? checkInTime : extraBed.ArrivalDate.Value.TimeOfDay) : arrivalDate;
-            var extraDeparture = extraBed.DepartureDate.HasValue ? extraBed.DepartureDate.Value.Date.Add(extraBed.DepartureDate.Value.TimeOfDay == TimeSpan.Zero ? checkOutTime : extraBed.DepartureDate.Value.TimeOfDay) : departureDate;
-            var numberOfNights = extraBed.NumberOfNights > 0 ? extraBed.NumberOfNights : reservation.Nights;
-            var amount = extraBed.Amount > 0 ? extraBed.Amount : extraBed.RatePerNight * numberOfNights * quantity;
-            var discountPercent = extraBed.DiscountPercent;
-            var discountAmount = extraBed.DiscountAmount;
-            var seniorCitizenCount = Math.Max(0, extraBed.SeniorCitizenCount);
-            var seniorCitizenPercent = extraBed.SeniorCitizenPercent > 0 ? extraBed.SeniorCitizenPercent : 20m;
-            var seniorCitizenDiscountAmount = extraBed.SeniorCitizenDiscountAmount;
-            var netAmount = extraBed.NetAmount > 0
-                ? extraBed.NetAmount
-                : Math.Max(0, amount - discountAmount - seniorCitizenDiscountAmount);
-
-            reservation.ExtraBeds.Add(new ReservationExtraBed
+            foreach (var extraBed in input.ExtraBeds ?? [])
             {
-                ExtraBedTypeId = extraBed.ExtraBedTypeId,
-                ArrivalDate = extraArrival,
-                DepartureDate = extraDeparture,
-                Quantity = quantity,
-                RatePerNight = extraBed.RatePerNight,
-                NumberOfNights = numberOfNights,
-                Amount = amount,
-                DiscountPercent = discountPercent,
-                DiscountAmount = discountAmount,
-                SeniorCitizenCount = seniorCitizenCount,
-                SeniorCitizenPercent = seniorCitizenPercent,
-                SeniorCitizenDiscountAmount = seniorCitizenDiscountAmount,
-                NetAmount = netAmount,
-            });
+                var quantity = Math.Max(1, extraBed.Quantity);
+                var extraArrival = extraBed.ArrivalDate.HasValue ? extraBed.ArrivalDate.Value.Date.Add(extraBed.ArrivalDate.Value.TimeOfDay == TimeSpan.Zero ? checkInTime : extraBed.ArrivalDate.Value.TimeOfDay) : arrivalDate;
+                var extraDeparture = extraBed.DepartureDate.HasValue ? extraBed.DepartureDate.Value.Date.Add(extraBed.DepartureDate.Value.TimeOfDay == TimeSpan.Zero ? checkOutTime : extraBed.DepartureDate.Value.TimeOfDay) : departureDate;
+                var numberOfNights = extraBed.NumberOfNights > 0 ? extraBed.NumberOfNights : reservation.Nights;
+                var amount = extraBed.Amount > 0 ? extraBed.Amount : extraBed.RatePerNight * numberOfNights * quantity;
+                var discountPercent = extraBed.DiscountPercent;
+                var discountAmount = extraBed.DiscountAmount;
+                var seniorCitizenCount = Math.Max(0, extraBed.SeniorCitizenCount);
+                var seniorCitizenPercent = extraBed.SeniorCitizenPercent > 0 ? extraBed.SeniorCitizenPercent : 20m;
+                var seniorCitizenDiscountAmount = extraBed.SeniorCitizenDiscountAmount;
+                var netAmount = extraBed.NetAmount > 0
+                    ? extraBed.NetAmount
+                    : Math.Max(0, amount - discountAmount - seniorCitizenDiscountAmount);
+
+                reservation.ExtraBeds.Add(new ReservationExtraBed
+                {
+                    ExtraBedTypeId = extraBed.ExtraBedTypeId,
+                    ArrivalDate = extraArrival,
+                    DepartureDate = extraDeparture,
+                    Quantity = quantity,
+                    RatePerNight = extraBed.RatePerNight,
+                    NumberOfNights = numberOfNights,
+                    Amount = amount,
+                    DiscountPercent = discountPercent,
+                    DiscountAmount = discountAmount,
+                    SeniorCitizenCount = seniorCitizenCount,
+                    SeniorCitizenPercent = seniorCitizenPercent,
+                    SeniorCitizenDiscountAmount = seniorCitizenDiscountAmount,
+                    NetAmount = netAmount,
+                });
+            }
         }
 
         // Attach primary and additional guests only when a guest is linked
