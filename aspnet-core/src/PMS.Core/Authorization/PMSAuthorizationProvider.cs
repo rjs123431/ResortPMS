@@ -33,8 +33,7 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         roles.CreateChildPermission(PermissionNames.Pages_Admin_Roles_Edit, L("Edit"));
 
         administration.CreateChildPermission(PermissionNames.Pages_Admin_AuditTrail, L("AuditTrail"), multiTenancySides: MultiTenancySides.Tenant);
-
-        //administration.CreateChildPermission(PermissionNames.Pages_Admin_Settings, L("Settings"), multiTenancySides: MultiTenancySides.Tenant);
+        administration.CreateChildPermission(PermissionNames.Pages_Admin_Settings, L("Settings"), multiTenancySides: MultiTenancySides.Tenant);
 
         webApp.CreateChildPermission(PermissionNames.Pages_Reports, L("Reports"), multiTenancySides: MultiTenancySides.Tenant);
 

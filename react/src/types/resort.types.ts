@@ -161,6 +161,20 @@ export interface GetRoomRackResultDto {
   cells: RoomRackDayCellDto[];
 }
 
+export interface RoomRackSettingsDto {
+  dateRangeDays: number;
+  colorInHouse: string;
+  colorInHouseDark: string;
+  colorPendingReservation: string;
+  colorPendingReservationDark: string;
+  colorConfirmedReservation: string;
+  colorConfirmedReservationDark: string;
+  colorCheckoutToday: string;
+  colorCheckoutTodayDark: string;
+  colorOnHoldRoom: string;
+  colorOnHoldRoomDark: string;
+}
+
 export interface CreateRoomDto {
   roomNumber: string;
   roomTypeId: string;

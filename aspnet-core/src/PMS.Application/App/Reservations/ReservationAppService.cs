@@ -29,6 +29,7 @@ public interface IReservationAppService : IApplicationService
     Task UpdateAsync(UpdateReservationDto input);
     Task CancelAsync(CancelReservationDto input);
     Task ConfirmAsync(Guid reservationId);
+    Task SetPendingAsync(Guid reservationId);
     Task MarkNoShowAsync(Guid reservationId);
     Task<Guid> RecordDepositAsync(RecordReservationDepositDto input);
     Task<int> AddGuestsAsync(AddReservationGuestsDto input);
@@ -343,6 +344,27 @@ public class ReservationAppService(
             null,
             new { Status = (int)ReservationStatus.Confirmed },
             nameof(ConfirmAsync));
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
+    public async Task SetPendingAsync(Guid reservationId)
+    {
+        var reservation = await reservationRepository.GetAsync(reservationId);
+
+        if (reservation.Status != ReservationStatus.Draft)
+            throw new UserFriendlyException(L("OnlyDraftCanBeSetToPending"));
+
+        reservation.Status = ReservationStatus.Pending;
+        await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            null,
+            new { Status = (int)ReservationStatus.Pending },
+            nameof(SetPendingAsync));
     }
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]

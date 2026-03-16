@@ -55,6 +55,7 @@ const HousekeepingHubPage = lazy(() => import('@pages/Resort/Housekeeping/Housek
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 const AuditTrailPage = lazy(() => import('@pages/Administration/AuditTrailPage').then((m) => ({ default: m.AuditTrailPage })));
+const RoomRackSettingsPage = lazy(() => import('@pages/Administration/RoomRackSettingsPage').then((m) => ({ default: m.RoomRackSettingsPage })));
 const ReportsPage = lazy(() => import('@pages/Reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 
 const queryClient = new QueryClient({
@@ -496,17 +497,17 @@ const App: React.FC = () => {
                           </PageTitle>
                         }
                       />
+                      <Route
+                        path="room-rack-settings"
+                        element={
+                          <PageTitle title="Room Rack Settings">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Settings]}>
+                              <RoomRackSettingsPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
                     </Route>
-                    <Route
-                      path="/reports"
-                      element={
-                        <PageTitle title="Reports &amp; Analytics">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reports]}>
-                            <ReportsPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
                     <Route path="/guests" element={<Navigate to="/admin/guests" replace />} />
                     <Route path="/rooms" element={<Navigate to="/admin/rooms" replace />} />
                     <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />

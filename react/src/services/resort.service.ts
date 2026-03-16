@@ -33,6 +33,7 @@ import {
   RoomListDto,
   RoomDto,
   GetRoomRackResultDto,
+  RoomRackSettingsDto,
   RoomTypeDto,
   RoomTypeListDto,
   RoomRatePlanDto,
@@ -197,6 +198,15 @@ export const resortService = {
     return response.data.result;
   },
 
+  getRoomRackSettings: async (): Promise<RoomRackSettingsDto> => {
+    const response = await api.get<ApiResponse<RoomRackSettingsDto>>('/api/services/app/RoomRackSettings/Get');
+    return response.data.result;
+  },
+
+  updateRoomRackSettings: async (input: RoomRackSettingsDto): Promise<void> => {
+    await api.put('/api/services/app/RoomRackSettings/Update', input);
+  },
+
   createRoom: async (input: CreateRoomDto) => {
     const response = await api.post<ApiResponse<string>>('/api/services/app/Room/Create', input);
     return response.data.result;
@@ -301,6 +311,10 @@ export const resortService = {
 
   confirmReservation: async (reservationId: string) => {
     await api.post('/api/services/app/Reservation/Confirm', null, { params: { reservationId } });
+  },
+
+  setReservationPending: async (reservationId: string) => {
+    await api.post('/api/services/app/Reservation/SetPending', null, { params: { reservationId } });
   },
 
   markReservationNoShow: async (reservationId: string) => {

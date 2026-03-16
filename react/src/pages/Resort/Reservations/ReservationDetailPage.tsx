@@ -17,6 +17,8 @@ const formatMoney = (value: number) =>
 
 const getStatusBadgeClass = (status: ReservationStatus) => {
   switch (status) {
+    case ReservationStatus.Draft:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
     case ReservationStatus.Pending:
       return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200';
     case ReservationStatus.Confirmed:
@@ -127,6 +129,15 @@ export const ReservationDetailPage = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
+    },
+  });
+
+  const setPendingMutation = useMutation({
+    mutationFn: () => resortService.setReservationPending(id as string),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
+      void queryClient.invalidateQueries({ queryKey: ['room-rack-info'] });
     },
   });
 
@@ -301,6 +312,26 @@ export const ReservationDetailPage = () => {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reservation Detail</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Review and manage reservation details.</p>
           </div>
+          {reservationDetail?.status === ReservationStatus.Draft ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded bg-amber-600 px-3 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-50"
+                disabled={setPendingMutation.isPending}
+                onClick={() => setPendingMutation.mutate()}
+              >
+                {setPendingMutation.isPending ? 'Updating…' : 'Make Pending'}
+              </button>
+              <button
+                type="button"
+                className="rounded bg-rose-600 px-3 py-2 text-sm text-white hover:bg-rose-700 disabled:opacity-50"
+                disabled={cancelMutation.isPending}
+                onClick={() => cancelMutation.mutate()}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : null}
           {reservationDetail?.status === ReservationStatus.Pending ? (
             <div className="flex gap-2">
               <button

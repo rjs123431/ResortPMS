@@ -7,6 +7,7 @@ export const PermissionNames = {
   Pages_Admin_Roles_Create: 'Pages.Admin.Roles.Create',
   Pages_Admin_Roles_Edit: 'Pages.Admin.Roles.Edit',
   Pages_Admin_AuditTrail: 'Pages.Admin.AuditTrail',
+  Pages_Admin_Settings: 'Pages.Admin.Settings',
   Pages_Guests: 'Pages.Guests',
   Pages_Guests_Create: 'Pages.Guests.Create',
   Pages_Guests_Edit: 'Pages.Guests.Edit',

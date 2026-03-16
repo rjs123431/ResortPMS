@@ -32,6 +32,17 @@ namespace PMS.Configuration
                     scopes: SettingScopes.Tenant),
                 new SettingDefinition(AppSettingNames.PublicApiKey,"1234"),
 
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.DateRangeDays, "14", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorInHouse, "#DBEAFE", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorInHouseDark, "#1E3A8A", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorPendingReservation, "#FEF3C7", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorPendingReservationDark, "#713F12", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorConfirmedReservation, "#D1FAE5", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorConfirmedReservationDark, "#14532D", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorCheckoutToday, "#BFDBFE", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorCheckoutTodayDark, "#1E40AF", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorOnHoldRoom, "#E2E8F0", scopes: SettingScopes.Tenant),
+                new SettingDefinition(AppSettingNames.FrontDesk_RoomRack.ColorOnHoldRoomDark, "#475569", scopes: SettingScopes.Tenant),
             };
         }
 

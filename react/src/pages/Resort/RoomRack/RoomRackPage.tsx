@@ -5,12 +5,24 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ArrowLeftIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { MainLayout } from '@components/layout/MainLayout';
+import { useTheme } from '@contexts/ThemeContext';
 import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
 import { ReservationStatus } from '@/types/resort.types';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 import { RoomRackDetailPanel, type RoomRackPanelItem } from './RoomRackDetailPanel';
 import { RoomRackBookingsDialog, type BookingsDialogItem } from './RoomRackBookingsDialog';
+
+/** Returns a dark or light text color for a given hex background. */
+function contrastColor(hex: string): string {
+  const h = hex.replace(/^#/, '');
+  if (h.length !== 6) return '#111827';
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance > 0.5 ? '#111827' : '#f9fafb';
+}
 
 /** Normalize to YYYY-MM-DD for grid comparison. Prefer date part from ISO strings to avoid timezone shift. */
 const toDateKey = (d: Date | string | undefined | null): string => {
@@ -79,8 +91,17 @@ function formatDateRange(startKey: string, endKey: string): string {
 
 export const RoomRackPage = () => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
+  const { data: roomRackSettings } = useQuery({
+    queryKey: ['room-rack-settings'],
+    queryFn: () => resortService.getRoomRackSettings(),
+    staleTime: 2 * 60 * 1000,
+  });
 
+  const dateRangeDays = roomRackSettings?.dateRangeDays ?? 14;
+  const appliedSettingsRef = useRef(false);
   const [stayRange, setStayRange] = useState<[Date, Date]>(() => {
     const today = new Date();
     today.setHours(12, 0, 0, 0);
@@ -89,9 +110,32 @@ export const RoomRackPage = () => {
     return [today, end];
   });
 
+  useEffect(() => {
+    if (roomRackSettings == null || appliedSettingsRef.current) return;
+    appliedSettingsRef.current = true;
+    const days = Math.max(1, Math.min(90, dateRangeDays));
+    setStayRange(([start]) => {
+      const end = new Date(start);
+      end.setDate(end.getDate() + days);
+      return [start, end];
+    });
+  }, [roomRackSettings, dateRangeDays]);
+
   const [startDate, endDate] = stayRange;
   const setStartDate = (d: Date) => setStayRange(([, end]) => [d, end]);
   const setEndDate = (d: Date) => setStayRange(([start]) => [start, d]);
+
+  const colors = useMemo(() => {
+    const s = roomRackSettings;
+    if (!s) return null;
+    return {
+      inHouse: isDark ? s.colorInHouseDark : s.colorInHouse,
+      pendingReservation: isDark ? s.colorPendingReservationDark : s.colorPendingReservation,
+      confirmedReservation: isDark ? s.colorConfirmedReservationDark : s.colorConfirmedReservation,
+      checkoutToday: isDark ? s.colorCheckoutTodayDark : s.colorCheckoutToday,
+      onHoldRoom: isDark ? s.colorOnHoldRoomDark : s.colorOnHoldRoom,
+    };
+  }, [roomRackSettings, isDark]);
 
   const startKey = useMemo(() => toDateKey(startDate), [startDate]);
   const endKey = useMemo(() => toDateKey(endDate), [endDate]);
@@ -523,7 +567,7 @@ export const RoomRackPage = () => {
                       {rooms.map((room) => {
                         const roomNum = room.roomNumber;
                         const n = dateColumns.length;
-                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
+                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; bgStyle?: { backgroundColor: string; color: string }; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
                         const segments: SegmentItem[] = [];
                         let i = 0;
                         while (i < dateColumns.length) {
@@ -587,6 +631,14 @@ export const RoomRackPage = () => {
                           const startDateKey = dateColumns[startIndex];
                           const endDateKey = dateColumns[endIndex - 1];
                           const dateRangeStr = formatDateRange(startDateKey, endDateKey);
+                          let bgStyle: { backgroundColor: string; color: string } | undefined;
+                          if (colors) {
+                            let bg: string;
+                            if (cell.type === 'stay') bg = lastDayHalf ? colors.checkoutToday : colors.inHouse;
+                            else if (cell.type === 'reservation') bg = isConfirmed ? colors.confirmedReservation : colors.pendingReservation;
+                            else bg = colors.onHoldRoom;
+                            bgStyle = { backgroundColor: bg, color: contrastColor(bg) };
+                          }
                           let tooltip: string;
                           if (cell.type === 'stay') {
                             tooltip = `In-house · Stay ${cell.stayNo}\nGuest: ${cell.guestName || '—'}\nDates: ${dateRangeStr}`;
@@ -610,6 +662,7 @@ export const RoomRackPage = () => {
                             endIndex,
                             bgClass,
                             textClass,
+                            bgStyle,
                             extendsBefore,
                             extendsAfter,
                             firstDayHalf: firstDayHalf || undefined,
@@ -686,15 +739,17 @@ export const RoomRackPage = () => {
                                   return (
                                     <div
                                       key={seg.id}
-                                      className={`absolute top-0 bottom-0 z-10 min-w-0 flex items-center overflow-hidden border border-gray-300 dark:border-gray-600 ${seg.bgClass}`}
+                                      className={`absolute top-0 bottom-0 z-10 min-w-0 flex items-center overflow-hidden border border-gray-300 dark:border-gray-600 ${seg.bgStyle ? '' : seg.bgClass}`}
                                       style={{
+                                        ...seg.bgStyle,
                                         left: `${leftPct}%`,
                                         width: `${widthPct}%`,
                                       }}
                                     >
                                       <button
                                         type="button"
-                                        className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
+                                        className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.bgStyle ? '' : seg.textClass}`}
+                                        style={seg.bgStyle ? { color: seg.bgStyle.color } : undefined}
                                         onClick={() => {
                                           if (seg.panelItem) {
                                             setDetailPanelItem(seg.panelItem);
