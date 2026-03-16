@@ -92,7 +92,8 @@ public class CheckInAppService(
         {
             var room = roomId == primaryRoom.Id ? primaryRoom : await ValidateAndGetRoomAsync(roomId);
             var available = await roomDailyInventoryService.IsRoomAvailableForDatesAsync(
-                room.Id, reservation.ArrivalDate, reservation.DepartureDate);
+                room.Id, reservation.ArrivalDate, reservation.DepartureDate,
+                excludeReservationId: reservation.Id);
             if (!available)
                 throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
             await EnsureRoomIsAvailableForReservationDatesAsync(
