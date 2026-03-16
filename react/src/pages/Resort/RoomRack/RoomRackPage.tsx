@@ -413,6 +413,7 @@ export const RoomRackPage = () => {
     return () => ro.disconnect();
   }, [dateColumns.length, roomsByType.length]);
 
+
   return (
     <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -487,7 +488,7 @@ export const RoomRackPage = () => {
                 setStartDate(today);
                 setEndDate(end);
               }}
-              className="flex h-9 shrink-0 items-center justify-center rounded border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              className="flex h-9 shrink-0 items-center justify-center rounded border border-primary-500 bg-primary-50 px-3 text-sm font-semibold text-primary-800 hover:bg-primary-100 dark:border-primary-400 dark:bg-primary-900 dark:text-primary-50 dark:hover:bg-primary-800"
               title="Go to today"
             >
               Today
@@ -524,7 +525,7 @@ export const RoomRackPage = () => {
               <table className="min-w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
-                    <th className="sticky top-0 left-0 z-[40] min-w-[160px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+                    <th className="sticky top-0 left-0 z-[40] min-w-[160px] border-b border-r border-gray-300 bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
                       Room
                     </th>
                     {dateColumns.map((dateKey) => {
@@ -535,7 +536,8 @@ export const RoomRackPage = () => {
                       return (
                         <th
                           key={dateKey}
-                          className={`sticky top-0 z-[20] min-w-[100px] border-b border-r p-2 text-center font-medium last:border-r-0 ${
+                          data-date-key={dateKey}
+                          className={`sticky top-0 z-[20] min-w-[100px] border-b border-r border-gray-200 p-2 text-center font-medium last:border-r-0 dark:border-gray-600 ${
                             isToday
                               ? 'bg-primary-50 text-primary-800 dark:bg-primary-500 dark:text-primary-100'
                               : isWeekend
@@ -559,13 +561,13 @@ export const RoomRackPage = () => {
                   {roomsByType.map(([roomTypeName, rooms]) => (
                     <React.Fragment key={roomTypeName}>
                       <tr className="bg-gray-100 dark:bg-gray-700">
-                        <td className="sticky left-0 z-[30] min-w-[160px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-gray-200 dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+                        <td className="sticky left-0 z-[30] min-w-[160px] border-b bg-gray-100 p-2 font-medium text-gray-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-gray-200 dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
                           {roomTypeName}
                         </td>
                         {dateColumns.map((dateKey) => {
                           const count = bookingCountByRoomTypeAndDate(roomTypeName, dateKey);
                           return (
-                            <td key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center last:border-r-0" title={count > 0 ? 'No. of bookings' : undefined}>
+                            <td key={dateKey} className="min-w-[100px] border-b p-2 text-center" title={count > 0 ? 'No. of bookings' : undefined}>
                               {count > 0 ? (
                                 <button
                                   type="button"

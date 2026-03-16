@@ -1,46 +1,38 @@
-/* Custom horizontal scrollbar for RoomRackPage */
+/* Custom horizontal scrollbar for RoomRackPage – more standard look */
 .scrollbar-custom {
-  scrollbar-width: auto;
-  scrollbar-color: #6366f1 #e5e7eb;
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #e5e7eb; /* thumb, track */
 }
-
-.scrollbar-custom::-webkit-scrollbar {
-  height: 16px; /* controls horizontal scrollbar thickness */
-}
-
 
 .dark .scrollbar-custom {
-  scrollbar-width: auto;
-  scrollbar-color: #6366f1 darkgray;
-}
-.scrollbar-custom::-webkit-scrollbar {
-  height: 24px !important;
-  min-height: 24px !important;
-  max-height: 24px !important;
-  background: #e5e7eb;
-  border-radius: 4px;
-}
-.scrollbar-custom::-webkit-scrollbar-thumb {
-  background: #6366f1;
-  border-radius: 4px;
-}
-.scrollbar-custom::-webkit-scrollbar-track {
-  background: #e5e7eb;
-  border-radius: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #1f2937;
 }
 
 .scrollbar-custom::-webkit-scrollbar {
-  height: 16px;
+  height: 12px;
   background: #e5e7eb;
-  border-radius: 4px;
 }
+
 .scrollbar-custom::-webkit-scrollbar-thumb {
-  background: #6366f1;
-  border-radius: 4px;
+  background: #9ca3af;
+  border-radius: 9999px;
 }
+
 .scrollbar-custom::-webkit-scrollbar-track {
   background: #e5e7eb;
-  border-radius: 4px;
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar {
+  background: #111827;
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-track {
+  background: #111827;
 }
 @tailwind base;
 @tailwind components;
