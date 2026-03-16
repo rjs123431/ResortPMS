@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -331,6 +331,14 @@ export const CheckInWalkInPage = () => {
   const selectionGrandTotal = useMemo(
     () => round2(reservationDetailTotal + extraBedTotal),
     [reservationDetailTotal, extraBedTotal]
+  );
+
+  const handleAvailabilityChange = useCallback(
+    ({ availableRooms: nextAvailableRooms, availabilityRows: nextAvailabilityRows }: { availableRooms: RoomListDto[]; availabilityRows: RoomTypeAvailabilityRow[] }) => {
+      setAvailableRooms(nextAvailableRooms);
+      setAvailabilityRows(nextAvailabilityRows);
+    },
+    []
   );
 
   const handleSearch = (criteria: RoomTypeAvailabilitySearchCriteria) => {
@@ -949,10 +957,7 @@ export const CheckInWalkInPage = () => {
                 onErrorMessageChange={setSearchError}
                 excludeReservedWithoutAssignedRoom={false}
                 checkInReadyOnly
-                onAvailabilityChange={({ availableRooms: nextAvailableRooms, availabilityRows: nextAvailabilityRows }) => {
-                  setAvailableRooms(nextAvailableRooms);
-                  setAvailabilityRows(nextAvailabilityRows);
-                }}
+                onAvailabilityChange={handleAvailabilityChange}
               />
             </div>
           </section>
