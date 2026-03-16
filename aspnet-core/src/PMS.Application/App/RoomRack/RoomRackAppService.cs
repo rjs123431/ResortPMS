@@ -93,15 +93,6 @@ public class RoomRackAppService(
 
         var resMap = reservationList.ToDictionary(x => x.Id, x => (x.ReservationNo ?? string.Empty, x.GuestName ?? string.Empty, (int)x.Status));
 
-        var reservationRoomIds = await reservationRoomRepository.GetAll()
-            .AsNoTracking()
-            .Where(rr => allResIds.Contains(rr.ReservationId))
-            .Select(rr => new { rr.ReservationId, rr.RoomId })
-            .ToListAsync();
-        var allRoomsHaveRoomIdByRes = reservationRoomIds
-            .GroupBy(x => x.ReservationId)
-            .ToDictionary(g => g.Key, g => g.All(x => x.RoomId.HasValue));
-
         var stayMap = stayList.ToDictionary(x => x.Id, x => (x.StayNo ?? string.Empty, x.GuestName ?? string.Empty));
         var roomById = rooms.ToDictionary(r => r.Id);
 
@@ -134,6 +125,49 @@ public class RoomRackAppService(
             .Select(sr => new { sr.StayId, sr.RoomId, sr.ArrivalDate, sr.DepartureDate })
             .ToListAsync();
         var stayDateByStayAndRoom = stayRoomDates.ToDictionary(x => (x.StayId, x.RoomId), x => (x.ArrivalDate.Date, x.DepartureDate.Date));
+
+        var roomTypeIds = rooms.Select(r => r.RoomTypeId).Distinct().ToList();
+        var roomTypeIdToName = rooms.GroupBy(r => r.RoomTypeId).ToDictionary(g => g.Key, g => g.First().RoomType?.Name ?? string.Empty);
+
+        var bookingStatuses = new[] { (int)PMS.App.ReservationStatus.Draft, (int)PMS.App.ReservationStatus.Pending };
+        var unassignedRooms = await reservationRoomRepository.GetAll()
+            .AsNoTracking()
+            .Where(rr => rr.RoomId == null && roomTypeIds.Contains(rr.RoomTypeId) && rr.ArrivalDate < end && rr.DepartureDate > start)
+            .Select(rr => new { rr.ReservationId, rr.RoomTypeId, rr.ArrivalDate, rr.DepartureDate })
+            .ToListAsync();
+        var unassignedResIds = unassignedRooms.Select(x => x.ReservationId).Distinct().ToList();
+        List<(Guid Id, string ReservationNo, string GuestName, int Status)> unassignedResList = [];
+        if (unassignedResIds.Count > 0)
+        {
+            var raw = await reservationRepository.GetAll()
+                .AsNoTracking()
+                .Where(r => unassignedResIds.Contains(r.Id) && bookingStatuses.Contains((int)r.Status))
+                .Select(r => new { r.Id, r.ReservationNo, r.GuestName, r.Status })
+                .ToListAsync();
+            unassignedResList = raw.Select(r => (r.Id, r.ReservationNo ?? string.Empty, r.GuestName ?? string.Empty, (int)r.Status)).ToList();
+        }
+        var unassignedResMap = unassignedResList.ToDictionary(x => x.Id, x => (x.ReservationNo, x.GuestName, x.Status));
+        var unassignedBookings = new List<UnassignedBookingDto>();
+        foreach (var rr in unassignedRooms)
+        {
+            if (!unassignedResMap.TryGetValue(rr.ReservationId, out var res)) continue;
+            if (!roomTypeIdToName.TryGetValue(rr.RoomTypeId, out var roomTypeName) || string.IsNullOrEmpty(roomTypeName)) continue;
+            var arr = rr.ArrivalDate.Date;
+            var dep = rr.DepartureDate.Date;
+            for (var d = arr; d < dep && d < end; d = d.AddDays(1))
+            {
+                if (d >= start)
+                    unassignedBookings.Add(new UnassignedBookingDto
+                    {
+                        RoomTypeName = roomTypeName,
+                        InventoryDate = d,
+                        ReservationId = rr.ReservationId,
+                        ReservationNo = res.Item1,
+                        GuestName = res.Item2,
+                        ReservationStatus = res.Item3,
+                    });
+            }
+        }
 
         var roomListDtos = rooms.Select(r => MapToRoomListDto(r)).ToList();
         var cells = inventory.Select(i =>
@@ -200,10 +234,9 @@ public class RoomRackAppService(
                 isDeparture = false;
             }
 
-            // Bookings count/dialog: reservations only (exclude stays/in-house)
+            // Bookings count/dialog: only Draft reservations (exclude Pending and Confirmed)
             var countInBookings = status == (int)RoomDailyInventoryStatus.Reserved && reservationId.HasValue
-                && (resStatus == (int)PMS.App.ReservationStatus.Draft
-                    || !allRoomsHaveRoomIdByRes.GetValueOrDefault(reservationId.Value, true));
+                && resStatus == (int)PMS.App.ReservationStatus.Draft;
 
             return new RoomRackDayCellDto
             {
@@ -223,7 +256,7 @@ public class RoomRackAppService(
             };
         }).ToList();
 
-        return new GetRoomRackResultDto { Rooms = roomListDtos, Cells = cells };
+        return new GetRoomRackResultDto { Rooms = roomListDtos, Cells = cells, UnassignedBookings = unassignedBookings };
     }
 
     private static RoomListDto MapToRoomListDto(Room room)

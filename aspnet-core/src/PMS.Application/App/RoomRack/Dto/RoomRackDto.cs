@@ -29,8 +29,19 @@ public class RoomRackDayCellDto
     public bool IsArrivalDate { get; set; }
     /// <summary>True when this date is the departure date for the reservation/stay in this room (used to draw half-day on last day).</summary>
     public bool IsDepartureDate { get; set; }
-    /// <summary>When true, this cell is included in the "No. of bookings" count. False when reservation has rooms and all have RoomId set (fully assigned); true for stays, drafts, and reservations with at least one unassigned room.</summary>
+    /// <summary>When true, this cell is included in the "No. of bookings" count (reservations with a room that are draft, pending, or confirmed).</summary>
     public bool CountInBookings { get; set; }
+}
+
+/// <summary>One unassigned reservation booking (no room assigned) for the bookings count/dialog per room type and date.</summary>
+public class UnassignedBookingDto
+{
+    public string RoomTypeName { get; set; } = string.Empty;
+    public DateTime InventoryDate { get; set; }
+    public Guid ReservationId { get; set; }
+    public string ReservationNo { get; set; } = string.Empty;
+    public string GuestName { get; set; } = string.Empty;
+    public int ReservationStatus { get; set; }
 }
 
 /// <summary>Result of GetRoomInfoAsync: rooms list and daily inventory cells for the date range.</summary>
@@ -38,4 +49,6 @@ public class GetRoomRackResultDto
 {
     public List<RoomListDto> Rooms { get; set; } = [];
     public List<RoomRackDayCellDto> Cells { get; set; } = [];
+    /// <summary>Reservations (draft, pending, confirmed) without a room assigned — shown in bookings count/dialog only.</summary>
+    public List<UnassignedBookingDto> UnassignedBookings { get; set; } = [];
 }

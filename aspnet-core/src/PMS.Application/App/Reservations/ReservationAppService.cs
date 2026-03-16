@@ -132,7 +132,7 @@ public class ReservationAppService(
             SpecialRequests = input.SpecialRequests ?? string.Empty,
         };
 
-// Attach room entries (temp: room type/dates/rates only, no RoomId or RoomNumber; normal: include assignment and reserve inventory)
+        // Attach room entries (temp: room type/dates/rates only, no RoomId or RoomNumber; normal: include assignment and reserve inventory)
         foreach (var room in input.Rooms)
         {
             var roomType = await roomTypeRepository.FirstOrDefaultAsync(room.RoomTypeId);
@@ -555,15 +555,16 @@ public class ReservationAppService(
         if (!available)
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 
-        var hasReservationConflict = await reservationRoomRepository.GetAll()
+        var ReservationConflict = await reservationRoomRepository.GetAll()
             .AsNoTracking()
+            .Include(rr => rr.Reservation)
             .Where(rr => rr.RoomId == input.RoomId)
             .Where(rr => rr.ReservationId != input.ReservationId)
             .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
-            .AnyAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
-                           rr.Reservation.Status == ReservationStatus.Confirmed ||
-                           rr.Reservation.Status == ReservationStatus.CheckedIn);
+            .FirstOrDefaultAsync(rr => rr.Reservation.Status == ReservationStatus.Pending ||
+                           rr.Reservation.Status == ReservationStatus.Confirmed);
 
+        var hasReservationConflict = ReservationConflict != null;
         if (hasReservationConflict)
             throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
 

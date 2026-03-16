@@ -197,7 +197,7 @@ export const RoomRackPage = () => {
     el.scrollBy({ left: delta, behavior: 'smooth' });
   }, []);
 
-  const { data: roomRackData } = useQuery({
+  const { data: roomRackData, isLoading: isRoomRackLoading } = useQuery({
     queryKey: ['room-rack-info', startKey, endKey],
     queryFn: () => resortService.getRoomRackInfo(startKey, endKey),
     staleTime: 30 * 1000,
@@ -359,8 +359,15 @@ export const RoomRackPage = () => {
       const k = `${typeName}|${dateKey}`;
       countBy.set(k, (countBy.get(k) ?? 0) + 1);
     });
+    (roomRackData?.unassignedBookings ?? []).forEach((ub) => {
+      const typeName = (ub.roomTypeName ?? '').trim();
+      if (!typeName) return;
+      const dateKey = toDateKey(ub.inventoryDate);
+      const k = `${typeName}|${dateKey}`;
+      countBy.set(k, (countBy.get(k) ?? 0) + 1);
+    });
     return (roomTypeName: string, dateKey: string) => countBy.get(`${roomTypeName}|${dateKey}`) ?? 0;
-  }, [roomRackData?.cells, roomNumberToType]);
+  }, [roomRackData?.cells, roomRackData?.unassignedBookings, roomNumberToType]);
 
   const bookingsListByRoomTypeAndDate = useMemo(() => {
     const listBy = new Map<string, BookingsDialogItem[]>();
@@ -382,8 +389,24 @@ export const RoomRackPage = () => {
       });
       listBy.set(k, list);
     });
+    (roomRackData?.unassignedBookings ?? []).forEach((ub) => {
+      const typeName = (ub.roomTypeName ?? '').trim();
+      if (!typeName) return;
+      const dateKey = toDateKey(ub.inventoryDate);
+      const k = `${typeName}|${dateKey}`;
+      const list = listBy.get(k) ?? [];
+      list.push({
+        type: 'reservation',
+        id: ub.reservationId,
+        number: ub.reservationNo ?? '',
+        guestName: ub.guestName ?? '—',
+        roomNumber: '—',
+        status: ub.reservationStatus,
+      });
+      listBy.set(k, list);
+    });
     return (roomTypeName: string, dateKey: string) => listBy.get(`${roomTypeName}|${dateKey}`) ?? [];
-  }, [roomRackData?.cells, roomNumberToType]);
+  }, [roomRackData?.cells, roomRackData?.unassignedBookings, roomNumberToType]);
 
   const [bookingsDialogOpen, setBookingsDialogOpen] = useState(false);
   const [bookingsDialogPayload, setBookingsDialogPayload] = useState<{ roomTypeName: string; dateKey: string } | null>(null);
@@ -422,7 +445,7 @@ export const RoomRackPage = () => {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link
-              to="/"
+              to="/front-desk"
               className="rounded p-1 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
               title="Back to Front Desk"
             >
@@ -522,6 +545,17 @@ export const RoomRackPage = () => {
               className="min-h-0 flex-1 overflow-auto scrollbar-custom max-h-[min(70vh,800px)]"
               onScroll={updateScrollArrows}
             >
+              {isRoomRackLoading ? (
+                <div className="flex min-h-[min(70vh,800px)] items-center justify-center rounded border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50">
+                  <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
+                    <svg className="h-10 w-10 animate-spin text-primary-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span className="text-sm font-medium">Loading room rack…</span>
+                  </div>
+                </div>
+              ) : (
               <table className="min-w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
@@ -796,6 +830,7 @@ export const RoomRackPage = () => {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
             
           </div>

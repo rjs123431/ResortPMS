@@ -156,9 +156,20 @@ export interface RoomRackDayCellDto {
   countInBookings?: boolean;
 }
 
+/** Unassigned reservation (no room) for bookings count/dialog per room type and date. */
+export interface UnassignedBookingDto {
+  roomTypeName: string;
+  inventoryDate: string;
+  reservationId: string;
+  reservationNo: string;
+  guestName: string;
+  reservationStatus: number;
+}
+
 export interface GetRoomRackResultDto {
   rooms: RoomListDto[];
   cells: RoomRackDayCellDto[];
+  unassignedBookings?: UnassignedBookingDto[];
 }
 
 export interface RoomRackSettingsDto {

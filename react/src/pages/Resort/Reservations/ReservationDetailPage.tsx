@@ -234,15 +234,19 @@ export const ReservationDetailPage = () => {
     return Math.max(0, reservationDetail.totalAmount - reservationDetail.depositPaid);
   }, [reservationDetail]);
 
-  const canAddGuests = useMemo(() => {
+  /** Draft: no assign room, add guest, add deposit. Pending/Confirmed: allow all. */
+  const canShowBookingActions = useMemo(() => {
     if (!reservationDetail) return false;
     return ![
+      ReservationStatus.Draft,
       ReservationStatus.Cancelled,
       ReservationStatus.NoShow,
       ReservationStatus.CheckedIn,
       ReservationStatus.Completed,
     ].includes(reservationDetail.status);
   }, [reservationDetail]);
+
+  const canAddGuests = canShowBookingActions;
 
   const existingGuestIds = useMemo(() => new Set(guests.map((g) => g.guestId)), [guests]);
 
@@ -270,15 +274,7 @@ export const ReservationDetailPage = () => {
     return Boolean(roomLine?.roomId);
   }, [assignDialogReservationRoomId, reservationDetail?.rooms]);
 
-  const canAssignRooms = useMemo(() => {
-    if (!reservationDetail) return false;
-    return ![
-      ReservationStatus.Cancelled,
-      ReservationStatus.NoShow,
-      ReservationStatus.CheckedIn,
-      ReservationStatus.Completed,
-    ].includes(reservationDetail.status);
-  }, [reservationDetail]);
+  const canAssignRooms = canShowBookingActions;
 
   const openAssignRoomDialog = (reservationRoomId: string, currentRoomId?: string) => {
     setAssignDialogReservationRoomId(reservationRoomId);
@@ -444,14 +440,17 @@ export const ReservationDetailPage = () => {
                             <td className="p-2">{room.roomTypeName}</td>
                             <td className="p-2">{room.roomNumber || (room.roomId ? roomNumberById.get(room.roomId) : undefined) || 'Unassigned'}</td>
                             <td className="p-2 text-right">
-                              <button
-                                type="button"
-                                className="rounded bg-primary-600 px-2 py-1 text-xs text-white disabled:opacity-50"
-                                disabled={!canAssignRooms}
-                                onClick={() => openAssignRoomDialog(room.id, room.roomId)}
-                              >
-                                {room.roomId ? 'Change Room' : 'Assign Room'}
-                              </button>
+                              {canAssignRooms ? (
+                                <button
+                                  type="button"
+                                  className="rounded bg-primary-600 px-2 py-1 text-xs text-white"
+                                  onClick={() => openAssignRoomDialog(room.id, room.roomId)}
+                                >
+                                  {room.roomId ? 'Change Room' : 'Assign Room'}
+                                </button>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
                             </td>
                             <td className="p-2 text-right tabular-nums">{formatMoney(room.ratePerNight)}</td>
                             <td className="p-2 text-right tabular-nums">{room.numberOfNights}</td>
@@ -502,14 +501,15 @@ export const ReservationDetailPage = () => {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h4 className="font-medium">Guests</h4>
-                  <button
-                    type="button"
-                    className="rounded bg-primary-600 px-3 py-1 text-sm text-white disabled:opacity-50"
-                    disabled={!canAddGuests}
-                    onClick={() => setIsGuestDialogOpen(true)}
-                  >
-                    Add Guest(s)
-                  </button>
+                  {canAddGuests && (
+                    <button
+                      type="button"
+                      className="rounded bg-primary-600 px-3 py-1 text-sm text-white"
+                      onClick={() => setIsGuestDialogOpen(true)}
+                    >
+                      Add Guest(s)
+                    </button>
+                  )}
                 </div>
                 {guests.length === 0 ? (
                   <p className="text-gray-500">No guests.</p>
@@ -582,14 +582,15 @@ export const ReservationDetailPage = () => {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h4 className="mb-2 font-medium">Deposits</h4>
-                  <button
-                    type="button"
-                    className="rounded bg-primary-600 px-3 py-1 text-sm text-white disabled:opacity-50"
-                    disabled={!canAddGuests}
-                    onClick={() => setIsDepositDialogOpen(true)}
-                  >
-                    Add Deposit
-                  </button>
+                  {canAddGuests && (
+                    <button
+                      type="button"
+                      className="rounded bg-primary-600 px-3 py-1 text-sm text-white"
+                      onClick={() => setIsDepositDialogOpen(true)}
+                    >
+                      Add Deposit
+                    </button>
+                  )}
                 </div>
                 {deposits.length === 0 ? (
                   <p className="text-gray-500">No deposits yet.</p>
