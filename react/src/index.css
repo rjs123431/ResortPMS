@@ -1,3 +1,47 @@
+/* Custom horizontal scrollbar for RoomRackPage */
+.scrollbar-custom {
+  scrollbar-width: auto;
+  scrollbar-color: #6366f1 #e5e7eb;
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  height: 16px; /* controls horizontal scrollbar thickness */
+}
+
+
+.dark .scrollbar-custom {
+  scrollbar-width: auto;
+  scrollbar-color: #6366f1 darkgray;
+}
+.scrollbar-custom::-webkit-scrollbar {
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: #6366f1;
+  border-radius: 4px;
+}
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  height: 16px;
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: #6366f1;
+  border-radius: 4px;
+}
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 4px;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

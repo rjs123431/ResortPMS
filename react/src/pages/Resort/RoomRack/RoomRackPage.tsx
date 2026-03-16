@@ -61,7 +61,7 @@ const spanDays = (start: Date, end: Date): number => {
 
 export const RoomRackPage = () => {
   const navigate = useNavigate();
-  
+
 
   const [stayRange, setStayRange] = useState<[Date, Date]>(() => {
     const today = new Date();
@@ -297,6 +297,34 @@ export const RoomRackPage = () => {
     return (roomTypeName: string, dateKey: string) => countBy.get(`${roomTypeName}|${dateKey}`) ?? 0;
   }, [roomRackData?.cells, roomNumberToType]);
 
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const [tableScrollWidth, setTableScrollWidth] = useState(0);
+
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const table = scrollRef.current;
+    if (!top || !table) return;
+    const sync = (src: HTMLDivElement, dest: HTMLDivElement) => {
+      dest.scrollLeft = src.scrollLeft;
+    };
+    top.onscroll = () => sync(top, table);
+    table.onscroll = () => sync(table, top);
+    return () => {
+      top.onscroll = null;
+      table.onscroll = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const table = scrollRef.current;
+    if (!table) return;
+    const updateWidth = () => setTableScrollWidth(table.scrollWidth);
+    updateWidth();
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(table);
+    return () => ro.disconnect();
+  }, [dateColumns.length, roomsByType.length]);
+
   return (
     <MainLayout>
       <div className="space-y-4">
@@ -381,10 +409,19 @@ export const RoomRackPage = () => {
             </button>
           </div>
 
-          <div className="relative">
+          <div className="relative flex flex-col">
+            {/* Top scrollbar: use overflow-x-scroll and min height so Safari shows the track; width synced via state */}
+            <div
+              ref={topScrollRef}
+              className="min-h-[var(--scrollbar-thumb-height,20px)] shrink-0 overflow-x-scroll overflow-y-hidden scrollbar-custom"
+              style={{ height: 'var(--scrollbar-thumb-height, 20px)' }}
+              aria-hidden
+            >
+              <div style={{ width: tableScrollWidth || '100%', minHeight: 1 }} />
+            </div>
             <div
               ref={scrollRef}
-              className="overflow-x-auto"
+              className="min-h-0 flex-1 overflow-auto scrollbar-custom max-h-[min(70vh,800px)]"
               onScroll={updateScrollArrows}
             >
               <table className="min-w-full border-collapse text-sm">
@@ -392,245 +429,226 @@ export const RoomRackPage = () => {
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="sticky left-0 z-[30] min-w-[100px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">Room</th>
                     {dateColumns.map((dateKey) => {
-                    const d = new Date(dateKey + 'T12:00:00');
-                    return (
-                      <th key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center font-medium text-gray-700 last:border-r-0 dark:text-gray-200">
-                        <div>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                        <div className="text-xs font-normal text-gray-500 dark:text-gray-400">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {roomsByType.map(([roomTypeName, rooms]) => (
-                  <React.Fragment key={roomTypeName}>
-                    <tr className="bg-gray-100 dark:bg-gray-700">
-                      <td className="sticky left-0 z-[30] min-w-[100px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-gray-200 dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
-                        {roomTypeName}
-                      </td>
-                      {dateColumns.map((dateKey) => (
-                        <td key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center last:border-r-0">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{bookingCountByRoomTypeAndDate(roomTypeName, dateKey)}</span>
-                          <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">bookings</span>
-                        </td>
-                      ))}
-                    </tr>
-                    {rooms.map((room) => {
-                      const roomNum = room.roomNumber;
-                      const n = dateColumns.length;
-                      type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean };
-                      const segments: SegmentItem[] = [];
-                      let i = 0;
-                      while (i < dateColumns.length) {
-                        const cells = getCellsAt(roomNum, dateColumns[i]);
-                        if (cells.length === 0) {
-                          i++;
-                          continue;
-                        }
-                        const cell = cells[0];
-                        const cellId =
-                          cell.type === 'stay'
-                            ? `s-${cell.stayId}`
-                            : cell.type === 'reservation'
-                              ? `r-${cell.reservationId}`
-                              : `b-${i}`;
-                        const startIndex = i;
-                        let endIndex = i + 1;
-                        while (endIndex < dateColumns.length) {
-                          const nextCells = getCellsAt(roomNum, dateColumns[endIndex]);
-                          const nextCell = nextCells.find((c) =>
-                            cell.type === 'stay'
-                              ? c.type === 'stay' && c.stayId === cell.stayId
-                              : cell.type === 'reservation'
-                                ? c.type === 'reservation' && c.reservationId === cell.reservationId
-                                : c.type === 'blocked'
-                          );
-                          if (!nextCell) break;
-                          endIndex++;
-                        }
-                        const guestName = cell.type === 'blocked' ? cell.label : cell.guestName;
-                        const navPath =
-                          cell.type === 'stay'
-                            ? `/stays/${cell.stayId}`
-                            : cell.type === 'reservation'
-                              ? `/reservations/${cell.reservationId}`
-                              : '#';
-                        const isConfirmed = cell.type === 'reservation' && cell.reservationStatus === ReservationStatus.Confirmed;
-                        const bgClass =
-                          cell.type === 'stay'
-                            ? 'bg-blue-100 dark:bg-blue-900'
-                            : cell.type === 'reservation'
-                              ? isConfirmed
-                                ? 'bg-green-100 dark:bg-green-900'
-                                : 'bg-yellow-100 dark:bg-yellow-900'
-                              : 'bg-slate-200 dark:bg-slate-600';
-                        const textClass =
-                          cell.type === 'stay'
-                            ? 'text-blue-900 hover:underline dark:text-blue-100'
-                            : cell.type === 'reservation'
-                              ? isConfirmed
-                                ? 'text-green-900 hover:underline dark:text-green-100'
-                                : 'text-yellow-900 hover:underline dark:text-yellow-100'
-                              : 'text-slate-700 dark:text-slate-200 cursor-default';
-                        const isStayOrRes = cell.type === 'stay' || cell.type === 'reservation';
-                        const lastDayKey = dateColumns[endIndex - 1];
-                        const lastDayDto = cellsByKey.get(`${roomNum.trim()}|${lastDayKey}`);
-                        const extendsBefore = isStayOrRes && startIndex === 0 && !cell.isArrivalDate;
-                        const extendsAfter = isStayOrRes && endIndex === dateColumns.length && !(lastDayDto?.isDepartureDate);
-                        const firstDayHalf = isStayOrRes && !!cell.isDepartureDate;
-                        const lastDayHalf = isStayOrRes && !!lastDayDto?.isDepartureDate;
-                        segments.push({
-                          id: `${cellId}-${startIndex}`,
-                          guestName: guestName || '—',
-                          navPath,
-                          startIndex,
-                          endIndex,
-                          bgClass,
-                          textClass,
-                          extendsBefore,
-                          extendsAfter,
-                          firstDayHalf: firstDayHalf || undefined,
-                          lastDayHalf: lastDayHalf || undefined,
-                        });
-                        i = endIndex;
-                      }
+                      const d = new Date(dateKey + 'T12:00:00');
                       return (
-                        <tr key={room.id} className="border-b">
-                          <td className="sticky left-0 z-[30] h-[2.5rem] border-r bg-white p-2 font-medium text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-800 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)] align-middle">
-                            {roomNum}
-                          </td>
-                          <td colSpan={n} className="min-w-0 p-0 align-middle h-[2.5rem]">
-                            <div
-                              className="relative w-full h-full min-h-8 border-b border-gray-200 dark:border-gray-600"
-                              style={{
-                                backgroundImage: `linear-gradient(to right, var(--tw-border-color, rgb(229 231 235)) 1px, transparent 1px)`,
-                                backgroundSize: `${100 / n}% 100%`,
-                              }}
-                              onMouseMove={(e) => {
-                                if (isDragging) return;
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const x = e.clientX - rect.left;
-                                const pct = Math.max(0, Math.min(1, x / rect.width));
-                                const dateIndex = getDateIndexFromPosition(pct, n);
-                                if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) {
-                                  setHoveredEmptyCell(null);
-                                  return;
-                                }
-                                setHoveredEmptyCell({ roomId: room.id, dateIndex });
-                              }}
-                              onMouseLeave={() => setHoveredEmptyCell(null)}
-                              onMouseDown={(e) => {
-                                if ((e.target as HTMLElement).closest('button')) return;
-                                const el = e.currentTarget;
-                                const rect = el.getBoundingClientRect();
-                                const x = e.clientX - rect.left;
-                                const pct = Math.max(0, Math.min(1, x / rect.width));
-                                const dateIndex = getDateIndexFromPosition(pct, n);
-                                if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) return;
-                                timelineDragRef.current = el;
-                                setSelection({
-                                  roomId: room.id,
-                                  roomNumber: roomNum,
-                                  roomTypeId: room.roomTypeId,
-                                  roomTypeName: room.roomTypeName ?? roomTypeName,
-                                  startIndex: dateIndex,
-                                  endIndex: dateIndex,
-                                });
-                                setIsDragging(true);
-                              }}
-                            >
-                              <div
-                                className="absolute inset-0 z-0 cursor-pointer"
-                                aria-hidden
-                                style={{ pointerEvents: isDragging ? 'none' : 'auto' }}
-                              />
-                              {hoveredEmptyCell && hoveredEmptyCell.roomId === room.id && (
-                                <div
-                                  className="absolute top-0 bottom-0 z-[5] pointer-events-none bg-gray-200/60 dark:bg-gray-500/40"
-                                  style={{
-                                    left: `${((hoveredEmptyCell.dateIndex + CHECK_IN_HOUR_FRAC) / n) * 100}%`,
-                                    width: `${((1 + CHECK_OUT_HOUR_FRAC - CHECK_IN_HOUR_FRAC) / n) * 100}%`,
-                                  }}
-                                />
-                              )}
-                              {segments.map((seg) => {
-                                // Check-in 2pm: first day always starts at 2pm (right half of column), never from midnight
-                                const leftPct = seg.firstDayHalf ? (seg.startIndex / n) * 100 : ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
-                                const rightPct = seg.extendsAfter ? 100 : seg.lastDayHalf ? ((seg.endIndex - 0.5) / n) * 100 : ((seg.endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
-                                const widthPct = rightPct - leftPct;
-                                return (
-                                  <div
-                                    key={seg.id}
-                                    className={`absolute top-0 bottom-0 z-10 min-w-0 flex items-center overflow-hidden border border-gray-300 dark:border-gray-600 ${seg.bgClass}`}
-                                    style={{
-                                      left: `${leftPct}%`,
-                                      width: `${widthPct}%`,
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
-                                      onClick={() => seg.navPath !== '#' && navigate(seg.navPath)}
-                                      title={seg.guestName}
-                                    >
-                                      {seg.guestName}
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                              {selection && selection.roomId === room.id && (() => {
-                                const minStart = Math.min(selection.startIndex, selection.endIndex);
-                                const maxEnd = Math.max(selection.startIndex, selection.endIndex);
-                                const nights = maxEnd - minStart + 1;
-                                const nightLabel = nights === 1 ? '1 night' : `${nights} nights`;
-                                const leftPct = ((minStart + CHECK_IN_HOUR_FRAC) / n) * 100;
-                                const rightPct = ((maxEnd + 1 + CHECK_OUT_HOUR_FRAC) / n) * 100;
-                                const widthPct = rightPct - leftPct;
-                                return (
-                                  <div
-                                    className="absolute top-0 bottom-0 z-20 min-w-0 flex items-center pointer-events-none border-2 border-primary-500 bg-primary-500/30 dark:bg-primary-400/30"
-                                    style={{
-                                      left: `${leftPct}%`,
-                                      width: `${widthPct}%`,
-                                    }}
-                                  >
-                                    <span className="px-1.5 text-xs font-medium text-primary-800 dark:text-primary-200">
-                                      {nightLabel}
-                                    </span>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </td>
-                        </tr>
+                        <th key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center font-medium text-gray-700 last:border-r-0 dark:text-gray-200">
+                          <div>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                          <div className="text-xs font-normal text-gray-500 dark:text-gray-400">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                        </th>
                       );
                     })}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roomsByType.map(([roomTypeName, rooms]) => (
+                    <React.Fragment key={roomTypeName}>
+                      <tr className="bg-gray-100 dark:bg-gray-700">
+                        <td className="sticky left-0 z-[30] min-w-[100px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-gray-200 dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+                          {roomTypeName}
+                        </td>
+                        {dateColumns.map((dateKey) => (
+                          <td key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center last:border-r-0">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{bookingCountByRoomTypeAndDate(roomTypeName, dateKey)}</span>
+                            <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">bookings</span>
+                          </td>
+                        ))}
+                      </tr>
+                      {rooms.map((room) => {
+                        const roomNum = room.roomNumber;
+                        const n = dateColumns.length;
+                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean };
+                        const segments: SegmentItem[] = [];
+                        let i = 0;
+                        while (i < dateColumns.length) {
+                          const cells = getCellsAt(roomNum, dateColumns[i]);
+                          if (cells.length === 0) {
+                            i++;
+                            continue;
+                          }
+                          const cell = cells[0];
+                          const cellId =
+                            cell.type === 'stay'
+                              ? `s-${cell.stayId}`
+                              : cell.type === 'reservation'
+                                ? `r-${cell.reservationId}`
+                                : `b-${i}`;
+                          const startIndex = i;
+                          let endIndex = i + 1;
+                          while (endIndex < dateColumns.length) {
+                            const nextCells = getCellsAt(roomNum, dateColumns[endIndex]);
+                            const nextCell = nextCells.find((c) =>
+                              cell.type === 'stay'
+                                ? c.type === 'stay' && c.stayId === cell.stayId
+                                : cell.type === 'reservation'
+                                  ? c.type === 'reservation' && c.reservationId === cell.reservationId
+                                  : c.type === 'blocked'
+                            );
+                            if (!nextCell) break;
+                            endIndex++;
+                          }
+                          const guestName = cell.type === 'blocked' ? cell.label : cell.guestName;
+                          const navPath =
+                            cell.type === 'stay'
+                              ? `/stays/${cell.stayId}`
+                              : cell.type === 'reservation'
+                                ? `/reservations/${cell.reservationId}`
+                                : '#';
+                          const isConfirmed = cell.type === 'reservation' && cell.reservationStatus === ReservationStatus.Confirmed;
+                          const bgClass =
+                            cell.type === 'stay'
+                              ? 'bg-blue-100 dark:bg-blue-900'
+                              : cell.type === 'reservation'
+                                ? isConfirmed
+                                  ? 'bg-green-100 dark:bg-green-900'
+                                  : 'bg-yellow-100 dark:bg-yellow-900'
+                                : 'bg-slate-200 dark:bg-slate-600';
+                          const textClass =
+                            cell.type === 'stay'
+                              ? 'text-blue-900 hover:underline dark:text-blue-100'
+                              : cell.type === 'reservation'
+                                ? isConfirmed
+                                  ? 'text-green-900 hover:underline dark:text-green-100'
+                                  : 'text-yellow-900 hover:underline dark:text-yellow-100'
+                                : 'text-slate-700 dark:text-slate-200 cursor-default';
+                          const isStayOrRes = cell.type === 'stay' || cell.type === 'reservation';
+                          const lastDayKey = dateColumns[endIndex - 1];
+                          const lastDayDto = cellsByKey.get(`${roomNum.trim()}|${lastDayKey}`);
+                          const extendsBefore = isStayOrRes && startIndex === 0 && !cell.isArrivalDate;
+                          const extendsAfter = isStayOrRes && endIndex === dateColumns.length && !(lastDayDto?.isDepartureDate);
+                          const firstDayHalf = isStayOrRes && !!cell.isDepartureDate;
+                          const lastDayHalf = isStayOrRes && !!lastDayDto?.isDepartureDate;
+                          segments.push({
+                            id: `${cellId}-${startIndex}`,
+                            guestName: guestName || '—',
+                            navPath,
+                            startIndex,
+                            endIndex,
+                            bgClass,
+                            textClass,
+                            extendsBefore,
+                            extendsAfter,
+                            firstDayHalf: firstDayHalf || undefined,
+                            lastDayHalf: lastDayHalf || undefined,
+                          });
+                          i = endIndex;
+                        }
+                        return (
+                          <tr key={room.id} className="border-b">
+                            <td className="sticky left-0 z-[30] h-[2.5rem] border-r bg-white p-2 font-medium text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-800 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)] align-middle">
+                              {roomNum}
+                            </td>
+                            <td colSpan={n} className="min-w-0 p-0 align-middle h-[2.5rem]">
+                              <div
+                                className="relative w-full h-full min-h-8 border-b border-gray-200 dark:border-gray-600"
+                                style={{
+                                  backgroundImage: `linear-gradient(to right, var(--tw-border-color, rgb(229 231 235)) 1px, transparent 1px)`,
+                                  backgroundSize: `${100 / n}% 100%`,
+                                }}
+                                onMouseMove={(e) => {
+                                  if (isDragging) return;
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const x = e.clientX - rect.left;
+                                  const pct = Math.max(0, Math.min(1, x / rect.width));
+                                  const dateIndex = getDateIndexFromPosition(pct, n);
+                                  if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) {
+                                    setHoveredEmptyCell(null);
+                                    return;
+                                  }
+                                  setHoveredEmptyCell({ roomId: room.id, dateIndex });
+                                }}
+                                onMouseLeave={() => setHoveredEmptyCell(null)}
+                                onMouseDown={(e) => {
+                                  if ((e.target as HTMLElement).closest('button')) return;
+                                  const el = e.currentTarget;
+                                  const rect = el.getBoundingClientRect();
+                                  const x = e.clientX - rect.left;
+                                  const pct = Math.max(0, Math.min(1, x / rect.width));
+                                  const dateIndex = getDateIndexFromPosition(pct, n);
+                                  if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) return;
+                                  timelineDragRef.current = el;
+                                  setSelection({
+                                    roomId: room.id,
+                                    roomNumber: roomNum,
+                                    roomTypeId: room.roomTypeId,
+                                    roomTypeName: room.roomTypeName ?? roomTypeName,
+                                    startIndex: dateIndex,
+                                    endIndex: dateIndex,
+                                  });
+                                  setIsDragging(true);
+                                }}
+                              >
+                                <div
+                                  className="absolute inset-0 z-0 cursor-pointer"
+                                  aria-hidden
+                                  style={{ pointerEvents: isDragging ? 'none' : 'auto' }}
+                                />
+                                {hoveredEmptyCell && hoveredEmptyCell.roomId === room.id && (
+                                  <div
+                                    className="absolute top-0 bottom-0 z-[5] pointer-events-none bg-gray-200/60 dark:bg-gray-500/40"
+                                    style={{
+                                      left: `${((hoveredEmptyCell.dateIndex + CHECK_IN_HOUR_FRAC) / n) * 100}%`,
+                                      width: `${((1 + CHECK_OUT_HOUR_FRAC - CHECK_IN_HOUR_FRAC) / n) * 100}%`,
+                                    }}
+                                  />
+                                )}
+                                {segments.map((seg) => {
+                                  // Check-in 2pm: first day always starts at 2pm (right half of column), never from midnight
+                                  const leftPct = seg.firstDayHalf ? (seg.startIndex / n) * 100 : ((seg.startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                  const rightPct = seg.extendsAfter ? 100 : seg.lastDayHalf ? ((seg.endIndex - 0.5) / n) * 100 : ((seg.endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
+                                  const widthPct = rightPct - leftPct;
+                                  return (
+                                    <div
+                                      key={seg.id}
+                                      className={`absolute top-0 bottom-0 z-10 min-w-0 flex items-center overflow-hidden border border-gray-300 dark:border-gray-600 ${seg.bgClass}`}
+                                      style={{
+                                        left: `${leftPct}%`,
+                                        width: `${widthPct}%`,
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
+                                        onClick={() => seg.navPath !== '#' && navigate(seg.navPath)}
+                                        title={seg.guestName}
+                                      >
+                                        {seg.guestName}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                                {selection && selection.roomId === room.id && (() => {
+                                  const minStart = Math.min(selection.startIndex, selection.endIndex);
+                                  const maxEnd = Math.max(selection.startIndex, selection.endIndex);
+                                  const nights = maxEnd - minStart + 1;
+                                  const nightLabel = nights === 1 ? '1 night' : `${nights} nights`;
+                                  const leftPct = ((minStart + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                  const rightPct = ((maxEnd + 1 + CHECK_OUT_HOUR_FRAC) / n) * 100;
+                                  const widthPct = rightPct - leftPct;
+                                  return (
+                                    <div
+                                      className="absolute top-0 bottom-0 z-20 min-w-0 flex items-center pointer-events-none border-2 border-primary-500 bg-primary-500/30 dark:bg-primary-400/30"
+                                      style={{
+                                        left: `${leftPct}%`,
+                                        width: `${widthPct}%`,
+                                      }}
+                                    >
+                                      <span className="px-1.5 text-xs font-medium text-primary-800 dark:text-primary-200">
+                                        {nightLabel}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {canScrollLeft && (
-              <button
-                type="button"
-                onClick={() => scrollBy(-200)}
-                className="absolute left-[100px] top-10 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white/95 text-gray-700 shadow hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700"
-                aria-label="Scroll dates left"
-              >
-                <span className="text-lg leading-none">‹</span>
-              </button>
-            )}
-            {canScrollRight && (
-              <button
-                type="button"
-                onClick={() => scrollBy(200)}
-                className="absolute right-0 top-10 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white/95 text-gray-700 shadow hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700"
-                aria-label="Scroll dates right"
-              >
-                <span className="text-lg leading-none">›</span>
-              </button>
-            )}
+            
           </div>
         </section>
       </div>
