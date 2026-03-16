@@ -69,6 +69,16 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         paymentMethods.CreateChildPermission(PermissionNames.Pages_PaymentMethods_Create, L("Create"));
         paymentMethods.CreateChildPermission(PermissionNames.Pages_PaymentMethods_Edit, L("Edit"));
 
+        // SETUP — Channels
+        var channels = setup.CreateChildPermission(PermissionNames.Pages_Channels, L("Channels"), multiTenancySides: MultiTenancySides.Tenant);
+        channels.CreateChildPermission(PermissionNames.Pages_Channels_Create, L("Create"));
+        channels.CreateChildPermission(PermissionNames.Pages_Channels_Edit, L("Edit"));
+
+        // SETUP — Agencies
+        var agencies = setup.CreateChildPermission(PermissionNames.Pages_Agencies, L("Agencies"), multiTenancySides: MultiTenancySides.Tenant);
+        agencies.CreateChildPermission(PermissionNames.Pages_Agencies_Create, L("Create"));
+        agencies.CreateChildPermission(PermissionNames.Pages_Agencies_Edit, L("Edit"));
+
         // SETUP — Extra Bed Types
         var extraBedTypes = setup.CreateChildPermission(PermissionNames.Pages_ExtraBedTypes, L("ExtraBedTypes"), multiTenancySides: MultiTenancySides.Tenant);
         extraBedTypes.CreateChildPermission(PermissionNames.Pages_ExtraBedTypes_Create, L("Create"));

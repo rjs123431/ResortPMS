@@ -65,6 +65,8 @@ export const ReservationListPage = () => {
                 <tr className="border-b text-left">
                   <th className="p-2">Reservation No.</th>
                   <th className="p-2">Guest</th>
+                  <th className="p-2">Channel</th>
+                  <th className="p-2">Agency</th>
                   <th className="p-2">Check-In</th>
                   <th className="p-2">Check-Out</th>
                   <th className="p-2">Status</th>
@@ -76,6 +78,8 @@ export const ReservationListPage = () => {
                   <tr className="border-b" key={r.id}>
                     <td className="p-2">{r.reservationNo}</td>
                     <td className="p-2">{r.guestName}</td>
+                    <td className="p-2">{r.channelName || '-'}</td>
+                    <td className="p-2">{r.agencyName || '-'}</td>
                     <td className="p-2">{new Date(r.arrivalDate).toLocaleDateString()}</td>
                     <td className="p-2">{new Date(r.departureDate).toLocaleDateString()}</td>
                     <td className="p-2">

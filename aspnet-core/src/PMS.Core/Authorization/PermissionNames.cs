@@ -63,6 +63,16 @@ namespace PMS.Authorization
         public const string Pages_PaymentMethods_Create = "Pages.PaymentMethods.Create";
         public const string Pages_PaymentMethods_Edit = "Pages.PaymentMethods.Edit";
 
+        // SETUP — Channels
+        public const string Pages_Channels = "Pages.Channels";
+        public const string Pages_Channels_Create = "Pages.Channels.Create";
+        public const string Pages_Channels_Edit = "Pages.Channels.Edit";
+
+        // SETUP — Agencies
+        public const string Pages_Agencies = "Pages.Agencies";
+        public const string Pages_Agencies_Create = "Pages.Agencies.Create";
+        public const string Pages_Agencies_Edit = "Pages.Agencies.Edit";
+
         // SETUP — Extra Bed Types
         public const string Pages_ExtraBedTypes = "Pages.ExtraBedTypes";
         public const string Pages_ExtraBedTypes_Create = "Pages.ExtraBedTypes.Create";

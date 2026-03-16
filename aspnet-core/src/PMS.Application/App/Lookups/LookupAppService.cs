@@ -32,6 +32,24 @@ public interface IPaymentMethodAppService : IApplicationService
     Task UpdateAsync(PaymentMethodDto input);
 }
 
+public interface IChannelAppService : IApplicationService
+{
+    Task<ChannelDto> GetAsync(Guid id);
+    Task<PagedResultDto<ChannelListDto>> GetAllAsync(GetChannelsInput input);
+    Task<System.Collections.Generic.List<ChannelListDto>> GetAllActiveAsync();
+    Task<Guid> CreateAsync(CreateChannelDto input);
+    Task UpdateAsync(ChannelDto input);
+}
+
+public interface IAgencyAppService : IApplicationService
+{
+    Task<AgencyDto> GetAsync(Guid id);
+    Task<PagedResultDto<AgencyListDto>> GetAllAsync(GetAgenciesInput input);
+    Task<System.Collections.Generic.List<AgencyListDto>> GetAllActiveAsync();
+    Task<Guid> CreateAsync(CreateAgencyDto input);
+    Task UpdateAsync(AgencyDto input);
+}
+
 public interface IExtraBedTypeAppService : IApplicationService
 {
     Task<ExtraBedTypeDto> GetAsync(Guid id);
@@ -199,6 +217,126 @@ public class PaymentMethodAppService(
         ObjectMapper.Map(input, entity);
         entity.Name = input.Name.Trim();
         await paymentMethodRepository.UpdateAsync(entity);
+    }
+}
+
+[AbpAuthorize(PermissionNames.Pages_Channels)]
+public class ChannelAppService(
+    IRepository<Channel, Guid> channelRepository
+) : PMSAppServiceBase, IChannelAppService
+{
+    public async Task<ChannelDto> GetAsync(Guid id)
+    {
+        var entity = await channelRepository.GetAsync(id);
+        return ObjectMapper.Map<ChannelDto>(entity);
+    }
+
+    public async Task<PagedResultDto<ChannelListDto>> GetAllAsync(GetChannelsInput input)
+    {
+        var query = channelRepository.GetAll()
+            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Name.Contains(input.Filter))
+            .WhereIf(input.IsActive.HasValue, x => x.IsActive == input.IsActive);
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(input.Sorting ?? "Name").PageBy(input).ToListAsync();
+        return new PagedResultDto<ChannelListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<ChannelListDto>>(items));
+    }
+
+    public async Task<System.Collections.Generic.List<ChannelListDto>> GetAllActiveAsync()
+    {
+        var items = await channelRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+        return ObjectMapper.Map<System.Collections.Generic.List<ChannelListDto>>(items);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Channels_Create)]
+    public async Task<Guid> CreateAsync(CreateChannelDto input)
+    {
+        var name = input.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name)) throw new UserFriendlyException("Channel name is required.");
+
+        var exists = await channelRepository.GetAll().AnyAsync(x => x.Name == name);
+        if (exists) throw new UserFriendlyException("Channel name already exists.");
+
+        var entity = ObjectMapper.Map<Channel>(input);
+        entity.Name = name;
+        entity.IsActive = true;
+
+        return await channelRepository.InsertAndGetIdAsync(entity);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Channels_Edit)]
+    public async Task UpdateAsync(ChannelDto input)
+    {
+        var entity = await channelRepository.GetAsync(input.Id);
+        var name = input.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name)) throw new UserFriendlyException("Channel name is required.");
+
+        var duplicate = await channelRepository.GetAll().AnyAsync(x => x.Id != input.Id && x.Name == name);
+        if (duplicate) throw new UserFriendlyException("Channel name already exists.");
+
+        ObjectMapper.Map(input, entity);
+        entity.Name = name;
+        await channelRepository.UpdateAsync(entity);
+    }
+}
+
+[AbpAuthorize(PermissionNames.Pages_Agencies)]
+public class AgencyAppService(
+    IRepository<Agency, Guid> agencyRepository
+) : PMSAppServiceBase, IAgencyAppService
+{
+    public async Task<AgencyDto> GetAsync(Guid id)
+    {
+        var entity = await agencyRepository.GetAsync(id);
+        return ObjectMapper.Map<AgencyDto>(entity);
+    }
+
+    public async Task<PagedResultDto<AgencyListDto>> GetAllAsync(GetAgenciesInput input)
+    {
+        var query = agencyRepository.GetAll()
+            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Name.Contains(input.Filter))
+            .WhereIf(input.IsActive.HasValue, x => x.IsActive == input.IsActive);
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(input.Sorting ?? "Name").PageBy(input).ToListAsync();
+        return new PagedResultDto<AgencyListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<AgencyListDto>>(items));
+    }
+
+    public async Task<System.Collections.Generic.List<AgencyListDto>> GetAllActiveAsync()
+    {
+        var items = await agencyRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+        return ObjectMapper.Map<System.Collections.Generic.List<AgencyListDto>>(items);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Agencies_Create)]
+    public async Task<Guid> CreateAsync(CreateAgencyDto input)
+    {
+        var name = input.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name)) throw new UserFriendlyException("Agency name is required.");
+
+        var exists = await agencyRepository.GetAll().AnyAsync(x => x.Name == name);
+        if (exists) throw new UserFriendlyException("Agency name already exists.");
+
+        var entity = ObjectMapper.Map<Agency>(input);
+        entity.Name = name;
+        entity.IsActive = true;
+
+        return await agencyRepository.InsertAndGetIdAsync(entity);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Agencies_Edit)]
+    public async Task UpdateAsync(AgencyDto input)
+    {
+        var entity = await agencyRepository.GetAsync(input.Id);
+        var name = input.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name)) throw new UserFriendlyException("Agency name is required.");
+
+        var duplicate = await agencyRepository.GetAll().AnyAsync(x => x.Id != input.Id && x.Name == name);
+        if (duplicate) throw new UserFriendlyException("Agency name already exists.");
+
+        ObjectMapper.Map(input, entity);
+        entity.Name = name;
+        await agencyRepository.UpdateAsync(entity);
     }
 }
 

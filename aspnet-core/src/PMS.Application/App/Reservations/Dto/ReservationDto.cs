@@ -14,6 +14,10 @@ namespace PMS.App.Reservations.Dto;
 public class ReservationDto : EntityDto<Guid>
 {
     public string ReservationNo { get; set; }
+    public Guid? ChannelId { get; set; }
+    public string ChannelName { get; set; }
+    public Guid? AgencyId { get; set; }
+    public string AgencyName { get; set; }
     public Guid? GuestId { get; set; }
     public string GuestName { get; set; }
     public string FirstName { get; set; }
@@ -45,6 +49,10 @@ public class ReservationDto : EntityDto<Guid>
 public class ReservationListDto : EntityDto<Guid>
 {
     public string ReservationNo { get; set; }
+    public Guid? ChannelId { get; set; }
+    public string ChannelName { get; set; }
+    public Guid? AgencyId { get; set; }
+    public string AgencyName { get; set; }
     public Guid? GuestId { get; set; }
     public string GuestName { get; set; }
     public string FirstName { get; set; }
@@ -64,6 +72,8 @@ public class ReservationListDto : EntityDto<Guid>
 public class CreateReservationDto : IValidatableObject
 {
     public Guid? GuestId { get; set; }
+    public Guid? ChannelId { get; set; }
+    public Guid? AgencyId { get; set; }
     [Required] public DateTime ArrivalDate { get; set; }
     [Required] public DateTime DepartureDate { get; set; }
     [Range(1, 20)] public int Adults { get; set; } = 1;
@@ -107,6 +117,8 @@ public class CreateReservationDto : IValidatableObject
 public class UpdateReservationDto
 {
     [Required] public Guid Id { get; set; }
+    public Guid? ChannelId { get; set; }
+    public Guid? AgencyId { get; set; }
     [Required] public DateTime ArrivalDate { get; set; }
     [Required] public DateTime DepartureDate { get; set; }
     [Range(1, 20)] public int Adults { get; set; } = 1;

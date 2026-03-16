@@ -29,6 +29,30 @@ internal class PaymentMethodConfiguration : IEntityTypeConfiguration<PaymentMeth
     }
 }
 
+internal class ChannelConfiguration : IEntityTypeConfiguration<Channel>
+{
+    public void Configure(EntityTypeBuilder<Channel> entity)
+    {
+        entity.ToTable("Channel");
+
+        entity.Property(e => e.Name).HasMaxLength(64).IsRequired();
+
+        entity.HasIndex(e => e.Name).IsUnique();
+    }
+}
+
+internal class AgencyConfiguration : IEntityTypeConfiguration<Agency>
+{
+    public void Configure(EntityTypeBuilder<Agency> entity)
+    {
+        entity.ToTable("Agency");
+
+        entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
+
+        entity.HasIndex(e => e.Name).IsUnique();
+    }
+}
+
 internal class ExtraBedTypeConfiguration : IEntityTypeConfiguration<ExtraBedType>
 {
     public void Configure(EntityTypeBuilder<ExtraBedType> entity)

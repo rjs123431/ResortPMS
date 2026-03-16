@@ -27,6 +27,20 @@ internal class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         entity.HasIndex(e => e.ReservationNo).IsUnique();
         entity.HasIndex(e => new { e.GuestId, e.ArrivalDate });
         entity.HasIndex(e => e.Status);
+        entity.HasIndex(e => e.ChannelId);
+        entity.HasIndex(e => e.AgencyId);
+
+        entity.HasOne(e => e.Channel)
+            .WithMany()
+            .HasForeignKey(e => e.ChannelId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.Agency)
+            .WithMany()
+            .HasForeignKey(e => e.AgencyId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
 
         entity.HasOne(e => e.Guest)
             .WithMany()

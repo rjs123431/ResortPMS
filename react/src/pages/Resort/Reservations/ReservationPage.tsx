@@ -108,6 +108,8 @@ export const ReservationPage = () => {
   const [transactionNotes, setTransactionNotes] = useState('');
   const [reservationConditions, setReservationConditions] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+  const [selectedChannelId, setSelectedChannelId] = useState('');
+  const [selectedAgencyId, setSelectedAgencyId] = useState('');
   const [confirmError, setConfirmError] = useState('');
   const [initialDeposits, setInitialDeposits] = useState<InitialDepositRow[]>([]);
   const [showDepositDialog, setShowDepositDialog] = useState(false);
@@ -127,6 +129,18 @@ export const ReservationPage = () => {
   const { data: paymentMethods } = useQuery({
     queryKey: ['resort-payment-methods'],
     queryFn: () => resortService.getPaymentMethods(),
+    enabled: showReservationDetails && showGuestInfoStep,
+  });
+
+  const { data: channels } = useQuery({
+    queryKey: ['resort-channels'],
+    queryFn: () => resortService.getChannels(),
+    enabled: showReservationDetails && showGuestInfoStep,
+  });
+
+  const { data: agencies } = useQuery({
+    queryKey: ['resort-agencies'],
+    queryFn: () => resortService.getAgencies(),
     enabled: showReservationDetails && showGuestInfoStep,
   });
 
@@ -296,6 +310,8 @@ export const ReservationPage = () => {
     setTransactionNotes('');
     setReservationConditions('');
     setSpecialRequests('');
+    setSelectedChannelId('');
+    setSelectedAgencyId('');
     setInitialDeposits([]);
     setShowDepositDialog(false);
     setAvailabilityRows([]);
@@ -419,6 +435,9 @@ export const ReservationPage = () => {
       if (!selectedGuest?.id) {
         throw new Error('Please search and select a guest before confirming.');
       }
+      if (!selectedChannelId) {
+        throw new Error('Please select a reservation channel.');
+      }
       if (reservationDetailLines.length === 0) {
         throw new Error('No room selections found for this reservation.');
       }
@@ -457,6 +476,8 @@ export const ReservationPage = () => {
 
       const reservationId = await resortService.createReservation({
         guestId: selectedGuest.id,
+        channelId: selectedChannelId,
+        agencyId: selectedAgencyId || undefined,
         arrivalDate: searchCriteria.arrivalDate,
         departureDate: searchCriteria.departureDate,
         adults,
@@ -980,6 +1001,32 @@ export const ReservationPage = () => {
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, nationality: e.target.value }))}
                     />
                   </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reservation Channel</label>
+                    <select
+                      className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                      value={selectedChannelId}
+                      onChange={(e) => setSelectedChannelId(e.target.value)}
+                    >
+                      <option value="">Select channel</option>
+                      {(channels ?? []).map((channel) => (
+                        <option key={channel.id} value={channel.id}>{channel.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Agency</label>
+                    <select
+                      className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                      value={selectedAgencyId}
+                      onChange={(e) => setSelectedAgencyId(e.target.value)}
+                    >
+                      <option value="">Select agency (optional)</option>
+                      {(agencies ?? []).map((agency) => (
+                        <option key={agency.id} value={agency.id}>{agency.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="md:col-span-3 grid grid-cols-1 gap-2 md:grid-cols-1">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
@@ -1110,6 +1157,7 @@ export const ReservationPage = () => {
                 disabled={
                   createMutation.isPending ||
                   !searchCriteria ||
+                  !selectedChannelId ||
                   !selectedGuest?.id ||
                   reservationDetailLines.length === 0
                 }

@@ -40,6 +40,8 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     // Lookup tables
     public DbSet<ChargeType> ChargeTypes { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
+    public DbSet<Channel> Channels { get; set; }
+    public DbSet<Agency> Agencies { get; set; }
     public DbSet<ExtraBedType> ExtraBedTypes { get; set; }
 
     // Reservation
@@ -135,6 +137,8 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         // Lookups
         modelBuilder.ApplyConfiguration(new ChargeTypeConfiguration());
         modelBuilder.ApplyConfiguration(new PaymentMethodConfiguration());
+        modelBuilder.ApplyConfiguration(new ChannelConfiguration());
+        modelBuilder.ApplyConfiguration(new AgencyConfiguration());
         modelBuilder.ApplyConfiguration(new ExtraBedTypeConfiguration());
 
         // Reservation

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { resortService } from '@services/resort.service';
 
@@ -32,6 +32,20 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   const [children, setChildren] = useState(0);
   const [ratePerNight, setRatePerNight] = useState(0);
   const [notes, setNotes] = useState('');
+  const [selectedChannelId, setSelectedChannelId] = useState('');
+  const [selectedAgencyId, setSelectedAgencyId] = useState('');
+
+  const { data: channels } = useQuery({
+    queryKey: ['resort-channels'],
+    queryFn: () => resortService.getChannels(),
+    enabled: open,
+  });
+
+  const { data: agencies } = useQuery({
+    queryKey: ['resort-agencies'],
+    queryFn: () => resortService.getAgencies(),
+    enabled: open,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -48,12 +62,19 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     }
   }, [open, payload?.baseRate]);
 
+  useEffect(() => {
+    if (!open) return;
+    setSelectedChannelId('');
+    setSelectedAgencyId('');
+  }, [open]);
+
   const createMutation = useMutation({
     mutationFn: async (isTemp: boolean) => {
       if (!payload) throw new Error('Missing reservation data.');
       if (!firstName.trim()) throw new Error('First name is required.');
       if (!lastName.trim()) throw new Error('Last name is required.');
       if (!contactNumber.trim()) throw new Error('Contact number is required.');
+      if (!selectedChannelId) throw new Error('Reservation channel is required.');
       const checkInTime = '14:00:00';
       const checkOutTime = '12:00:00';
       const arrivalDate = payload.checkInDate.includes('T') ? payload.checkInDate : `${payload.checkInDate}T${checkInTime}`;
@@ -90,6 +111,8 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         departureDate,
         adults,
         children,
+        channelId: selectedChannelId,
+        agencyId: selectedAgencyId || undefined,
         totalAmount: isTemp ? 0 : amount,
         depositPercentage: 0,
         depositRequired: 0,
@@ -138,6 +161,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     firstName.trim() !== '' &&
     lastName.trim() !== '' &&
     contactNumber.trim() !== '' &&
+    selectedChannelId !== '' &&
     !createMutation.isPending;
 
   return (
@@ -202,6 +226,34 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reservation channel</label>
+                  <select
+                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    value={selectedChannelId}
+                    onChange={(e) => setSelectedChannelId(e.target.value)}
+                  >
+                    <option value="">Select channel</option>
+                    {(channels ?? []).map((channel) => (
+                      <option key={channel.id} value={channel.id}>{channel.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Agency</label>
+                  <select
+                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    value={selectedAgencyId}
+                    onChange={(e) => setSelectedAgencyId(e.target.value)}
+                  >
+                    <option value="">Select agency (optional)</option>
+                    {(agencies ?? []).map((agency) => (
+                      <option key={agency.id} value={agency.id}>{agency.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

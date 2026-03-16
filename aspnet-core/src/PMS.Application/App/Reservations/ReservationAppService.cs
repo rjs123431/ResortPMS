@@ -68,7 +68,7 @@ public class ReservationAppService(
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateReservationDto input)
     {
-        Guest? guest = null;
+        var guest = default(Guest);
         if (input.GuestId.HasValue && input.GuestId.Value != Guid.Empty)
         {
             guest = await guestRepository.FirstOrDefaultAsync(input.GuestId.Value);
@@ -121,6 +121,8 @@ public class ReservationAppService(
         {
             Id = reservationId,
             ReservationNo = reservationNo,
+            ChannelId = input.ChannelId,
+            AgencyId = input.AgencyId,
             GuestId = input.GuestId,
             GuestName = $"{firstName} {lastName}".Trim(),
             FirstName = firstName,
@@ -275,6 +277,8 @@ public class ReservationAppService(
         reservation.ArrivalDate = input.ArrivalDate.Date.Add(checkInTime);
         reservation.DepartureDate = input.DepartureDate.Date.Add(checkOutTime);
         reservation.Nights = (int)(input.DepartureDate.Date - input.ArrivalDate.Date).TotalDays;
+        reservation.ChannelId = input.ChannelId;
+        reservation.AgencyId = input.AgencyId;
         reservation.Adults = input.Adults;
         reservation.Children = input.Children;
         reservation.TotalAmount = input.TotalAmount;
@@ -1045,6 +1049,8 @@ public class ReservationAppService(
     public async Task<ReservationDto> GetAsync(Guid id)
     {
         var reservation = await reservationRepository.GetAll()
+            .Include(r => r.Channel)
+            .Include(r => r.Agency)
             .Include(r => r.Guest)
             .Include(r => r.Rooms).ThenInclude(rr => rr.RoomType)
             .Include(r => r.ExtraBeds).ThenInclude(eb => eb.ExtraBedType)
@@ -1056,6 +1062,8 @@ public class ReservationAppService(
             throw new UserFriendlyException(L("ReservationNotFound"));
 
         var dto = ObjectMapper.Map<ReservationDto>(reservation);
+        dto.ChannelName = reservation.Channel?.Name ?? string.Empty;
+        dto.AgencyName = reservation.Agency?.Name ?? string.Empty;
         foreach (var extraBed in dto.ExtraBeds)
         {
             var source = reservation.ExtraBeds.FirstOrDefault(x => x.Id == extraBed.Id);
@@ -1076,6 +1084,8 @@ public class ReservationAppService(
     public async Task<PagedResultDto<ReservationListDto>> GetAllAsync(GetReservationsInput input)
     {
         var query = reservationRepository.GetAll()
+            .Include(r => r.Channel)
+            .Include(r => r.Agency)
             .Include(r => r.Guest)
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
                 r => r.ReservationNo.Contains(input.Filter) ||
@@ -1090,12 +1100,22 @@ public class ReservationAppService(
 
         var total = await query.CountAsync();
         var items = await query.OrderBy(input.Sorting ?? "ArrivalDate desc").PageBy(input).ToListAsync();
-        return new PagedResultDto<ReservationListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<ReservationListDto>>(items));
+        var list = ObjectMapper.Map<System.Collections.Generic.List<ReservationListDto>>(items);
+        foreach (var item in list)
+        {
+            var source = items.FirstOrDefault(x => x.Id == item.Id);
+            item.ChannelName = source?.Channel?.Name ?? string.Empty;
+            item.AgencyName = source?.Agency?.Name ?? string.Empty;
+        }
+
+        return new PagedResultDto<ReservationListDto>(total, list);
     }
 
     public async Task<PagedResultDto<ReservationDto>> GetReservationsWithRoomsAsync(GetReservationsInput input)
     {
         var query = reservationRepository.GetAll()
+            .Include(r => r.Channel)
+            .Include(r => r.Agency)
             .Include(r => r.Guest)
             .Include(r => r.Rooms).ThenInclude(rr => rr.RoomType)
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
@@ -1111,6 +1131,14 @@ public class ReservationAppService(
 
         var total = await query.CountAsync();
         var items = await query.OrderBy(input.Sorting ?? "ArrivalDate desc").PageBy(input).ToListAsync();
-        return new PagedResultDto<ReservationDto>(total, ObjectMapper.Map<System.Collections.Generic.List<ReservationDto>>(items));
+        var list = ObjectMapper.Map<System.Collections.Generic.List<ReservationDto>>(items);
+        foreach (var item in list)
+        {
+            var source = items.FirstOrDefault(x => x.Id == item.Id);
+            item.ChannelName = source?.Channel?.Name ?? string.Empty;
+            item.AgencyName = source?.Agency?.Name ?? string.Empty;
+        }
+
+        return new PagedResultDto<ReservationDto>(total, list);
     }
 }

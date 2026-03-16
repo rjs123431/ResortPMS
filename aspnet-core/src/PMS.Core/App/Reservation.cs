@@ -8,6 +8,8 @@ namespace PMS.App;
 public class Reservation : FullAuditedEntity<Guid>
 {
     public string ReservationNo { get; set; } = string.Empty;
+    public Guid? ChannelId { get; set; }
+    public Guid? AgencyId { get; set; }
     public Guid? GuestId { get; set; }
     public DateTime ReservationDate { get; set; } = Clock.Now;
     public DateTime ArrivalDate { get; set; }
@@ -31,6 +33,8 @@ public class Reservation : FullAuditedEntity<Guid>
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
 
+    public virtual Channel Channel { get; set; }
+    public virtual Agency Agency { get; set; }
     public virtual Guest Guest { get; set; }
     public virtual ICollection<ReservationRoom> Rooms { get; set; } = [];
     public virtual ICollection<ReservationExtraBed> ExtraBeds { get; set; } = [];

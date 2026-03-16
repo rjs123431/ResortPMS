@@ -383,6 +383,10 @@ export interface ReservationExtraBedDto {
 export interface ReservationListDto {
   id: string;
   reservationNo: string;
+  channelId?: string;
+  channelName?: string;
+  agencyId?: string;
+  agencyName?: string;
   guestName: string;
   arrivalDate: string;
   departureDate: string;
@@ -395,6 +399,8 @@ export interface ReservationListDto {
 
 export interface CreateReservationDto {
   guestId?: string;
+  channelId?: string;
+  agencyId?: string;
   arrivalDate: string;
   departureDate: string;
   adults: number;
@@ -616,6 +622,10 @@ export interface ReservationDepositDto {
 export interface ReservationDetailDto {
   id: string;
   reservationNo: string;
+  channelId?: string;
+  channelName?: string;
+  agencyId?: string;
+  agencyName?: string;
   guestId?: string;
   guestName: string;
   firstName?: string;

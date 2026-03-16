@@ -32,6 +32,10 @@ public class ResortSetupDataCreator
             EnsureRoomRatePlans(roomTypes);
         }
 
+        // Always ensure newly introduced lookup data for existing tenants
+        EnsureChannels();
+        EnsureAgencies();
+
         // Always ensure POS data and POS_ORDER sequence for existing tenants (e.g. after migration)
         EnsurePosData();
         EnsurePosDocumentSequence();
@@ -44,6 +48,8 @@ public class ResortSetupDataCreator
                || _context.ChargeTypes.Any()
                || _context.ExtraBedTypes.Any()
                || _context.PaymentMethods.Any()
+               || _context.Channels.Any()
+               || _context.Agencies.Any()
                || _context.Staffs.Any()
                || _context.Guests.Any()
                || _context.DocumentSequences.Any(x => x.TenantId == _tenantId);
@@ -151,6 +157,50 @@ public class ResortSetupDataCreator
         foreach (var name in names)
         {
             _context.PaymentMethods.Add(new PaymentMethod { Name = name, IsActive = true });
+        }
+
+        _context.SaveChanges();
+    }
+
+    private void EnsureChannels()
+    {
+        var names = new[] { "FB", "Instagram", "Email", "Booking.com", "Agoda", "Agency" };
+
+        foreach (var name in names)
+        {
+            var exists = _context.Channels.Any(x => x.Name == name);
+            if (exists)
+            {
+                continue;
+            }
+
+            _context.Channels.Add(new Channel
+            {
+                Name = name,
+                IsActive = true,
+            });
+        }
+
+        _context.SaveChanges();
+    }
+
+    private void EnsureAgencies()
+    {
+        var names = new[] { "Walk-in Partner", "Corporate Partner", "Travel Agency" };
+
+        foreach (var name in names)
+        {
+            var exists = _context.Agencies.Any(x => x.Name == name);
+            if (exists)
+            {
+                continue;
+            }
+
+            _context.Agencies.Add(new Agency
+            {
+                Name = name,
+                IsActive = true,
+            });
         }
 
         _context.SaveChanges();

@@ -33,6 +33,8 @@ const RoomTypeListPage = lazy(() => import('@pages/Resort/RoomTypes/RoomTypesPag
 const RoomRatePlansPage = lazy(() => import('@pages/Resort/RoomRatePlans/RoomRatePlansPage').then((m) => ({ default: m.RoomRatePlansPage })));
 const ChargeTypeListPage = lazy(() => import('@pages/Resort/ChargeTypes/ChargeTypesPage').then((m) => ({ default: m.ChargeTypeListPage })));
 const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/PaymentMethodsPage').then((m) => ({ default: m.PaymentMethodListPage })));
+const ChannelListPage = lazy(() => import('@pages/Resort/Channels/ChannelsPage').then((m) => ({ default: m.ChannelListPage })));
+const AgencyListPage = lazy(() => import('@pages/Resort/Agencies/AgenciesPage').then((m) => ({ default: m.AgencyListPage })));
 const ExtraBedTypeListPage = lazy(() => import('./pages/Resort/ExtraBedTypes/ExtraBedTypesPage').then((m) => ({ default: m.ExtraBedTypeListPage })));
 const StaffListPage = lazy(() => import('@pages/Resort/Staff/StaffPage').then((m) => ({ default: m.StaffListPage })));
 const ReservationListPage = lazy(() => import('@pages/Resort/Reservations/ReservationsPage').then((m) => ({ default: m.ReservationListPage })));
@@ -466,6 +468,26 @@ const App: React.FC = () => {
                         }
                       />
                       <Route
+                        path="channels"
+                        element={
+                          <PageTitle title="Channels">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Channels]}>
+                              <ChannelListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="agencies"
+                        element={
+                          <PageTitle title="Agencies">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Agencies]}>
+                              <AgencyListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
                         path="extra-bed-types"
                         element={
                           <PageTitle title="Extra Bed Types">
@@ -531,6 +553,8 @@ const App: React.FC = () => {
                     <Route path="/room-rate-plans" element={<Navigate to="/admin/room-rate-plans" replace />} />
                     <Route path="/charge-types" element={<Navigate to="/admin/charge-types" replace />} />
                     <Route path="/payment-methods" element={<Navigate to="/admin/payment-methods" replace />} />
+                    <Route path="/channels" element={<Navigate to="/admin/channels" replace />} />
+                    <Route path="/agencies" element={<Navigate to="/admin/agencies" replace />} />
                     <Route path="/extra-bed-types" element={<Navigate to="/admin/extra-bed-types" replace />} />
                     <Route path="/staff" element={<Navigate to="/admin/staff" replace />} />
                     <Route path="/administration/users" element={<Navigate to="/admin/users" replace />} />
