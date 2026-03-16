@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
 
   return (
     <footer className="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 safe-area-inset">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+      <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-gray-600 dark:text-gray-400 text-xs sm:text-sm text-center sm:text-left">
           <div className="break-words">
             © {new Date().getFullYear()} PMS. All rights reserved.
