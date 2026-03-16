@@ -49,6 +49,7 @@ const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/Check
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
+const HomePage = lazy(() => import('@pages/Home/HomePage').then((m) => ({ default: m.HomePage })));
 const FrontDeskPage = lazy(() => import('@pages/Resort/FrontDesk/FrontDeskPage').then((m) => ({ default: m.FrontDeskPage })));
 const HousekeepingHubPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingHubPage').then((m) => ({ default: m.HousekeepingHubPage })));
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
@@ -129,9 +130,9 @@ const App: React.FC = () => {
                     <Route
                       path="/"
                       element={
-                        <PageTitle title="Front Desk">
+                        <PageTitle title="Home">
                           <ProtectedRoute>
-                            <FrontDeskPage />
+                            <HomePage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

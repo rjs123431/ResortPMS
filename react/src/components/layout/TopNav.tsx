@@ -23,7 +23,7 @@ export const TopNav: React.FC = () => {
   return (
     <nav className="flex items-center gap-1" aria-label="Main navigation">
       <NavLink
-        to="/"
+        to="/front-desk"
         end
         className={({ isActive }) =>
           [navClass, isActive ? activeClass : inactiveClass].join(' ')

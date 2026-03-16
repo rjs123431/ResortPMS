@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
@@ -348,9 +348,18 @@ export const RoomRackPage = () => {
     <MainLayout>
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Rack</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Room occupancy by date. Rows = rooms (by type), columns = dates.</p>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="rounded p-1 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+              title="Back to Front Desk"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Rack</h1>
+              {/* <p className="text-sm text-gray-500 dark:text-gray-400">Room occupancy by date. Rows = rooms (by type), columns = dates.</p> */}
+            </div>
           </div>
           <div className="flex flex-nowrap items-center gap-2">
             <div className="flex h-9 items-center gap-0 rounded border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700">
