@@ -8,6 +8,7 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Reservations.Dto;
+using PMS.App.RoomRatePlans;
 using PMS.Application.App.PropertyTimes;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
@@ -32,9 +33,13 @@ public interface IReservationAppService : IApplicationService
     Task SetPendingAsync(Guid reservationId);
     Task MarkNoShowAsync(Guid reservationId);
     Task<Guid> RecordDepositAsync(RecordReservationDepositDto input);
+    Task<int> AddRoomTypesAsync(AddReservationRoomTypesDto input);
+    Task<int> AddExtraBedsAsync(AddReservationExtraBedsDto input);
     Task<int> AddGuestsAsync(AddReservationGuestsDto input);
     Task UpdateGuestAgeAsync(UpdateReservationGuestAgeDto input);
     Task RemoveGuestAsync(RemoveReservationGuestDto input);
+    Task RemoveRoomAsync(RemoveReservationRoomDto input);
+    Task RemoveExtraBedAsync(RemoveReservationExtraBedDto input);
     Task AssignRoomAsync(AssignReservationRoomDto input);
 }
 
@@ -45,9 +50,12 @@ public class ReservationAppService(
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<ReservationDeposit, Guid> depositRepository,
     IRepository<ReservationGuest, Guid> reservationGuestRepository,
+    IRepository<ReservationExtraBed, Guid> reservationExtraBedRepository,
     IRepository<Guest, Guid> guestRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
+    IRepository<ExtraBedType, Guid> extraBedTypeRepository,
+    IRoomRatePlanAppService roomRatePlanAppService,
     IDocumentNumberService documentNumberService,
     IPropertyTimesProvider propertyTimesProvider,
     IRoomDailyInventoryService roomDailyInventoryService,
@@ -274,6 +282,51 @@ public class ReservationAppService(
         reservation.ReservationConditions = input.ReservationConditions ?? string.Empty;
         reservation.SpecialRequests = input.SpecialRequests ?? string.Empty;
 
+        // Update reservation rooms if provided
+        if (input.Rooms != null && input.Rooms.Count > 0)
+        {
+            // Remove existing rooms
+            var existingRooms = await reservationRoomRepository.GetAll()
+                .Where(rr => rr.ReservationId == reservation.Id)
+                .ToListAsync();
+            foreach (var room in existingRooms)
+            {
+                await reservationRoomRepository.DeleteAsync(room);
+            }
+
+            // Add new rooms
+            foreach (var roomDto in input.Rooms)
+            {
+                var roomType = await roomTypeRepository.FirstOrDefaultAsync(roomDto.RoomTypeId);
+                if (roomType == null)
+                    throw new UserFriendlyException(L("RoomTypeNotFound"));
+
+                var roomEntity = roomDto.RoomId.HasValue ? await roomRepository.FirstOrDefaultAsync(roomDto.RoomId.Value) : null;
+                string roomNumber = roomEntity?.RoomNumber ?? string.Empty;
+
+                var reservationRoom = new ReservationRoom
+                {
+                    ReservationId = reservation.Id,
+                    RoomTypeId = roomDto.RoomTypeId,
+                    RoomId = roomDto.RoomId,
+                    ArrivalDate = reservation.ArrivalDate,
+                    DepartureDate = reservation.DepartureDate,
+                    RatePerNight = roomDto.RatePerNight,
+                    NumberOfNights = reservation.Nights,
+                    Amount = roomDto.Amount,
+                    DiscountPercent = roomDto.DiscountPercent,
+                    DiscountAmount = roomDto.DiscountAmount,
+                    SeniorCitizenCount = roomDto.SeniorCitizenCount,
+                    SeniorCitizenPercent = roomDto.SeniorCitizenPercent,
+                    SeniorCitizenDiscountAmount = roomDto.SeniorCitizenDiscountAmount,
+                    NetAmount = roomDto.NetAmount,
+                    RoomTypeName = roomType.Name,
+                    RoomNumber = roomNumber
+                };
+                await reservationRoomRepository.InsertAsync(reservationRoom);
+            }
+        }
+
         await reservationRepository.UpdateAsync(reservation);
 
         await mutationAuditService.RecordAsync(
@@ -420,6 +473,105 @@ public class ReservationAppService(
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
+    public async Task<int> AddRoomTypesAsync(AddReservationRoomTypesDto input)
+    {
+        var reservation = await reservationRepository.GetAll()
+            .Include(r => r.Rooms)
+            .FirstOrDefaultAsync(r => r.Id == input.ReservationId);
+
+        if (reservation == null)
+            throw new UserFriendlyException(L("ReservationNotFound"));
+
+        if (reservation.Status != ReservationStatus.Draft && reservation.Status != ReservationStatus.Pending)
+            throw new UserFriendlyException("Room types can only be added to draft or pending reservations.");
+
+        var roomTypeRows = (input.RoomTypes ?? [])
+            .Where(x => x.RoomTypeId != Guid.Empty && x.Quantity > 0)
+            .GroupBy(x => x.RoomTypeId)
+            .Select(g => new AddReservationRoomTypeItemDto
+            {
+                RoomTypeId = g.Key,
+                Quantity = g.Sum(x => x.Quantity)
+            })
+            .ToList();
+
+        if (!roomTypeRows.Any())
+            throw new UserFriendlyException("Please provide at least one room type.");
+
+        var roomTypeIds = roomTypeRows.Select(x => x.RoomTypeId).ToList();
+        var roomTypes = await roomTypeRepository.GetAll()
+            .Where(rt => roomTypeIds.Contains(rt.Id))
+            .ToDictionaryAsync(rt => rt.Id);
+
+        var missingRoomTypeId = roomTypeIds.FirstOrDefault(id => !roomTypes.ContainsKey(id));
+        if (missingRoomTypeId != Guid.Empty)
+            throw new UserFriendlyException(L("RoomTypeNotFound"));
+
+        var arrivalDate = reservation.ArrivalDate;
+        var departureDate = reservation.DepartureDate;
+        var numberOfNights = reservation.Nights > 0
+            ? reservation.Nights
+            : Math.Max(1, (int)(departureDate.Date - arrivalDate.Date).TotalDays);
+
+        decimal addedNetAmount = 0;
+        foreach (var roomTypeRow in roomTypeRows)
+        {
+            var roomType = roomTypes[roomTypeRow.RoomTypeId];
+            var ratePerNight = await roomRatePlanAppService.GetEffectiveRatePerNightForStayAsync(
+                roomTypeRow.RoomTypeId,
+                arrivalDate,
+                departureDate);
+            var amount = ratePerNight * numberOfNights;
+
+            for (var index = 0; index < roomTypeRow.Quantity; index++)
+            {
+                reservation.Rooms.Add(new ReservationRoom
+                {
+                    ReservationId = reservation.Id,
+                    RoomTypeId = roomType.Id,
+                    RoomId = null,
+                    ArrivalDate = arrivalDate,
+                    DepartureDate = departureDate,
+                    RatePerNight = ratePerNight,
+                    NumberOfNights = numberOfNights,
+                    Amount = amount,
+                    DiscountPercent = 0,
+                    DiscountAmount = 0,
+                    SeniorCitizenCount = 0,
+                    SeniorCitizenPercent = 20m,
+                    SeniorCitizenDiscountAmount = 0,
+                    NetAmount = amount,
+                    RoomTypeName = roomType.Name,
+                    RoomNumber = string.Empty,
+                });
+                addedNetAmount += amount;
+            }
+        }
+
+        reservation.TotalAmount += addedNetAmount;
+        reservation.DepositRequired = Math.Round(reservation.TotalAmount * (reservation.DepositPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+
+        await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            null,
+            new
+            {
+                AddedRoomTypes = roomTypeRows.Select(x => new { x.RoomTypeId, x.Quantity }).ToList(),
+                reservation.TotalAmount,
+                reservation.DepositRequired,
+            },
+            nameof(AddRoomTypesAsync),
+            "AddRoomTypes");
+
+        return roomTypeRows.Sum(x => x.Quantity);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
     public async Task<int> AddGuestsAsync(AddReservationGuestsDto input)
     {
         var reservation = await reservationRepository.GetAll()
@@ -474,6 +626,103 @@ public class ReservationAppService(
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
+    public async Task<int> AddExtraBedsAsync(AddReservationExtraBedsDto input)
+    {
+        var reservation = await reservationRepository.GetAll()
+            .Include(r => r.ExtraBeds)
+            .FirstOrDefaultAsync(r => r.Id == input.ReservationId);
+
+        if (reservation == null)
+            throw new UserFriendlyException(L("ReservationNotFound"));
+
+        if (reservation.Status == ReservationStatus.Cancelled ||
+            reservation.Status == ReservationStatus.NoShow ||
+            reservation.Status == ReservationStatus.CheckedIn ||
+            reservation.Status == ReservationStatus.Completed)
+        {
+            throw new UserFriendlyException("Extra beds cannot be added for this reservation status.");
+        }
+
+        var extraBedRows = (input.ExtraBeds ?? [])
+            .Where(x => x.ExtraBedTypeId != Guid.Empty && x.Quantity > 0)
+            .GroupBy(x => x.ExtraBedTypeId)
+            .Select(g => new AddReservationExtraBedItemDto
+            {
+                ExtraBedTypeId = g.Key,
+                Quantity = g.Sum(x => x.Quantity)
+            })
+            .ToList();
+
+        if (!extraBedRows.Any())
+            throw new UserFriendlyException("Please provide at least one extra bed type.");
+
+        var extraBedTypeIds = extraBedRows.Select(x => x.ExtraBedTypeId).ToList();
+        var extraBedTypes = await extraBedTypeRepository.GetAll()
+            .Where(x => x.IsActive && extraBedTypeIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
+        var missingExtraBedTypeId = extraBedTypeIds.FirstOrDefault(id => !extraBedTypes.ContainsKey(id));
+        if (missingExtraBedTypeId != Guid.Empty)
+            throw new UserFriendlyException("Extra bed type not found.");
+
+        var arrivalDate = reservation.ArrivalDate;
+        var departureDate = reservation.DepartureDate;
+        var numberOfNights = reservation.Nights > 0
+            ? reservation.Nights
+            : Math.Max(1, (int)(departureDate.Date - arrivalDate.Date).TotalDays);
+
+        decimal addedNetAmount = 0;
+        foreach (var extraBedRow in extraBedRows)
+        {
+            var extraBedType = extraBedTypes[extraBedRow.ExtraBedTypeId];
+            var ratePerNight = extraBedType.BasePrice;
+            var amount = ratePerNight * numberOfNights * extraBedRow.Quantity;
+
+            reservation.ExtraBeds.Add(new ReservationExtraBed
+            {
+                ReservationId = reservation.Id,
+                ExtraBedTypeId = extraBedType.Id,
+                ArrivalDate = arrivalDate,
+                DepartureDate = departureDate,
+                Quantity = extraBedRow.Quantity,
+                RatePerNight = ratePerNight,
+                NumberOfNights = numberOfNights,
+                Amount = amount,
+                DiscountPercent = 0,
+                DiscountAmount = 0,
+                SeniorCitizenCount = 0,
+                SeniorCitizenPercent = 20m,
+                SeniorCitizenDiscountAmount = 0,
+                NetAmount = amount,
+            });
+
+            addedNetAmount += amount;
+        }
+
+        reservation.TotalAmount += addedNetAmount;
+        reservation.DepositRequired = Math.Round(reservation.TotalAmount * (reservation.DepositPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+
+        await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            null,
+            new
+            {
+                AddedExtraBeds = extraBedRows.Select(x => new { x.ExtraBedTypeId, x.Quantity }).ToList(),
+                reservation.TotalAmount,
+                reservation.DepositRequired,
+            },
+            nameof(AddExtraBedsAsync),
+            "AddExtraBeds");
+
+        return extraBedRows.Sum(x => x.Quantity);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
     public async Task UpdateGuestAgeAsync(UpdateReservationGuestAgeDto input)
     {
         var reservation = await reservationRepository.GetAsync(input.ReservationId);
@@ -518,6 +767,109 @@ public class ReservationAppService(
             throw new UserFriendlyException("Primary guest cannot be removed.");
 
         await reservationGuestRepository.DeleteAsync(guest);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
+    public async Task RemoveRoomAsync(RemoveReservationRoomDto input)
+    {
+        var reservation = await reservationRepository.GetAsync(input.ReservationId);
+        if (reservation.Status != ReservationStatus.Draft && reservation.Status != ReservationStatus.Pending)
+            throw new UserFriendlyException("Room types can only be removed from draft or pending reservations.");
+
+        var reservationRoom = await reservationRoomRepository.FirstOrDefaultAsync(x =>
+            x.Id == input.ReservationRoomId && x.ReservationId == input.ReservationId);
+
+        if (reservationRoom == null)
+            throw new UserFriendlyException("Reservation room entry not found.");
+
+        var removedNetAmount = reservationRoom.NetAmount > 0 ? reservationRoom.NetAmount : reservationRoom.Amount;
+        var removedRoom = new
+        {
+            reservationRoom.Id,
+            reservationRoom.RoomTypeId,
+            reservationRoom.RoomTypeName,
+            reservationRoom.RoomId,
+            reservationRoom.RoomNumber,
+            reservationRoom.NetAmount,
+        };
+
+        if (reservationRoom.RoomId.HasValue)
+        {
+            await roomDailyInventoryService.SetVacantAsync(
+                reservationRoom.RoomId.Value,
+                reservation.ArrivalDate.Date,
+                reservation.DepartureDate.Date);
+        }
+
+        await reservationRoomRepository.DeleteAsync(reservationRoom);
+
+        reservation.TotalAmount = Math.Max(0, reservation.TotalAmount - removedNetAmount);
+        reservation.DepositRequired = Math.Round(reservation.TotalAmount * (reservation.DepositPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+        await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            removedRoom,
+            new
+            {
+                RemovedReservationRoomId = reservationRoom.Id,
+                reservation.TotalAmount,
+                reservation.DepositRequired,
+            },
+            nameof(RemoveRoomAsync),
+            "RemoveRoom");
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
+    public async Task RemoveExtraBedAsync(RemoveReservationExtraBedDto input)
+    {
+        var reservation = await reservationRepository.GetAsync(input.ReservationId);
+        if (reservation.Status == ReservationStatus.Cancelled ||
+            reservation.Status == ReservationStatus.NoShow ||
+            reservation.Status == ReservationStatus.CheckedIn ||
+            reservation.Status == ReservationStatus.Completed)
+        {
+            throw new UserFriendlyException("Cannot edit extra beds for this reservation status.");
+        }
+
+        var reservationExtraBed = await reservationExtraBedRepository.FirstOrDefaultAsync(x =>
+            x.Id == input.ReservationExtraBedId && x.ReservationId == input.ReservationId);
+
+        if (reservationExtraBed == null)
+            throw new UserFriendlyException("Reservation extra bed entry not found.");
+
+        var removedNetAmount = reservationExtraBed.NetAmount > 0 ? reservationExtraBed.NetAmount : reservationExtraBed.Amount;
+        var removedExtraBed = new
+        {
+            reservationExtraBed.Id,
+            reservationExtraBed.ExtraBedTypeId,
+            reservationExtraBed.Quantity,
+            reservationExtraBed.NetAmount,
+        };
+
+        await reservationExtraBedRepository.DeleteAsync(reservationExtraBed);
+
+        reservation.TotalAmount = Math.Max(0, reservation.TotalAmount - removedNetAmount);
+        reservation.DepositRequired = Math.Round(reservation.TotalAmount * (reservation.DepositPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+        await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            removedExtraBed,
+            new
+            {
+                RemovedReservationExtraBedId = reservationExtraBed.Id,
+                reservation.TotalAmount,
+                reservation.DepositRequired,
+            },
+            nameof(RemoveExtraBedAsync),
+            "RemoveExtraBed");
     }
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]

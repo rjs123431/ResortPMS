@@ -116,7 +116,8 @@ public class UpdateReservationDto
     public decimal DepositRequired { get; set; }
     [StringLength(1024)] public string Notes { get; set; }
     [StringLength(2048)] public string ReservationConditions { get; set; }
-    [StringLength(2048)] public string SpecialRequests { get; set; }
+        [StringLength(2048)] public string SpecialRequests { get; set; }
+        public List<ReservationRoomDto> Rooms { get; set; } = new();
 }
 
 public class CancelReservationDto
@@ -140,6 +141,30 @@ public class AddReservationGuestsDto
     [Required][MinLength(1)] public List<AddReservationGuestItemDto> Guests { get; set; } = [];
 }
 
+public class AddReservationRoomTypesDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    [Required][MinLength(1)] public List<AddReservationRoomTypeItemDto> RoomTypes { get; set; } = [];
+}
+
+public class AddReservationExtraBedsDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    [Required][MinLength(1)] public List<AddReservationExtraBedItemDto> ExtraBeds { get; set; } = [];
+}
+
+public class AddReservationRoomTypeItemDto
+{
+    [Required] public Guid RoomTypeId { get; set; }
+    [Range(1, int.MaxValue)] public int Quantity { get; set; } = 1;
+}
+
+public class AddReservationExtraBedItemDto
+{
+    [Required] public Guid ExtraBedTypeId { get; set; }
+    [Range(1, int.MaxValue)] public int Quantity { get; set; } = 1;
+}
+
 public class AddReservationGuestItemDto
 {
     [Required] public Guid GuestId { get; set; }
@@ -157,6 +182,18 @@ public class RemoveReservationGuestDto
 {
     [Required] public Guid ReservationId { get; set; }
     [Required] public Guid ReservationGuestId { get; set; }
+}
+
+public class RemoveReservationRoomDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    [Required] public Guid ReservationRoomId { get; set; }
+}
+
+public class RemoveReservationExtraBedDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    [Required] public Guid ReservationExtraBedId { get; set; }
 }
 
 public class AssignReservationRoomDto

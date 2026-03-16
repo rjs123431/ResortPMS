@@ -424,6 +424,16 @@ export interface RecordReservationDepositDto {
   referenceNo?: string;
 }
 
+export interface AddReservationRoomTypeItemDto {
+  roomTypeId: string;
+  quantity: number;
+}
+
+export interface AddReservationRoomTypesDto {
+  reservationId: string;
+  roomTypes: AddReservationRoomTypeItemDto[];
+}
+
 export interface CheckInResultDto {
   stayId: string;
   stayNo: string;

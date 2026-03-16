@@ -338,6 +338,22 @@ export const resortService = {
     return response.data.result;
   },
 
+  addReservationRoomTypes: async (reservationId: string, roomTypes: { roomTypeId: string; quantity: number }[]) => {
+    const response = await api.post<ApiResponse<number>>('/api/services/app/Reservation/AddRoomTypes', {
+      reservationId,
+      roomTypes,
+    });
+    return response.data.result;
+  },
+
+  addReservationExtraBeds: async (reservationId: string, extraBeds: { extraBedTypeId: string; quantity: number }[]) => {
+    const response = await api.post<ApiResponse<number>>('/api/services/app/Reservation/AddExtraBeds', {
+      reservationId,
+      extraBeds,
+    });
+    return response.data.result;
+  },
+
   updateReservationGuestAge: async (reservationId: string, reservationGuestId: string, age: number) => {
     await api.put('/api/services/app/Reservation/UpdateGuestAge', {
       reservationId,
@@ -351,6 +367,24 @@ export const resortService = {
       params: {
         reservationId,
         reservationGuestId,
+      },
+    });
+  },
+
+  removeReservationRoom: async (reservationId: string, reservationRoomId: string) => {
+    await api.delete('/api/services/app/Reservation/RemoveRoom', {
+      params: {
+        reservationId,
+        reservationRoomId,
+      },
+    });
+  },
+
+  removeReservationExtraBed: async (reservationId: string, reservationExtraBedId: string) => {
+    await api.delete('/api/services/app/Reservation/RemoveExtraBed', {
+      params: {
+        reservationId,
+        reservationExtraBedId,
       },
     });
   },
