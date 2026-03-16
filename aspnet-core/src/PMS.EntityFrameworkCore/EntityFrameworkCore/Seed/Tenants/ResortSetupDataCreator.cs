@@ -29,6 +29,7 @@ public class ResortSetupDataCreator
             EnsureStaff();
             EnsureGuests();
             EnsureDocumentSequences();
+            EnsureRoomRatePlans(roomTypes);
         }
 
         // Always ensure POS data and POS_ORDER sequence for existing tenants (e.g. after migration)
@@ -52,42 +53,16 @@ public class ResortSetupDataCreator
     {
         var definitions = new[]
         {
-            new
-            {
-                Name = "Superior Twin Room",
-                Description = "2 twin beds; 40 m2; Balcony; Sea view; Air conditioning; Attached bathroom; Free toiletries",
-                MaxAdults = 2,
-                MaxChildren = 2,
-                BaseRate = 3215m,
-                LegacyNames = new[] { "Standard" }
-            },
-            new
-            {
-                Name = "Superior King",
-                Description = "1 king bed; 40 m2; Balcony; City view; Air conditioning; Attached bathroom; Tea or coffee maker",
-                MaxAdults = 2,
-                MaxChildren = 1,
-                BaseRate = 4073m,
-                LegacyNames = new[] { "Deluxe" }
-            },
-            new
-            {
-                Name = "Family Loft",
-                Description = "2 queen beds; 55 m2; Family seating area; Pantry; Air conditioning; Smart TV",
-                MaxAdults = 4,
-                MaxChildren = 2,
-                BaseRate = 5890m,
-                LegacyNames = new[] { "Family" }
-            },
-            new
-            {
-                Name = "One Bedroom Suite",
-                Description = "1 king bed; living room; 65 m2; Premium view; Late check-in; Flexible reschedule",
-                MaxAdults = 3,
-                MaxChildren = 2,
-                BaseRate = 8292m,
-                LegacyNames = new[] { "Suite" }
-            },
+            new { Name = "Native Room", Description = "Native Room", MaxAdults = 2, MaxChildren = 0, BaseRate = 2155m },
+            new { Name = "Garden View (Easy Access)", Description = "Garden View (Easy Access)", MaxAdults = 2, MaxChildren = 0, BaseRate = 3215m },
+            new { Name = "Sea View (Ground Floor)", Description = "Sea View (Ground Floor)", MaxAdults = 2, MaxChildren = 0, BaseRate = 3435m },
+            new { Name = "Saint Room", Description = "Saint Room", MaxAdults = 2, MaxChildren = 0, BaseRate = 3435m },
+            new { Name = "Sea View (Upper Floor)", Description = "Sea View (Upper Floor)", MaxAdults = 3, MaxChildren = 0, BaseRate = 4480m },
+            new { Name = "Seaside View", Description = "Seaside View", MaxAdults = 4, MaxChildren = 0, BaseRate = 5660m },
+            new { Name = "Garden View (6 pax)", Description = "Garden View", MaxAdults = 6, MaxChildren = 0, BaseRate = 6815m },
+            new { Name = "Garden View (8 pax)", Description = "Garden View", MaxAdults = 8, MaxChildren = 0, BaseRate = 8460m },
+            new { Name = "Barkada Room", Description = "Barkada Room", MaxAdults = 18, MaxChildren = 0, BaseRate = 18925m },
+            new { Name = "Villa", Description = "Villa (Breakfast & Kayaking not included)", MaxAdults = 3, MaxChildren = 0, BaseRate = 2099m },
         };
 
         foreach (var def in definitions)
@@ -115,10 +90,16 @@ public class ResortSetupDataCreator
     {
         var rooms = new List<(string Number, string Type, string Floor)>
         {
-            ("101", "Superior Twin Room", "1"), ("102", "Superior Twin Room", "1"), ("103", "Superior Twin Room", "1"), ("104", "Superior Twin Room", "1"), ("105", "Superior Twin Room", "1"),
-            ("106", "Superior King", "1"), ("107", "Superior King", "1"), ("108", "Superior King", "1"), ("109", "Superior King", "1"), ("110", "Superior King", "1"),
-            ("201", "Family Loft", "2"), ("202", "Family Loft", "2"), ("203", "Family Loft", "2"), ("204", "Family Loft", "2"), ("205", "Family Loft", "2"),
-            ("301", "One Bedroom Suite", "3"), ("302", "One Bedroom Suite", "3"), ("303", "One Bedroom Suite", "3"), ("304", "One Bedroom Suite", "3"), ("305", "One Bedroom Suite", "3"),
+            ("101", "Native Room", "1"), ("102", "Native Room", "1"), ("103", "Native Room", "1"), ("104", "Native Room", "1"), ("105", "Native Room", "1"),
+            ("106", "Garden View (Easy Access)", "1"), ("107", "Garden View (Easy Access)", "1"), ("108", "Garden View (Easy Access)", "1"), ("109", "Garden View (Easy Access)", "1"), ("110", "Garden View (Easy Access)", "1"),
+            ("201", "Sea View (Ground Floor)", "2"), ("202", "Sea View (Ground Floor)", "2"), ("203", "Sea View (Ground Floor)", "2"), ("204", "Sea View (Ground Floor)", "2"), ("205", "Sea View (Ground Floor)", "2"),
+            ("206", "Saint Room", "2"), ("207", "Saint Room", "2"),
+            ("208", "Sea View (Upper Floor)", "2"), ("209", "Sea View (Upper Floor)", "2"),
+            ("210", "Seaside View", "2"), ("211", "Seaside View", "2"),
+            ("212", "Garden View (6 pax)", "2"), ("213", "Garden View (6 pax)", "2"),
+            ("214", "Garden View (8 pax)", "2"), ("215", "Garden View (8 pax)", "2"),
+            ("216", "Barkada Room", "2"),
+            ("217", "Villa", "2"),
         };
 
         foreach (var room in rooms)
@@ -179,13 +160,100 @@ public class ResortSetupDataCreator
     {
         var definitions = new[]
         {
-            new ExtraBedType { Name = "Kid", BasePrice = 600m, IsActive = true },
-            new ExtraBedType { Name = "Adult", BasePrice = 1000m, IsActive = true },
+            new ExtraBedType { Name = "Kid", BasePrice = 650m, IsActive = true },
+            new ExtraBedType { Name = "Adult", BasePrice = 965m, IsActive = true },
         };
-
         _context.ExtraBedTypes.AddRange(definitions);
-
         _context.SaveChanges();
+    }
+
+    // Seed RoomRatePlans for Weekdays Promo and Rack Rate (Weekend/Regular)
+    private void EnsureRoomRatePlans(Dictionary<string, Guid> roomTypes)
+    {
+        var weekdayRates = new Dictionary<string, decimal>
+        {
+            { "Native Room", 2065m },
+            { "Garden View (Easy Access)", 2925m },
+            { "Sea View (Ground Floor)", 3125m },
+            { "Saint Room", 3125m },
+            { "Sea View (Upper Floor)", 4080m },
+            { "Seaside View", 5160m },
+            { "Garden View (6 pax)", 6235m },
+            { "Garden View (8 pax)", 7745m },
+            { "Barkada Room", 18125m },
+            { "Villa", 2099m },
+        };
+        var weekendRates = new Dictionary<string, decimal>
+        {
+            { "Native Room", 2155m },
+            { "Garden View (Easy Access)", 3215m },
+            { "Sea View (Ground Floor)", 3435m },
+            { "Saint Room", 3435m },
+            { "Sea View (Upper Floor)", 4480m },
+            { "Seaside View", 5660m },
+            { "Garden View (6 pax)", 6815m },
+            { "Garden View (8 pax)", 8460m },
+            { "Barkada Room", 18925m },
+            { "Villa", 2099m },
+        };
+        foreach (var rtName in roomTypes.Keys)
+        {
+            var roomTypeId = roomTypes[rtName];
+            var baseRate = _context.RoomTypes.FirstOrDefault(x => x.Id == roomTypeId)?.BaseRate ?? 0m;
+            // Weekdays Promo
+            var promoPlan = new RoomRatePlan
+            {
+                RoomTypeId = roomTypeId,
+                Code = "WEEKDAY_PROMO",
+                Name = "Weekdays Promo",
+                StartDate = DateTime.Today,
+                EndDate = null,
+                Priority = 1,
+                IsDefault = false,
+                IsActive = true,
+                CheckInTime = new TimeSpan(14, 0, 0),
+                CheckOutTime = new TimeSpan(12, 0, 0),
+            };
+            _context.RoomRatePlans.Add(promoPlan);
+            _context.SaveChanges();
+            foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+            {
+                if (day == DayOfWeek.Saturday || day == DayOfWeek.Sunday) continue;
+                _context.RoomRatePlanDays.Add(new RoomRatePlanDay
+                {
+                    RoomRatePlanId = promoPlan.Id,
+                    DayOfWeek = day,
+                    BasePrice = weekdayRates.TryGetValue(rtName, out var price) ? price : baseRate,
+                });
+            }
+            _context.SaveChanges();
+            // Weekend/Rack Rate
+            var rackPlan = new RoomRatePlan
+            {
+                RoomTypeId = roomTypeId,
+                Code = "RACK_RATE",
+                Name = "Rack Rate (Weekend/Regular)",
+                StartDate = DateTime.Today,
+                EndDate = null,
+                Priority = 2,
+                IsDefault = true,
+                IsActive = true,
+                CheckInTime = new TimeSpan(14, 0, 0),
+                CheckOutTime = new TimeSpan(12, 0, 0),
+            };
+            _context.RoomRatePlans.Add(rackPlan);
+            _context.SaveChanges();
+            foreach (DayOfWeek day in new[] { DayOfWeek.Saturday, DayOfWeek.Sunday })
+            {
+                _context.RoomRatePlanDays.Add(new RoomRatePlanDay
+                {
+                    RoomRatePlanId = rackPlan.Id,
+                    DayOfWeek = day,
+                    BasePrice = weekendRates.TryGetValue(rtName, out var price) ? price : baseRate,
+                });
+            }
+            _context.SaveChanges();
+        }
     }
 
     private void EnsureStaff()

@@ -12,7 +12,7 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260315051650_InitDatabase")]
+    [Migration("20260316004719_InitDatabase")]
     partial class InitDatabase
     {
         /// <inheritdoc />
