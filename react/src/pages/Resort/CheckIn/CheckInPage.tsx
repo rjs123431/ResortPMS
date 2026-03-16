@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 import { LoadPreCheckInDialog } from '../Shared/LoadPreCheckInDialog';
@@ -40,7 +39,7 @@ export const CheckInPage = () => {
   }, [reservationsData?.items, todayDateOnly]);
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -58,7 +57,7 @@ export const CheckInPage = () => {
               Pre-Check-In
             </button>
             <Link
-              to="/check-in/walk-in"
+              to="/front-desk/check-in/walk-in"
               className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
             >
               Walk-In
@@ -121,7 +120,7 @@ export const CheckInPage = () => {
                       <td className="border border-gray-200 p-2 dark:border-gray-700">
                         <button
                           type="button"
-                          onClick={() => navigate(`/check-in/reservations/${reservation.id}`)}
+                          onClick={() => navigate(`/front-desk/check-in/reservations/${reservation.id}`)}
                           className="rounded bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700"
                         >
                           Open
@@ -139,11 +138,11 @@ export const CheckInPage = () => {
           open={showPreCheckInDialog}
           onSelect={(preCheckInId) => {
             setShowPreCheckInDialog(false);
-            navigate(`/check-in/walk-in/${preCheckInId}`);
+            navigate(`/front-desk/check-in/walk-in/${preCheckInId}`);
           }}
           onClose={() => setShowPreCheckInDialog(false)}
         />
       </div>
-    </MainLayout>
+    </>
   );
 };

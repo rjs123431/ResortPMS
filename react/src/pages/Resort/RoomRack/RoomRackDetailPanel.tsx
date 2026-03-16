@@ -191,7 +191,7 @@ export const RoomRackDetailPanel: React.FC<RoomRackDetailPanelProps> = ({ open, 
                   type="button"
                   onClick={() => {
                     onClose();
-                    navigate(`/reservations/${item.reservationId}`);
+                    navigate(`/front-desk/reservations/${item.reservationId}`);
                   }}
                   className="w-full rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600"
                 >
@@ -202,7 +202,7 @@ export const RoomRackDetailPanel: React.FC<RoomRackDetailPanelProps> = ({ open, 
                     type="button"
                     onClick={() => {
                       onClose();
-                      navigate(`/check-in/reservations/${item.reservationId}`);
+                      navigate(`/front-desk/check-in/reservations/${item.reservationId}`);
                     }}
                     className="w-full rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                   >
@@ -217,7 +217,7 @@ export const RoomRackDetailPanel: React.FC<RoomRackDetailPanelProps> = ({ open, 
                   type="button"
                   onClick={() => {
                     onClose();
-                    navigate(`/stays/${item.stayId}`);
+                    navigate(`/front-desk/stays/${item.stayId}`);
                   }}
                   className="w-full rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600"
                 >
@@ -227,7 +227,7 @@ export const RoomRackDetailPanel: React.FC<RoomRackDetailPanelProps> = ({ open, 
                   type="button"
                   onClick={() => {
                     onClose();
-                    navigate(`/check-out`);
+                    navigate(`/front-desk/check-out`);
                   }}
                   className="w-full rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                 >

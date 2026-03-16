@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 
@@ -12,6 +12,8 @@ const inactiveClass =
 
 export const TopNav: React.FC = () => {
   const { isGranted } = useAuth();
+  const location = useLocation();
+  const isFrontDeskActive = location.pathname === '/front-desk' || location.pathname.startsWith('/front-desk/');
 
   const showReports = isGranted(PermissionNames.Pages_Reports);
   const showAdmin =
@@ -24,10 +26,8 @@ export const TopNav: React.FC = () => {
     <nav className="flex items-center gap-1" aria-label="Main navigation">
       <NavLink
         to="/front-desk"
-        end
-        className={({ isActive }) =>
-          [navClass, isActive ? activeClass : inactiveClass].join(' ')
-        }
+        end={false}
+        className={() => [navClass, isFrontDeskActive ? activeClass : inactiveClass].join(' ')}
       >
         Front Desk
       </NavLink>

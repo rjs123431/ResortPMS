@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ArrowLeftIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { MainLayout } from '@components/layout/MainLayout';
 import { useTheme } from '@contexts/ThemeContext';
 import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
@@ -440,8 +439,7 @@ export const RoomRackPage = () => {
   }, [dateColumns.length, roomsByType.length]);
 
   return (
-    <MainLayout>
-      <div className="space-y-4">
+    <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -634,9 +632,9 @@ export const RoomRackPage = () => {
                           const guestName = cell.type === 'blocked' ? cell.label : cell.guestName;
                           const navPath =
                             cell.type === 'stay'
-                              ? `/stays/${cell.stayId}`
+                              ? `/front-desk/stays/${cell.stayId}`
                               : cell.type === 'reservation'
-                                ? `/reservations/${cell.reservationId}`
+                                ? `/front-desk/reservations/${cell.reservationId}`
                                 : '#';
                           const isConfirmed = cell.type === 'reservation' && cell.reservationStatus === ReservationStatus.Confirmed;
                           const bgClass =
@@ -835,7 +833,6 @@ export const RoomRackPage = () => {
             
           </div>
         </section>
-      </div>
       <QuickReservationDialog
         open={quickReservationOpen}
         onClose={() => { setQuickReservationOpen(false); setQuickReservationPayload(null); setSelection(null); }}
@@ -854,6 +851,6 @@ export const RoomRackPage = () => {
         dateKey={bookingsDialogPayload?.dateKey ?? null}
         items={bookingsDialogPayload ? bookingsListByRoomTypeAndDate(bookingsDialogPayload.roomTypeName, bookingsDialogPayload.dateKey) : []}
       />
-    </MainLayout>
+    </div>
   );
 };

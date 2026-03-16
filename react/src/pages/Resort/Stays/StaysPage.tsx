@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 
 export const StaysPage = () => {
@@ -14,7 +13,7 @@ export const StaysPage = () => {
   });
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">In-House Stays</h1>
@@ -68,7 +67,7 @@ export const StaysPage = () => {
                       <button
                         type="button"
                         className="rounded bg-indigo-700 px-3 py-1 text-white"
-                        onClick={() => navigate(`/stays/${stay.id}`)}
+                        onClick={() => navigate(`/front-desk/stays/${stay.id}`)}
                       >
                         View
                       </button>
@@ -85,6 +84,6 @@ export const StaysPage = () => {
           </div>
         </section>
       </div>
-    </MainLayout>
+    </>
   );
 };

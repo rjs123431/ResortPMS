@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
@@ -296,7 +295,7 @@ export const CheckInReservationPage = () => {
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations-checkin-today'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
-      navigate('/check-in/confirmation', {
+      navigate('/front-desk/check-in/confirmation', {
         replace: true,
         state: {
           stayId: result.stayId,
@@ -313,7 +312,7 @@ export const CheckInReservationPage = () => {
   });
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -539,8 +538,8 @@ export const CheckInReservationPage = () => {
                 <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-700/40 dark:bg-emerald-900/20 dark:text-emerald-200">
                   <p>{successMessage}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <button type="button" className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white" onClick={() => navigate('/stays')}>Open In-House Stays</button>
-                    <button type="button" className="rounded border border-emerald-700 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200" onClick={() => navigate(`/reservations/${reservationId}`)}>Return to Reservation</button>
+                    <button type="button" className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white" onClick={() => navigate('/front-desk/stays')}>Open In-House Stays</button>
+                    <button type="button" className="rounded border border-emerald-700 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200" onClick={() => navigate(`/front-desk/reservations/${reservationId}`)}>Return to Reservation</button>
                   </div>
                 </div>
               ) : null}
@@ -550,7 +549,7 @@ export const CheckInReservationPage = () => {
                   <button
                     type="button"
                     className="rounded bg-emerald-700 px-4 py-2 text-sm text-white"
-                    onClick={() => navigate('/stays')}
+                    onClick={() => navigate('/front-desk/stays')}
                   >
                     Open Stay Information
                   </button>
@@ -630,6 +629,6 @@ export const CheckInReservationPage = () => {
         }}
         onClose={closeAssignRoomDialog}
       />
-    </MainLayout>
+    </>
   );
 };

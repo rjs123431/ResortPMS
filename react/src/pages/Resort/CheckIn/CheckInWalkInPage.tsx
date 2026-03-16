@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { HousekeepingStatus } from '@/types/resort.types';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
@@ -678,7 +677,7 @@ export const CheckInWalkInPage = () => {
     },
     onSuccess: (preCheckInId) => {
       if (!loadedPreCheckInId) {
-        navigate(`/check-in/walk-in/${preCheckInId}`, { replace: true });
+        navigate(`/front-desk/check-in/walk-in/${preCheckInId}`, { replace: true });
       }
       setLoadedPreCheckInId(preCheckInId);
       setPreCheckInSaveMessage('Pre-check-in saved successfully!');
@@ -779,7 +778,7 @@ export const CheckInWalkInPage = () => {
       setShowReservationDetails(true);
       setShowPreCheckInListDialog(false);
 
-      navigate(`/check-in/walk-in/${preCheckIn.id}`, { replace: true });
+      navigate(`/front-desk/check-in/walk-in/${preCheckIn.id}`, { replace: true });
     } catch (error) {
       setConfirmError(getErrorMessage(error));
     }
@@ -897,7 +896,7 @@ export const CheckInWalkInPage = () => {
       void queryClient.invalidateQueries({ queryKey: ['resort-stays'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-precheckins-pending'] });
-      navigate('/check-in/confirmation', {
+      navigate('/front-desk/check-in/confirmation', {
         replace: true,
         state: {
           stayId: result.stayId,
@@ -916,7 +915,7 @@ export const CheckInWalkInPage = () => {
   const currentStep = !showReservationDetails ? 1 : showGuestInfoStep ? 3 : 2;
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -1732,7 +1731,7 @@ export const CheckInWalkInPage = () => {
                   <button
                     type="button"
                     className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white"
-                    onClick={() => navigate('/stays')}
+                    onClick={() => navigate('/front-desk/stays')}
                   >
                     Open In-House Stays
                   </button>
@@ -1817,6 +1816,6 @@ export const CheckInWalkInPage = () => {
           onClose={() => setShowPreCheckInListDialog(false)}
         />
       </div>
-    </MainLayout>
+    </>
   );
 };

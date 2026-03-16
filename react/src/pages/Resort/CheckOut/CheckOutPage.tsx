@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog } from '@headlessui/react';
-import { MainLayout } from '@components/layout/MainLayout';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import { ClearRoomDialog } from '@pages/Resort/Shared/ClearRoomDialog';
 import { PostChargeDialog } from '@pages/Resort/Shared/PostChargeDialog';
@@ -188,7 +187,7 @@ export const CheckOutPage = () => {
     mutationFn: () => resortService.processCheckout({ stayId: stayId!, payments: [] }),
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ['resort-stays-checkout-list'] });
-      navigate(`/check-out/confirmation/${data.checkOutRecordId}`, { replace: true });
+      navigate(`/front-desk/check-out/confirmation/${data.checkOutRecordId}`, { replace: true });
     },
   });
 
@@ -242,12 +241,12 @@ export const CheckOutPage = () => {
   };
 
   if (!stayId) {
-    return <Navigate to="/check-out" replace />;
+    return <Navigate to="/front-desk/check-out" replace />;
   }
 
   if (isStatementError || !statement) {
     return (
-      <MainLayout>
+      <>
         <div className="mx-auto max-w-3xl space-y-6">
           <section className="rounded-lg border border-red-200 bg-white p-6 shadow dark:border-red-700/40 dark:bg-gray-800">
             <h1 className="text-xl font-bold text-red-700 dark:text-red-300">Stay Not Found</h1>
@@ -257,18 +256,18 @@ export const CheckOutPage = () => {
             <button
               type="button"
               className="mt-4 rounded bg-gray-600 px-4 py-2 text-sm font-medium text-white"
-              onClick={() => navigate('/check-out', { replace: true })}
+              onClick={() => navigate('/front-desk/check-out', { replace: true })}
             >
               Back to Check-Out List
             </button>
           </section>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -278,7 +277,7 @@ export const CheckOutPage = () => {
           <button
             type="button"
             className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 dark:border-gray-600 dark:text-gray-200"
-            onClick={() => navigate('/check-out')}
+            onClick={() => navigate('/front-desk/check-out')}
           >
             Back to List
           </button>
@@ -628,6 +627,6 @@ export const CheckOutPage = () => {
           </div>
         </Dialog>
       </div>
-    </MainLayout>
+    </>
   );
 };

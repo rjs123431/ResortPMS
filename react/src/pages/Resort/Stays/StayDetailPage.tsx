@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { CompleteGuestRequestDialog } from '../Shared/CompleteGuestRequestDialog';
@@ -259,7 +258,7 @@ export const StayDetailPage = () => {
   };
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -269,7 +268,7 @@ export const StayDetailPage = () => {
           <button
             type="button"
             className="rounded bg-gray-200 px-3 py-2 text-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100"
-            onClick={() => navigate('/stays')}
+            onClick={() => navigate('/front-desk/stays')}
           >
             Back To In-House Stays
           </button>
@@ -604,6 +603,6 @@ export const StayDetailPage = () => {
         }}
         onSave={(values) => transferRoomMutation.mutate(values)}
       />
-    </MainLayout>
+    </>
   );
 };

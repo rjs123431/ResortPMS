@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, Outlet } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, Outlet, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '@contexts/AuthContext';
@@ -7,6 +7,7 @@ import { ThemeProvider } from '@contexts/ThemeContext';
 import { SignalRProvider } from '@contexts/SignalRContext';
 import { ProtectedRoute } from '@components/auth/ProtectedRoute';
 import { AdminLayout } from '@components/layout/AdminLayout';
+import { FrontDeskLayout } from '@components/layout/FrontDeskLayout';
 import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import UpdateNotification from '@components/common/UpdateNotification';
@@ -50,7 +51,9 @@ const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/Cleaning
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
 const HomePage = lazy(() => import('@pages/Home/HomePage').then((m) => ({ default: m.HomePage })));
-const FrontDeskPage = lazy(() => import('@pages/Resort/FrontDesk/FrontDeskPage').then((m) => ({ default: m.FrontDeskPage })));
+const FrontDeskDashboardPage = lazy(() =>
+  import('@pages/Resort/FrontDesk/FrontDeskDashboardPage').then((m) => ({ default: m.FrontDeskDashboardPage })),
+);
 const HousekeepingHubPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingHubPage').then((m) => ({ default: m.HousekeepingHubPage })));
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
@@ -81,6 +84,11 @@ const LoadingScreen: React.FC = () => (
     <LogoSpinner sizeClassName="h-10 w-10" logoSizeClassName="h-6 w-6" spinnerClassName="border-b-2 border-blue-500" />
   </div>
 );
+
+const RedirectToFrontDesk: React.FC = () => {
+  const { pathname } = useLocation();
+  return <Navigate to={`/front-desk${pathname}`} replace />;
+};
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -138,16 +146,166 @@ const App: React.FC = () => {
                         </PageTitle>
                       }
                     />
-                    <Route
-                      path="/front-desk"
-                      element={
-                        <PageTitle title="Front Desk">
-                          <ProtectedRoute>
-                            <FrontDeskPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
+                    <Route path="/front-desk" element={<FrontDeskLayout><Outlet /></FrontDeskLayout>}>
+                      <Route
+                        index
+                        element={
+                          <PageTitle title="Front Desk">
+                            <ProtectedRoute>
+                              <FrontDeskDashboardPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="room-rack"
+                        element={
+                          <PageTitle title="Room Rack">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                              <RoomRackPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="reservations"
+                        element={
+                          <PageTitle title="Reservations">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
+                              <ReservationListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="reservations/:id"
+                        element={
+                          <PageTitle title="Reservation Detail">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
+                              <ReservationDetailPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="reservations/new"
+                        element={
+                          <PageTitle title="New Reservation">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
+                              <ReservationPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="check-in"
+                        element={
+                          <PageTitle title="Check-In">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                              <CheckInPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="check-in/reservations/:reservationId"
+                        element={
+                          <PageTitle title="Check-In Reservation">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                              <CheckInReservationPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="walk-in/:preCheckInId?"
+                        element={
+                          <PageTitle title="Walk-In Check-In">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                              <CheckInWalkInPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="check-in/confirmation"
+                        element={
+                          <PageTitle title="Check-In Confirmation">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                              <CheckInConfirmationPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="stays"
+                        element={
+                          <PageTitle title="In-House Stays">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Stays]}>
+                              <StaysPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="stays/:stayId"
+                        element={
+                          <PageTitle title="Stay Detail">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Stays]}>
+                              <StayDetailPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="check-out"
+                        element={
+                          <PageTitle title="Check-Out">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
+                              <CheckOutListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="check-out/:id"
+                        element={
+                          <PageTitle title="Check-Out">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
+                              <CheckOutPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="check-out/confirmation/:id"
+                        element={
+                          <PageTitle title="Check-Out Confirmation">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
+                              <CheckOutConfirmationPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="guests"
+                        element={
+                          <PageTitle title="Guests">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Guests]}>
+                              <GuestListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                    </Route>
+                    <Route path="/room-rack" element={<RedirectToFrontDesk />} />
+                    <Route path="/room-rack/*" element={<RedirectToFrontDesk />} />
+                    <Route path="/reservations/*" element={<RedirectToFrontDesk />} />
+                    <Route path="/new-reservation" element={<Navigate to="/front-desk/reservations/new" replace />} />
+                    <Route path="/check-in/*" element={<RedirectToFrontDesk />} />
+                    <Route path="/stays/*" element={<RedirectToFrontDesk />} />
+                    <Route path="/check-out/*" element={<RedirectToFrontDesk />} />
+                    <Route path="/guests" element={<RedirectToFrontDesk />} />
                     <Route
                       path="/dashboard"
                       element={<Navigate to="/" replace />}
@@ -193,148 +351,8 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
-                      path="/room-rack"
-                      element={
-                        <PageTitle title="Room Rack">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
-                            <RoomRackPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/reservations"
-                      element={
-                        <PageTitle title="Reservations">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
-                            <ReservationListPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/reservations/:id"
-                      element={
-                        <PageTitle title="Reservation Detail">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
-                            <ReservationDetailPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/reservations/new"
-                      element={
-                        <PageTitle title="New Reservation">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
-                            <ReservationPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/new-reservation"
-                      element={
-                        <PageTitle title="New Reservation">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reservations]}>
-                            <ReservationPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/check-in"
-                      element={
-                        <PageTitle title="Check-In">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
-                            <CheckInPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/check-in/reservations/:reservationId"
-                      element={
-                        <PageTitle title="Check-In Reservation">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
-                            <CheckInReservationPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/check-in/walk-in/:preCheckInId?"
-                      element={
-                        <PageTitle title="Walk-In Check-In">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
-                            <CheckInWalkInPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/check-in/confirmation"
-                      element={
-                        <PageTitle title="Check-In Confirmation">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
-                            <CheckInConfirmationPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/stays"
-                      element={
-                        <PageTitle title="In-House Stays">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Stays]}>
-                            <StaysPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/stays/:stayId"
-                      element={
-                        <PageTitle title="Stay Detail">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Stays]}>
-                            <StayDetailPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/check-out"
-                      element={
-                        <PageTitle title="Check-Out">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
-                            <CheckOutListPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/check-out/:id"
-                      element={
-                        <PageTitle title="Check-Out">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
-                            <CheckOutPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/check-out/confirmation/:id"
-                      element={
-                        <PageTitle title="Check-Out Confirmation">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckOut]}>
-                            <CheckOutConfirmationPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
                       path="/room-status"
-                      element={<Navigate to="/room-rack" replace />}
+                      element={<Navigate to="/front-desk/room-rack" replace />}
                     />
                     <Route
                       path="/housekeeping"
@@ -508,7 +526,6 @@ const App: React.FC = () => {
                         }
                       />
                     </Route>
-                    <Route path="/guests" element={<Navigate to="/admin/guests" replace />} />
                     <Route path="/rooms" element={<Navigate to="/admin/rooms" replace />} />
                     <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
                     <Route path="/room-rate-plans" element={<Navigate to="/admin/room-rate-plans" replace />} />

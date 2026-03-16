@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 
 const toDate = (value?: string) => {
@@ -95,7 +94,7 @@ export const CheckOutListPage = () => {
   const stays = inHouseData?.items ?? [];
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -158,7 +157,7 @@ export const CheckOutListPage = () => {
                         <button
                           type="button"
                           className="rounded bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
-                          onClick={() => navigate(`/check-out/${stay.id}`)}
+                          onClick={() => navigate(`/front-desk/check-out/${stay.id}`)}
                         >
                           Check-Out
                         </button>
@@ -177,6 +176,6 @@ export const CheckOutListPage = () => {
           )}
         </section>
       </div>
-    </MainLayout>
+    </>
   );
 };

@@ -2,7 +2,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
@@ -301,7 +300,7 @@ export const ReservationDetailPage = () => {
   }, []);
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -354,7 +353,7 @@ export const ReservationDetailPage = () => {
               <button
                 type="button"
                 className="rounded bg-primary-600 px-3 py-2 text-sm text-white"
-                onClick={() => navigate(`/check-in/reservations/${id}`)}
+                onClick={() => navigate(`/front-desk/check-in/reservations/${id}`)}
               >
                 Check-In
               </button>
@@ -904,6 +903,6 @@ export const ReservationDetailPage = () => {
           onClose={closeAssignRoomDialog}
         />
       </div>
-    </MainLayout>
+    </>
   );
 };

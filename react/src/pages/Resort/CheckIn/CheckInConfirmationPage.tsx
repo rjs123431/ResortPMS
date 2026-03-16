@@ -1,4 +1,3 @@
-import { MainLayout } from '@components/layout/MainLayout';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 type CheckInConfirmationState = {
@@ -14,11 +13,11 @@ export const CheckInConfirmationPage = () => {
   const state = location.state as CheckInConfirmationState | null;
 
   if (!state?.stayId || !state?.stayNo || !state?.folioId || !state?.folioNo) {
-    return <Navigate to="/check-in" replace />;
+    return <Navigate to="/front-desk/check-in" replace />;
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="mx-auto max-w-3xl space-y-6">
         <section className="rounded-lg border border-emerald-200 bg-white p-6 shadow dark:border-emerald-700/40 dark:bg-gray-800">
           <h1 className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">Check-In Completed</h1>
@@ -41,20 +40,20 @@ export const CheckInConfirmationPage = () => {
             <button
               type="button"
               className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
-              onClick={() => navigate('/stays', { replace: true })}
+              onClick={() => navigate('/front-desk/stays', { replace: true })}
             >
               Open In-House Stays
             </button>
             <button
               type="button"
               className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 dark:border-gray-600 dark:text-gray-200"
-              onClick={() => navigate('/check-in', { replace: true })}
+              onClick={() => navigate('/front-desk/check-in', { replace: true })}
             >
               Back to Check-In List
             </button>
           </div>
         </section>
       </div>
-    </MainLayout>
+    </>
   );
 };

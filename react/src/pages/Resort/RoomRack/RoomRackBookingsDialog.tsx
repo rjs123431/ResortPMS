@@ -81,7 +81,7 @@ export const RoomRackBookingsDialog = ({
                   <li key={item.type === 'reservation' ? `r-${item.id}` : `s-${item.id}`}>
                     {item.type === 'reservation' ? (
                       <Link
-                        to={`/reservations/${item.id}`}
+                        to={`/front-desk/reservations/${item.id}`}
                         className="flex flex-col gap-0.5 rounded-lg border border-gray-200 dark:border-gray-600 p-3 hover:bg-gray-50 hover:border-primary-300 dark:hover:bg-gray-700 dark:hover:border-primary-600 transition-colors"
                         onClick={onClose}
                       >
@@ -99,7 +99,7 @@ export const RoomRackBookingsDialog = ({
                       </Link>
                     ) : (
                       <Link
-                        to={`/stays/${item.id}`}
+                        to={`/front-desk/stays/${item.id}`}
                         className="flex flex-col gap-0.5 rounded-lg border border-gray-200 dark:border-gray-600 p-3 hover:bg-gray-50 hover:border-primary-300 dark:hover:bg-gray-700 dark:hover:border-primary-600 transition-colors"
                         onClick={onClose}
                       >

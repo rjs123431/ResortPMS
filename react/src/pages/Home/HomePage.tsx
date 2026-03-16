@@ -33,7 +33,7 @@ const HomeCard: React.FC<HomeCardProps> = ({ to, label, description, icon, allow
 export const HomePage: React.FC = () => {
   const { user, isGranted } = useAuth();
 
-  const displayName = [user?.name, user?.surname].filter(Boolean).join(' ').trim() || 'User';
+  const displayName = [user?.name].filter(Boolean).join(' ').trim() || 'User';
 
   const showFrontDesk = true;
   const showHousekeeping = isGranted(PermissionNames.Pages_Rooms);
@@ -49,7 +49,7 @@ export const HomePage: React.FC = () => {
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Welcome, {displayName}. How do you do today?
+            Welcome, {displayName}!
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Choose an area below to get started.

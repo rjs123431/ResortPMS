@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 
@@ -16,7 +15,7 @@ export const ReservationListPage = () => {
   const reservations = useMemo(() => reservationsData?.items ?? [], [reservationsData]);
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -24,7 +23,7 @@ export const ReservationListPage = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">Confirm, cancel, and inspect reservation details.</p>
           </div>
 
-          <Link to="/reservations/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
+          <Link to="/front-desk/reservations/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
             New Reservation
           </Link>
         </div>
@@ -61,9 +60,9 @@ export const ReservationListPage = () => {
                     <td className="p-2">{ReservationStatus[r.status]}</td>
                     <td className="p-2">
                       <div className="flex flex-wrap gap-2">
-                        <Link to={`/reservations/${r.id}`} className="rounded bg-slate-700 px-2 py-1 text-white">View</Link>
+                        <Link to={`/front-desk/reservations/${r.id}`} className="rounded bg-slate-700 px-2 py-1 text-white">View</Link>
                         {r.status === ReservationStatus.Confirmed ? (
-                          <Link to={`/check-in/reservations/${r.id}`} className="rounded bg-primary-600 px-2 py-1 text-white hover:bg-primary-700">Check-In</Link>
+                          <Link to={`/front-desk/check-in/reservations/${r.id}`} className="rounded bg-primary-600 px-2 py-1 text-white hover:bg-primary-700">Check-In</Link>
                         ) : null}
                       </div>
                     </td>
@@ -74,6 +73,6 @@ export const ReservationListPage = () => {
           </div>
         </section>
       </div>
-    </MainLayout>
+    </>
   );
 };

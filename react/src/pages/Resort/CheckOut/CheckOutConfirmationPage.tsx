@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { resortService } from '@services/resort.service';
 
@@ -17,22 +16,22 @@ export const CheckOutConfirmationPage = () => {
   });
 
   if (!id) {
-    return <Navigate to="/check-out" replace />;
+    return <Navigate to="/front-desk/check-out" replace />;
   }
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex min-h-[50vh] items-center justify-center">
           <p className="text-gray-500">Loading checkout details...</p>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (isError || !checkOutRecord) {
     return (
-      <MainLayout>
+      <>
         <div className="mx-auto max-w-3xl space-y-6">
           <section className="rounded-lg border border-red-200 bg-white p-6 shadow dark:border-red-700/40 dark:bg-gray-800">
             <h1 className="text-xl font-bold text-red-700 dark:text-red-300">Checkout Record Not Found</h1>
@@ -42,18 +41,18 @@ export const CheckOutConfirmationPage = () => {
             <button
               type="button"
               className="mt-4 rounded bg-gray-600 px-4 py-2 text-sm font-medium text-white"
-              onClick={() => navigate('/check-out', { replace: true })}
+              onClick={() => navigate('/front-desk/check-out', { replace: true })}
             >
               Back to Check-Out
             </button>
           </section>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="mx-auto max-w-3xl space-y-6">
         <section className="rounded-lg border border-emerald-200 bg-white p-6 shadow dark:border-emerald-700/40 dark:bg-gray-800">
           <h1 className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">Check-Out Completed</h1>
@@ -118,14 +117,14 @@ export const CheckOutConfirmationPage = () => {
             <button
               type="button"
               className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
-              onClick={() => navigate('/stays', { replace: true })}
+              onClick={() => navigate('/front-desk/stays', { replace: true })}
             >
               View Stays
             </button>
             <button
               type="button"
               className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 dark:border-gray-600 dark:text-gray-200"
-              onClick={() => navigate('/check-out', { replace: true })}
+              onClick={() => navigate('/front-desk/check-out', { replace: true })}
             >
               New Check-Out
             </button>
@@ -139,6 +138,6 @@ export const CheckOutConfirmationPage = () => {
           </div>
         </section>
       </div>
-    </MainLayout>
+    </>
   );
 };

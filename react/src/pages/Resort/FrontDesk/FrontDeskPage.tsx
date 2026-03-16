@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MainLayout } from '@components/layout/MainLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 
@@ -36,7 +35,7 @@ export const FrontDeskPage: React.FC = () => {
   const { isGranted } = useAuth();
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Front Desk</h1>
@@ -46,7 +45,7 @@ export const FrontDeskPage: React.FC = () => {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <NavCard
-            to="/room-rack"
+            to="/front-desk/room-rack"
             label="Room Rack"
             description="View and manage room status and availability."
             allowed={isGranted(PermissionNames.Pages_Rooms)}
@@ -57,7 +56,7 @@ export const FrontDeskPage: React.FC = () => {
             }
           />
           <NavCard
-            to="/reservations"
+            to="/front-desk/reservations"
             label="Reservations"
             description="Create and manage reservations."
             allowed={isGranted(PermissionNames.Pages_Reservations)}
@@ -68,7 +67,7 @@ export const FrontDeskPage: React.FC = () => {
             }
           />
           <NavCard
-            to="/check-in"
+            to="/front-desk/check-in"
             label="Check-In"
             description="Check in reservations and walk-ins."
             allowed={isGranted(PermissionNames.Pages_CheckIn)}
@@ -79,7 +78,7 @@ export const FrontDeskPage: React.FC = () => {
             }
           />
           <NavCard
-            to="/stays"
+            to="/front-desk/stays"
             label="In-House"
             description="View and manage current in-house stays."
             allowed={isGranted(PermissionNames.Pages_Stays)}
@@ -90,7 +89,7 @@ export const FrontDeskPage: React.FC = () => {
             }
           />
           <NavCard
-            to="/check-out"
+            to="/front-desk/check-out"
             label="Check-Out"
             description="Process check-outs and settlements."
             allowed={isGranted(PermissionNames.Pages_CheckOut)}
@@ -102,6 +101,6 @@ export const FrontDeskPage: React.FC = () => {
           />
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 };

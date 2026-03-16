@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         ),
         children: [
           {
-            path: '/room-rack',
+            path: '/front-desk/room-rack',
             label: 'Room Rack',
             permissions: [PermissionNames.Pages_Rooms],
             icon: (
@@ -55,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ),
           },
           {
-            path: '/reservations',
+            path: '/front-desk/reservations',
             label: 'Reservations',
             permissions: [PermissionNames.Pages_Reservations],
             icon: (
@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ),
           },
           {
-            path: '/check-in',
+            path: '/front-desk/check-in',
             label: 'Check-In',
             permissions: [PermissionNames.Pages_CheckIn],
             icon: (
@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ),
           },
           {
-            path: '/stays',
+            path: '/front-desk/stays',
             label: 'In-House',
             permissions: [PermissionNames.Pages_Stays],
             icon: (
@@ -85,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ),
           },
           {
-            path: '/check-out',
+            path: '/front-desk/check-out',
             label: 'Check-Out',
             permissions: [PermissionNames.Pages_CheckOut],
             icon: (

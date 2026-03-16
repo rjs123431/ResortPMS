@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useNavigate } from 'react-router-dom';
-import { MainLayout } from '@components/layout/MainLayout';
 import { resortService } from '@services/resort.service';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
@@ -592,7 +591,7 @@ export const ReservationPage = () => {
     onSuccess: (reservationId) => {
       setConfirmError('');
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      navigate(`/reservations/${reservationId}`);
+      navigate(`/front-desk/reservations/${reservationId}`);
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : 'Unable to save reservation.';
@@ -603,7 +602,7 @@ export const ReservationPage = () => {
   const currentStep = !showReservationDetails ? 1 : showGuestInfoStep ? 3 : 2;
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="w-full rounded-lg border border-gray-200 bg-white/90 p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
@@ -1352,6 +1351,6 @@ export const ReservationPage = () => {
           onSave={saveDepositDialog}
         />
       </div>
-    </MainLayout>
+    </>
   );
 };
