@@ -15,6 +15,7 @@ using PMS.Application.App.Services;
 using PMS.Auditing;
 using PMS.Authorization;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
@@ -36,6 +37,7 @@ public interface IReservationAppService : IApplicationService
     Task<int> AddRoomTypesAsync(AddReservationRoomTypesDto input);
     Task<int> AddExtraBedsAsync(AddReservationExtraBedsDto input);
     Task<int> AddGuestsAsync(AddReservationGuestsDto input);
+    Task LinkGuestAsync(LinkReservationGuestDto input);
     Task UpdateGuestAgeAsync(UpdateReservationGuestAgeDto input);
     Task RemoveGuestAsync(RemoveReservationGuestDto input);
     Task RemoveRoomAsync(RemoveReservationRoomDto input);
@@ -352,9 +354,19 @@ public class ReservationAppService(
 
         var previousStatus = reservation.Status;
         reservation.Status = ReservationStatus.Cancelled;
-        reservation.Notes = string.IsNullOrWhiteSpace(input.Reason)
-            ? reservation.Notes
-            : $"{reservation.Notes}\n[CANCELLED] {input.Reason}".Trim();
+        var cancellationNoteParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(input.Reason))
+            cancellationNoteParts.Add($"Reason: {input.Reason.Trim()}");
+        if (!string.IsNullOrWhiteSpace(input.Remarks))
+            cancellationNoteParts.Add($"Remarks: {input.Remarks.Trim()}");
+
+        if (cancellationNoteParts.Count > 0)
+        {
+            var cancellationNote = $"[CANCELLED] {string.Join(" | ", cancellationNoteParts)}";
+            reservation.Notes = string.IsNullOrWhiteSpace(reservation.Notes)
+                ? cancellationNote
+                : $"{reservation.Notes}\n{cancellationNote}";
+        }
 
         await reservationRepository.UpdateAsync(reservation);
 
@@ -371,7 +383,7 @@ public class ReservationAppService(
             reservation.Id.ToString(),
             "Updated",
             new { PreviousStatus = (int)previousStatus },
-            new { Status = (int)ReservationStatus.Cancelled, Reason = input.Reason },
+            new { Status = (int)ReservationStatus.Cancelled, Reason = input.Reason, Remarks = input.Remarks },
             nameof(CancelAsync),
             "Cancelled");
 
@@ -622,6 +634,81 @@ public class ReservationAppService(
 
         await reservationRepository.UpdateAsync(reservation);
         return validGuestIds.Count;
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
+    public async Task LinkGuestAsync(LinkReservationGuestDto input)
+    {
+        var reservation = await reservationRepository.GetAll()
+            .Include(r => r.Guests)
+            .FirstOrDefaultAsync(r => r.Id == input.ReservationId);
+
+        if (reservation == null)
+            throw new UserFriendlyException(L("ReservationNotFound"));
+
+        if (reservation.Status == ReservationStatus.Cancelled ||
+            reservation.Status == ReservationStatus.NoShow ||
+            reservation.Status == ReservationStatus.CheckedIn ||
+            reservation.Status == ReservationStatus.Completed)
+        {
+            throw new UserFriendlyException("Cannot link guest for this reservation status.");
+        }
+
+        var guest = await guestRepository.FirstOrDefaultAsync(input.GuestId);
+        if (guest == null)
+            throw new UserFriendlyException(L("GuestNotFound"));
+
+        var previousGuest = new
+        {
+            reservation.GuestId,
+            reservation.GuestName,
+            reservation.FirstName,
+            reservation.LastName,
+            reservation.Phone,
+            reservation.Email,
+        };
+
+        reservation.GuestId = guest.Id;
+        reservation.GuestName = $"{guest.FirstName} {guest.LastName}".Trim();
+        reservation.FirstName = guest.FirstName ?? string.Empty;
+        reservation.LastName = guest.LastName ?? string.Empty;
+        reservation.Phone = guest.Phone ?? string.Empty;
+        reservation.Email = guest.Email ?? string.Empty;
+
+        var existingPrimary = reservation.Guests.FirstOrDefault(g => g.IsPrimary);
+        if (existingPrimary == null)
+        {
+            reservation.Guests.Add(new ReservationGuest
+            {
+                GuestId = guest.Id,
+                Age = 0,
+                IsPrimary = true,
+            });
+        }
+        else
+        {
+            existingPrimary.GuestId = guest.Id;
+        }
+
+        await reservationRepository.UpdateAsync(reservation);
+
+        await mutationAuditService.RecordAsync(
+            "Reservation",
+            reservation.Id.ToString(),
+            "Updated",
+            previousGuest,
+            new
+            {
+                reservation.GuestId,
+                reservation.GuestName,
+                reservation.FirstName,
+                reservation.LastName,
+                reservation.Phone,
+                reservation.Email,
+            },
+            nameof(LinkGuestAsync),
+            "LinkGuest");
     }
 
     [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]

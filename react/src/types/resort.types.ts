@@ -616,6 +616,7 @@ export interface ReservationDepositDto {
 export interface ReservationDetailDto {
   id: string;
   reservationNo: string;
+  guestId?: string;
   guestName: string;
   firstName?: string;
   lastName?: string;

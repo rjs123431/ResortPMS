@@ -2,12 +2,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import Swal from 'sweetalert2';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
-import { notifySuccess } from '@/utils/alerts';
+import { confirmAction, notifySuccess } from '@/utils/alerts';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
+import { SearchGuestDialog, type SelectedGuest } from '../Shared/SearchGuestDialog';
 import {
   RoomTypeAvailabilitySearch,
   type RoomTypeAvailabilitySearchCriteria,
@@ -25,8 +27,10 @@ const toDateOnly = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? '' : formatDateLocal(date);
 };
 
-const formatMoney = (value: number) =>
-  value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatMoney = (value?: number | null) => {
+  const safeValue = Number.isFinite(value) ? (value as number) : 0;
+  return safeValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 const formatDisplayDate = (value?: string | Date | null) => {
   if (!value) return '-';
@@ -37,6 +41,16 @@ const formatDisplayDate = (value?: string | Date | null) => {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  });
+};
+
+const formatDisplayTime = (value?: string | Date | null) => {
+  if (!value) return '-';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
   });
 };
 
@@ -184,7 +198,8 @@ export const ReservationDetailPage = () => {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: () => resortService.cancelReservation(id as string, 'Cancelled from reservation detail'),
+    mutationFn: (input: { reason: string; remarks?: string }) =>
+      resortService.cancelReservation(id as string, input.reason, input.remarks),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
@@ -234,6 +249,18 @@ export const ReservationDetailPage = () => {
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
       notifySuccess('Guest(s) added to reservation.');
+    },
+  });
+
+  const linkGuestMutation = useMutation({
+    mutationFn: (guestId: string) => resortService.linkReservationGuest(id as string, guestId),
+    onSuccess: () => {
+      setIsGuestDialogOpen(false);
+      setGuestFilter('');
+      setSelectedGuestsForAdd({});
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
+      notifySuccess('Guest linked to reservation.');
     },
   });
 
@@ -348,16 +375,15 @@ export const ReservationDetailPage = () => {
     return Math.max(0, reservationDetail.totalAmount - reservationDetail.depositPaid);
   }, [reservationDetail]);
 
+  const computedRoomAmount = useMemo(
+    () => rooms.reduce((sum, room) => sum + Number(room.netAmount || 0), 0),
+    [rooms],
+  );
+
   /** Draft: no assign room, add guest, add deposit. Pending/Confirmed: allow all. */
   const canShowBookingActions = useMemo(() => {
     if (!reservationDetail) return false;
-    return ![
-      ReservationStatus.Draft,
-      ReservationStatus.Cancelled,
-      ReservationStatus.NoShow,
-      ReservationStatus.CheckedIn,
-      ReservationStatus.Completed,
-    ].includes(reservationDetail.status);
+    return reservationDetail.status === ReservationStatus.Pending;
   }, [reservationDetail]);
 
   const canAddGuests = canShowBookingActions;
@@ -401,6 +427,7 @@ export const ReservationDetailPage = () => {
   const isArrivalToday = toDateOnly(reservationDetail?.arrivalDate) === todayDateOnly;
   const canShowCheckInActions =
     reservationDetail?.status === ReservationStatus.Confirmed && isArrivalToday;
+  const isLinkGuestMode = !reservationDetail?.guestId;
   const allRoomTypeIds = useMemo(() => (roomTypes ?? []).map((roomType) => roomType.id), [roomTypes]);
   const selectedRoomTypeIdsForAdd = useMemo(
     () => Object.entries(selectedRoomTypeAmounts).filter(([, amount]) => amount > 0).map(([roomTypeId]) => roomTypeId),
@@ -431,6 +458,58 @@ export const ReservationDetailPage = () => {
     };
   }, []);
 
+  const handleConfirmReservation = async () => {
+    if (!id) return;
+    const result = await confirmAction('This action will confirm this reservation.', {
+      title: 'Confirm Reservation',
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Back',
+    });
+    if (!result.isConfirmed) return;
+    confirmMutation.mutate(id);
+  };
+
+  const handleCancelReservation = async () => {
+    const result = await confirmAction('', {
+      title: 'Cancel Reservation',
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Close',
+      html: `
+        <div style="text-align:left;display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <label for="cancel-reason" style="display:block;font-size:12px;margin-bottom:4px;">Cancel Reason</label>
+            <input id="cancel-reason" class="swal2-input" style="margin:0;width:100%;" placeholder="Enter cancel reason" />
+          </div>
+          <div>
+            <label for="cancel-remarks" style="display:block;font-size:12px;margin-bottom:4px;">Remarks</label>
+            <textarea id="cancel-remarks" class="swal2-textarea" style="margin:0;width:100%;" rows="3" placeholder="Enter remarks"></textarea>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const reasonElement = document.getElementById('cancel-reason') as HTMLInputElement | null;
+        const remarksElement = document.getElementById('cancel-remarks') as HTMLTextAreaElement | null;
+        const reason = reasonElement?.value?.trim() ?? '';
+        const remarks = remarksElement?.value?.trim() ?? '';
+
+        if (!reason) {
+          Swal.showValidationMessage('Cancel Reason is required.');
+          return null;
+        }
+
+        return { reason, remarks };
+      },
+    });
+
+    if (!result.isConfirmed || !result.value) return;
+    const payload = result.value as { reason: string; remarks?: string };
+    cancelMutation.mutate({
+      reason: payload.reason,
+      remarks: payload.remarks,
+    });
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -449,68 +528,8 @@ export const ReservationDetailPage = () => {
               <ChevronLeftIcon className="h-4 w-4" />
               Back
             </button>
-            {reservationDetail?.status === ReservationStatus.Pending ? (
-              <>
-                <button
-                  type="button"
-                  className="w-full rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
-                  disabled={confirmMutation.isPending}
-                  onClick={() => confirmMutation.mutate(id as string)}
-                >
-                  Confirm
-                </button>
-                <button
-                  type="button"
-                  className="w-full rounded bg-rose-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
-                  disabled={cancelMutation.isPending}
-                  onClick={() => cancelMutation.mutate()}
-                >
-                  Cancel
-                </button>
-              </>
-            ) : null}
-            {canShowCheckInActions ? (
-              <>
-                <button
-                  type="button"
-                  className="w-full rounded bg-primary-600 px-3 py-2 text-sm text-white sm:w-auto"
-                  onClick={() => navigate(`/front-desk/check-in/reservations/${id}`)}
-                >
-                  Check-In
-                </button>
-                <button
-                  type="button"
-                  className="w-full rounded bg-amber-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
-                  disabled={noShowMutation.isPending}
-                  onClick={() => noShowMutation.mutate()}
-                >
-                  No Show
-                </button>
-              </>
-            ) : null}
           </div>
         </div>
-
-        {reservationDetail?.status === ReservationStatus.Draft ? (
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              type="button"
-              className="w-full rounded bg-amber-600 px-3 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-50 sm:w-auto"
-              disabled={setPendingMutation.isPending}
-              onClick={() => setPendingMutation.mutate()}
-            >
-              {setPendingMutation.isPending ? 'Updating…' : 'Make Pending'}
-            </button>
-            <button
-              type="button"
-              className="w-full rounded bg-rose-600 px-3 py-2 text-sm text-white hover:bg-rose-700 disabled:opacity-50 sm:w-auto"
-              disabled={cancelMutation.isPending}
-              onClick={() => cancelMutation.mutate()}
-            >
-              Cancel
-            </button>
-          </div>
-        ) : null}
 
         <section className="rounded-lg bg-white p-4 shadow sm:p-5 dark:bg-gray-800">
           {isLoading ? <p className="text-sm text-gray-500">Loading...</p> : null}
@@ -578,59 +597,106 @@ export const ReservationDetailPage = () => {
           ) : null}
           {reservationDetail ? (
             <div className="space-y-6 text-sm">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                  <h4 className="text-base font-semibold">Guest Info</h4>
-                  <div className="mt-3 space-y-3">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">First Name Lastname</p>
-                      <p className="font-semibold">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-semibold">Reservation Details</h4>
+                        <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{reservationDetail.reservationNo}</span>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClass(reservationDetail.status)}`}>
+                          {ReservationStatus[reservationDetail.status]}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        {reservationDetail.status === ReservationStatus.Draft ? (
+                          <>
+                            <button
+                              type="button"
+                              className="w-full rounded bg-amber-600 px-3 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-50 sm:w-auto"
+                              disabled={setPendingMutation.isPending}
+                              onClick={() => setPendingMutation.mutate()}
+                            >
+                              {setPendingMutation.isPending ? 'Updating…' : 'Make Pending'}
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-4 border-t border-gray-200 pt-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-gray-200 dark:border-gray-700 dark:sm:divide-gray-700">
+                      <div className="sm:pr-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">CHECK-IN</p>
+                        <p className="mt-1 text-lg font-bold tracking-tight text-gray-900 dark:text-white">{formatDisplayDate(reservationDetail.arrivalDate)}</p>
+                        <p className="mt-0 text-sm font-medium text-gray-500 dark:text-gray-400">From {formatDisplayTime(reservationDetail.arrivalDate)}</p>
+                      </div>
+                      <div className="sm:pl-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">CHECK-OUT</p>
+                        <p className="mt-1 text-lg font-bold tracking-tight text-gray-900 dark:text-white">{formatDisplayDate(reservationDetail.departureDate)}</p>
+                        <p className="mt-0 text-sm font-medium text-gray-500 dark:text-gray-400">Until {formatDisplayTime(reservationDetail.departureDate)}</p>
+                      </div>
+                    </div>
+
+                    <p className="mt-3 font-semibold">
+                      {reservationDetail.nights} Night{reservationDetail.nights > 1 ? 's' : ''}, {reservationDetail.adults} Adult{reservationDetail.adults > 1 ? 's' : ''} {reservationDetail.children} Children
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <h4 className="text-base font-semibold">Guest Info</h4>
+                      {!reservationDetail.guestId && reservationDetail.status !== ReservationStatus.Cancelled ? (
+                        <button
+                          type="button"
+                          className="w-full rounded bg-primary-600 px-3 py-1.5 text-sm text-white hover:bg-primary-700 sm:w-auto"
+                          onClick={() => setIsGuestDialogOpen(true)}
+                        >
+                          Link Guest
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">GUEST NAME</p>
+                      <p className="mt-1 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
                         {(reservationDetail.firstName?.trim() || reservationDetail.lastName?.trim())
                           ? `${reservationDetail.firstName?.trim() ?? ''} ${reservationDetail.lastName?.trim() ?? ''}`.trim()
                           : reservationDetail.guestName}
                       </p>
+
+                      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-gray-200 dark:sm:divide-gray-700">
+                        <div className="sm:pr-4">
+                          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">CONTACT NUMBER</p>
+                          <p className="mt-1 text-base font-medium text-gray-500 dark:text-gray-400">{reservationDetail.phone?.trim() ? reservationDetail.phone : '-'}</p>
+                        </div>
+                        <div className="sm:pl-4">
+                          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">EMAIL</p>
+                          <p className="mt-1 text-base font-medium text-gray-500 dark:text-gray-400 break-all">{reservationDetail.email?.trim() ? reservationDetail.email : '-'}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                    <h4 className="text-base font-semibold">Notes</h4>
+                    <div className="mt-3 space-y-3">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Contact #</p>
-                        <p className="font-semibold">{reservationDetail.phone?.trim() ? reservationDetail.phone : '-'}</p>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Notes</p>
+                        <p className="font-semibold whitespace-pre-line">{reservationDetail.notes?.trim() ? reservationDetail.notes : '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</p>
-                        <p className="font-semibold break-all">{reservationDetail.email?.trim() ? reservationDetail.email : '-'}</p>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Reservation Conditions</p>
+                        <p className="font-semibold whitespace-pre-line">{reservationDetail.reservationConditions?.trim() ? reservationDetail.reservationConditions : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Special Requests</p>
+                        <p className="font-semibold whitespace-pre-line">{reservationDetail.specialRequests?.trim() ? reservationDetail.specialRequests : '-'}</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-base font-semibold">Reservation Details</h4>
-                    <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{reservationDetail.reservationNo}</span>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClass(reservationDetail.status)}`}>
-                      {ReservationStatus[reservationDetail.status]}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Check-In Date & Time</p>
-                      <p className="font-semibold">{formatDisplayDate(reservationDetail.arrivalDate)} {new Date(reservationDetail.arrivalDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Check-Out Date & Time</p>
-                      <p className="font-semibold">{formatDisplayDate(reservationDetail.departureDate)} {new Date(reservationDetail.departureDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                  </div>
-
-                  <p className="mt-3 font-semibold">
-                    {reservationDetail.nights} Night{reservationDetail.nights > 1 ? 's' : ''}, {reservationDetail.adults} Adult{reservationDetail.adults > 1 ? 's' : ''} {reservationDetail.children} Children
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-base font-semibold">Rooms</h4>
@@ -702,9 +768,9 @@ export const ReservationDetailPage = () => {
                     </table>
                   </div>
                 )}
-              </div>
+                  </div>
 
-              <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-base font-semibold">Extra Beds</h4>
@@ -764,13 +830,34 @@ export const ReservationDetailPage = () => {
                     </table>
                   </div>
                 )}
-              </div>
-              </div>
+                  </div>
 
-              <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                    <h4 className="text-base font-semibold">Totals</h4>
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Room Amount</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(computedRoomAmount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Extra Bed Amount</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(reservationDetail.extraBedAmount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Total Amount</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(reservationDetail.totalAmount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-gray-200 pt-2 dark:border-gray-700">
+                        <span className="text-gray-500 dark:text-gray-400">Balance</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(totalAmountBalance)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h4 className="text-base font-semibold">Deposits</h4>
+                    <h4 className="text-base font-semibold">Payments</h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Record payments applied before check-in.</p>
                   </div>
                   {canAddGuests && (
@@ -809,25 +896,33 @@ export const ReservationDetailPage = () => {
                     </table>
                   </div>
                 )}
-              </div>
+                  </div>
 
-              <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                <h4 className="text-base font-semibold">Notes & Requests</h4>
-                <div className="mt-3 space-y-3">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Notes</p>
-                    <p className="font-semibold whitespace-pre-line">{reservationDetail.notes?.trim() ? reservationDetail.notes : '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Reservation Conditions</p>
-                    <p className="font-semibold whitespace-pre-line">{reservationDetail.reservationConditions?.trim() ? reservationDetail.reservationConditions : '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Special Requests</p>
-                    <p className="font-semibold whitespace-pre-line">{reservationDetail.specialRequests?.trim() ? reservationDetail.specialRequests : '-'}</p>
-                  </div>
                 </div>
               </div>
+
+              {(reservationDetail.status === ReservationStatus.Pending || reservationDetail.status === ReservationStatus.Draft) ? (
+                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 pt-4 dark:border-gray-700">
+                  {reservationDetail.status === ReservationStatus.Pending ? (
+                    <button
+                      type="button"
+                      className="w-full rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
+                      disabled={confirmMutation.isPending || cancelMutation.isPending}
+                      onClick={handleConfirmReservation}
+                    >
+                      {confirmMutation.isPending ? 'Confirming…' : 'Confirm'}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="w-full rounded bg-rose-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
+                    disabled={cancelMutation.isPending || confirmMutation.isPending}
+                    onClick={handleCancelReservation}
+                  >
+                    {cancelMutation.isPending ? 'Cancelling…' : 'Cancel'}
+                  </button>
+                </div>
+              ) : null}
 
               <AddExtraBedDialog
                 open={isAddExtraBedDialogOpen}
@@ -931,171 +1026,14 @@ export const ReservationDetailPage = () => {
           </Dialog>
         ) : null}
 
-        <Dialog open={isGuestDialogOpen} onClose={() => {}} className="relative z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
-          <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
-              <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
-                <div className="mb-4 flex items-center justify-between">
-                  <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">Search Guests</DialogTitle>
-                  <button className="rounded bg-gray-200 px-2 py-1 text-sm dark:bg-gray-700" onClick={closeGuestDialog}>
-                    Close
-                  </button>
-                </div>
-
-                <div className="mb-3 flex items-end gap-2">
-                  <div className="w-full">
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Search Guests</label>
-                    <input
-                      className="w-full rounded border p-2 dark:bg-gray-700"
-                      value={guestFilter}
-                      onChange={(e) => setGuestFilter(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded bg-primary-600 px-3 py-2 text-white hover:bg-primary-700"
-                    onClick={() => setShowCreateGuest((prev) => !prev)}
-                  >
-                    {showCreateGuest ? 'Cancel New Guest' : 'New Guest'}
-                  </button>
-                </div>
-
-                {showCreateGuest ? (
-                  <div className="mb-4 rounded border p-3 dark:border-gray-700">
-                    <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Create Guest</p>
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Guest Code</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.guestCode} onChange={(e) => setNewGuest((s) => ({ ...s, guestCode: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.firstName} onChange={(e) => setNewGuest((s) => ({ ...s, firstName: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.lastName} onChange={(e) => setNewGuest((s) => ({ ...s, lastName: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Middle Name</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.middleName} onChange={(e) => setNewGuest((s) => ({ ...s, middleName: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.email} onChange={(e) => setNewGuest((s) => ({ ...s, email: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.phone} onChange={(e) => setNewGuest((s) => ({ ...s, phone: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nationality</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.nationality} onChange={(e) => setNewGuest((s) => ({ ...s, nationality: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-                        <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.notes} onChange={(e) => setNewGuest((s) => ({ ...s, notes: e.target.value }))} />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="mt-3 rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
-                      disabled={createGuestMutation.isPending || !newGuest.guestCode || !newGuest.firstName || !newGuest.lastName}
-                      onClick={() => createGuestMutation.mutate()}
-                    >
-                      {createGuestMutation.isPending ? 'Saving Guest...' : 'Save Guest'}
-                    </button>
-                  </div>
-                ) : null}
-
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="p-2">Code</th>
-                        <th className="p-2">Name</th>
-                        <th className="p-2">Phone</th>
-                        <th className="p-2">Email</th>
-                        <th className="p-2 text-right">Age</th>
-                        <th className="p-2 text-right">Add</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isGuestLookupLoading ? (
-                        <tr>
-                          <td className="p-2 text-gray-500" colSpan={6}>Loading guests...</td>
-                        </tr>
-                      ) : selectableGuests.length === 0 ? (
-                        <tr>
-                          <td className="p-2 text-gray-500" colSpan={6}>No available guests to add.</td>
-                        </tr>
-                      ) : (
-                        selectableGuests.map((guest) => (
-                          <tr key={guest.id} className="border-b">
-                            <td className="p-2">{guest.guestCode}</td>
-                            <td className="p-2">{guest.fullName}</td>
-                            <td className="p-2">{guest.phone || '-'}</td>
-                            <td className="p-2">{guest.email || '-'}</td>
-                            <td className="p-2 text-right">
-                              <input
-                                type="number"
-                                min={0}
-                                max={150}
-                                className="w-20 rounded border p-1 text-right dark:bg-gray-700"
-                                disabled={!Object.prototype.hasOwnProperty.call(selectedGuestsForAdd, guest.id)}
-                                value={selectedGuestsForAdd[guest.id] ?? '0'}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setSelectedGuestsForAdd((prev) => ({ ...prev, [guest.id]: value }));
-                                }}
-                              />
-                            </td>
-                            <td className="p-2 text-right">
-                              <input
-                                type="checkbox"
-                                checked={Object.prototype.hasOwnProperty.call(selectedGuestsForAdd, guest.id)}
-                                onChange={(e) => {
-                                  setSelectedGuestsForAdd((prev) => {
-                                    if (e.target.checked) {
-                                      return { ...prev, [guest.id]: prev[guest.id] ?? '0' };
-                                    }
-                                    const next = { ...prev };
-                                    delete next[guest.id];
-                                    return next;
-                                  });
-                                }}
-                              />
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-4 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
-                    disabled={
-                      addGuestsMutation.isPending ||
-                      Object.keys(selectedGuestsForAdd).length === 0 ||
-                      Object.values(selectedGuestsForAdd).some((age) => Number(age || 0) < 0 || Number(age || 0) > 150)
-                    }
-                    onClick={() => {
-                      const rows = Object.entries(selectedGuestsForAdd).map(([guestId, age]) => ({
-                        guestId,
-                        age: Math.max(0, Number(age || 0)),
-                      }));
-                      addGuestsMutation.mutate(rows);
-                    }}
-                  >
-                    {addGuestsMutation.isPending ? 'Saving...' : `Add ${Object.keys(selectedGuestsForAdd).length} Guest(s)`}
-                  </button>
-                </div>
-              </DialogPanel>
-            </div>
-        </Dialog>
+        <SearchGuestDialog
+          open={isGuestDialogOpen}
+          onClose={closeGuestDialog}
+          onSelectGuest={(guest: SelectedGuest) => {
+            if (!isLinkGuestMode) return;
+            linkGuestMutation.mutate(guest.id);
+          }}
+        />
 
         <AssignRoomDialog
           open={Boolean(assignDialogReservationRoomId)}

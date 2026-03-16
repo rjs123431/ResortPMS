@@ -321,8 +321,12 @@ export const resortService = {
     await api.post('/api/services/app/Reservation/MarkNoShow', null, { params: { reservationId } });
   },
 
-  cancelReservation: async (reservationId: string, reason?: string) => {
-    await api.post('/api/services/app/Reservation/Cancel', { reservationId, reason: reason ?? '' });
+  cancelReservation: async (reservationId: string, reason?: string, remarks?: string) => {
+    await api.post('/api/services/app/Reservation/Cancel', {
+      reservationId,
+      reason: reason ?? '',
+      remarks: remarks ?? '',
+    });
   },
 
   recordReservationDeposit: async (input: RecordReservationDepositDto) => {
@@ -336,6 +340,13 @@ export const resortService = {
       guests,
     });
     return response.data.result;
+  },
+
+  linkReservationGuest: async (reservationId: string, guestId: string) => {
+    await api.post('/api/services/app/Reservation/LinkGuest', {
+      reservationId,
+      guestId,
+    });
   },
 
   addReservationRoomTypes: async (reservationId: string, roomTypes: { roomTypeId: string; quantity: number }[]) => {

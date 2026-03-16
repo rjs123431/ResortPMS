@@ -124,6 +124,7 @@ public class CancelReservationDto
 {
     [Required] public Guid ReservationId { get; set; }
     [StringLength(512)] public string Reason { get; set; }
+    [StringLength(2048)] public string Remarks { get; set; }
 }
 
 public class RecordReservationDepositDto
@@ -139,6 +140,12 @@ public class AddReservationGuestsDto
 {
     [Required] public Guid ReservationId { get; set; }
     [Required][MinLength(1)] public List<AddReservationGuestItemDto> Guests { get; set; } = [];
+}
+
+public class LinkReservationGuestDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    [Required] public Guid GuestId { get; set; }
 }
 
 public class AddReservationRoomTypesDto

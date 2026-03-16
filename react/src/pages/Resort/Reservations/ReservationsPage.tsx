@@ -4,6 +4,27 @@ import { useQuery } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 
+const getStatusBadgeClass = (status: ReservationStatus) => {
+  switch (status) {
+    case ReservationStatus.Draft:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    case ReservationStatus.Pending:
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200';
+    case ReservationStatus.Confirmed:
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200';
+    case ReservationStatus.CheckedIn:
+      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200';
+    case ReservationStatus.NoShow:
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200';
+    case ReservationStatus.Cancelled:
+      return 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200';
+    case ReservationStatus.Completed:
+      return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+  }
+};
+
 export const ReservationListPage = () => {
   const [filter, setFilter] = useState('');
 
@@ -57,7 +78,11 @@ export const ReservationListPage = () => {
                     <td className="p-2">{r.guestName}</td>
                     <td className="p-2">{new Date(r.arrivalDate).toLocaleDateString()}</td>
                     <td className="p-2">{new Date(r.departureDate).toLocaleDateString()}</td>
-                    <td className="p-2">{ReservationStatus[r.status]}</td>
+                    <td className="p-2">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClass(r.status)}`}>
+                        {ReservationStatus[r.status]}
+                      </span>
+                    </td>
                     <td className="p-2">
                       <div className="flex flex-wrap gap-2">
                         <Link to={`/front-desk/reservations/${r.id}`} className="rounded bg-slate-700 px-2 py-1 text-white">View</Link>
