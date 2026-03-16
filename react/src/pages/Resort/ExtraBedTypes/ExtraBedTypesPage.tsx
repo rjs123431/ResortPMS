@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
@@ -52,8 +51,7 @@ export const ExtraBedTypeListPage = () => {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Extra Bed Types</h1>
@@ -137,7 +135,6 @@ export const ExtraBedTypeListPage = () => {
             }
           }}
         />
-      </div>
-    </MainLayout>
+    </div>
   );
 };

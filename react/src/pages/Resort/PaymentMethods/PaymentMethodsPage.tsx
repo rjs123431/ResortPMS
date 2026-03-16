@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
@@ -49,8 +48,7 @@ export const PaymentMethodListPage = () => {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Payment Methods</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Manage accepted payment channels.</p>
@@ -129,7 +127,6 @@ export const PaymentMethodListPage = () => {
             }
           }}
         />
-      </div>
-    </MainLayout>
+    </div>
   );
 };

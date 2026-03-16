@@ -4,13 +4,16 @@ import { useAuth } from '@contexts/AuthContext';
 import { authService } from '@services/auth.service';
 import { useSignalR } from '@contexts/SignalRContext';
 import { HeaderNotifications } from './HeaderNotifications';
+import { TopNav } from './TopNav';
 
 interface HeaderProps {
-  onMenuClick: () => void;
-  isSidebarOpen: boolean;
+  onMenuClick?: () => void;
+  isSidebarOpen?: boolean;
+  /** Show top nav (Front Desk, Housekeeping, Reports, Admin). Used in MainLayout. */
+  showTopNav?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) => {
+export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen = false, showTopNav = false }) => {
   const { user, logout } = useAuth();
   const { isConnected } = useSignalR();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -71,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
   return (
     <header className="bg-[#016fb3] shadow-sm sticky top-0 z-50 border-b border-[#015a8c] safe-area-inset">
       <div className="px-4">
-        <div className="flex justify-between items-center h-14 sm:h-16 min-h-[3.5rem]">
+        <div className="flex justify-between items-center h-14 sm:h-16 min-h-[3.5rem] gap-2">
           <div className="flex items-center min-w-0">
             <div className="flex items-center gap-2">
               <Link to="/" className="flex items-center gap-2">
@@ -84,20 +87,27 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
                 </div>
                 <h1 className="text-base sm:text-xl font-bold text-white truncate">PMS</h1>
               </Link>
-              <button
-                type="button"
-                onClick={onMenuClick}
-                aria-label="Toggle menu"
-                className="lg:hidden flex-shrink-0 p-2 -m-2 ml-1 text-white hover:text-white/90 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50 rounded touch-manipulation"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {isSidebarOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
-              </button>
+              {onMenuClick != null && (
+                <button
+                  type="button"
+                  onClick={onMenuClick}
+                  aria-label="Toggle menu"
+                  className="lg:hidden flex-shrink-0 p-2 -m-2 ml-1 text-white hover:text-white/90 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50 rounded touch-manipulation"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {isSidebarOpen ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
+              )}
+              {showTopNav && user && (
+                <div className="hidden sm:flex ml-4">
+                  <TopNav />
+                </div>
+              )}
             </div>
           </div>
 
@@ -179,6 +189,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
             )}
           </div>
         </div>
+        {showTopNav && user && (
+          <div className="flex sm:hidden pb-2 -mx-1 overflow-x-auto">
+            <TopNav />
+          </div>
+        )}
       </div>
     </header>
   );

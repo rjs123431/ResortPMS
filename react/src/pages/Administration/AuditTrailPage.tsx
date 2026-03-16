@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
 import {
   auditService,
   type MutationAuditLogDto,
@@ -377,8 +376,7 @@ export const AuditTrailPage = () => {
   const [activeTab, setActiveTab] = useState<'mutation' | 'financial'>('mutation');
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Audit Trail</h1>
@@ -420,7 +418,6 @@ export const AuditTrailPage = () => {
             {activeTab === 'financial' && <FinancialLogTab />}
           </div>
         </section>
-      </div>
-    </MainLayout>
+    </div>
   );
 };

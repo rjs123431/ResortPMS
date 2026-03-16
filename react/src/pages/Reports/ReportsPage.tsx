@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { MainLayout } from '@components/layout/MainLayout';
 import {
   BarChart,
   Bar,
@@ -11,7 +12,6 @@ import {
   LineChart,
   Line,
 } from 'recharts';
-import { MainLayout } from '@components/layout/MainLayout';
 import { reportingService } from '@services/reporting.service';
 import type {
   DashboardKpisDto,

@@ -1,11 +1,12 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '@contexts/AuthContext';
 import { ThemeProvider } from '@contexts/ThemeContext';
 import { SignalRProvider } from '@contexts/SignalRContext';
 import { ProtectedRoute } from '@components/auth/ProtectedRoute';
+import { AdminLayout } from '@components/layout/AdminLayout';
 import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import UpdateNotification from '@components/common/UpdateNotification';
@@ -20,7 +21,6 @@ const LoginPage = lazy(() => import('@pages/Login/LoginPage').then((m) => ({ def
 const RegisterPage = lazy(() => import('@pages/Register/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('@pages/ForgotPassword/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('@pages/ResetPassword/ResetPasswordPage').then((m) => ({ default: m.default })));
-const DashboardPage = lazy(() => import('@pages/Dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const ChangePasswordPage = lazy(() => import('@pages/ChangePassword/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })));
 const ProfilePage = lazy(() => import('@pages/Profile/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const NotificationsPage = lazy(() => import('@pages/Notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
@@ -49,6 +49,8 @@ const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/Check
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
+const FrontDeskPage = lazy(() => import('@pages/Resort/FrontDesk/FrontDeskPage').then((m) => ({ default: m.FrontDeskPage })));
+const HousekeepingHubPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingHubPage').then((m) => ({ default: m.HousekeepingHubPage })));
 const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 const AuditTrailPage = lazy(() => import('@pages/Administration/AuditTrailPage').then((m) => ({ default: m.AuditTrailPage })));
@@ -127,22 +129,26 @@ const App: React.FC = () => {
                     <Route
                       path="/"
                       element={
-                        <PageTitle title="Dashboard">
+                        <PageTitle title="Front Desk">
                           <ProtectedRoute>
-                            <DashboardPage />
+                            <FrontDeskPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/front-desk"
+                      element={
+                        <PageTitle title="Front Desk">
+                          <ProtectedRoute>
+                            <FrontDeskPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
                     />
                     <Route
                       path="/dashboard"
-                      element={
-                        <PageTitle title="Dashboard">
-                          <ProtectedRoute>
-                            <DashboardPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
+                      element={<Navigate to="/" replace />}
                     />
                     <Route
                       path="/profile"
@@ -180,86 +186,6 @@ const App: React.FC = () => {
                         <PageTitle title="My Account">
                           <ProtectedRoute>
                             <MyAccountPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/guests"
-                      element={
-                        <PageTitle title="Guests">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Guests]}>
-                            <GuestListPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/rooms"
-                      element={
-                        <PageTitle title="Rooms">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
-                            <RoomsPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/room-types"
-                      element={
-                        <PageTitle title="Room Types">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomTypes]}>
-                            <RoomTypeListPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/room-rate-plans"
-                      element={
-                        <PageTitle title="Room Rate Plans">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomRatePlans]}>
-                            <RoomRatePlansPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/charge-types"
-                      element={
-                        <PageTitle title="Charge Types">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ChargeTypes]}>
-                            <ChargeTypeListPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/payment-methods"
-                      element={
-                        <PageTitle title="Payment Methods">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_PaymentMethods]}>
-                            <PaymentMethodListPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/extra-bed-types"
-                      element={
-                        <PageTitle title="Extra Bed Types">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ExtraBedTypes]}>
-                            <ExtraBedTypeListPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/staff"
-                      element={
-                        <PageTitle title="Staff">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Staff]}>
-                            <StaffListPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }
@@ -409,6 +335,16 @@ const App: React.FC = () => {
                       element={<Navigate to="/room-rack" replace />}
                     />
                     <Route
+                      path="/housekeeping"
+                      element={
+                        <PageTitle title="Housekeeping">
+                          <ProtectedRoute>
+                            <HousekeepingHubPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
                       path="/housekeeping/cleaning-board"
                       element={
                         <PageTitle title="Cleaning Board">
@@ -439,35 +375,127 @@ const App: React.FC = () => {
                       }
                     />
                     <Route
-                      path="/administration/users"
+                      path="/admin"
                       element={
-                        <PageTitle title="Users">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Users]}>
-                            <UsersPage />
-                          </ProtectedRoute>
-                        </PageTitle>
+                        <ProtectedRoute>
+                          <AdminLayout>
+                            <Outlet />
+                          </AdminLayout>
+                        </ProtectedRoute>
                       }
-                    />
-                    <Route
-                      path="/administration/roles"
-                      element={
-                        <PageTitle title="Roles">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Roles]}>
-                            <RolesPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
-                    <Route
-                      path="/administration/audit-trail"
-                      element={
-                        <PageTitle title="Audit Trail">
-                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_AuditTrail]}>
-                            <AuditTrailPage />
-                          </ProtectedRoute>
-                        </PageTitle>
-                      }
-                    />
+                    >
+                      <Route index element={<Navigate to="/admin/guests" replace />} />
+                      <Route
+                        path="guests"
+                        element={
+                          <PageTitle title="Guests">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Guests]}>
+                              <GuestListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="rooms"
+                        element={
+                          <PageTitle title="Rooms">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                              <RoomsPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="room-types"
+                        element={
+                          <PageTitle title="Room Types">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomTypes]}>
+                              <RoomTypeListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="room-rate-plans"
+                        element={
+                          <PageTitle title="Room Rate Plans">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomRatePlans]}>
+                              <RoomRatePlansPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="charge-types"
+                        element={
+                          <PageTitle title="Charge Types">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ChargeTypes]}>
+                              <ChargeTypeListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="payment-methods"
+                        element={
+                          <PageTitle title="Payment Methods">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_PaymentMethods]}>
+                              <PaymentMethodListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="extra-bed-types"
+                        element={
+                          <PageTitle title="Extra Bed Types">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ExtraBedTypes]}>
+                              <ExtraBedTypeListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="staff"
+                        element={
+                          <PageTitle title="Staff">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Staff]}>
+                              <StaffListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="users"
+                        element={
+                          <PageTitle title="Users">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Users]}>
+                              <UsersPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="roles"
+                        element={
+                          <PageTitle title="Roles">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Roles]}>
+                              <RolesPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="audit-trail"
+                        element={
+                          <PageTitle title="Audit Trail">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_AuditTrail]}>
+                              <AuditTrailPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                    </Route>
                     <Route
                       path="/reports"
                       element={
@@ -478,6 +506,18 @@ const App: React.FC = () => {
                         </PageTitle>
                       }
                     />
+                    <Route path="/guests" element={<Navigate to="/admin/guests" replace />} />
+                    <Route path="/rooms" element={<Navigate to="/admin/rooms" replace />} />
+                    <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
+                    <Route path="/room-rate-plans" element={<Navigate to="/admin/room-rate-plans" replace />} />
+                    <Route path="/charge-types" element={<Navigate to="/admin/charge-types" replace />} />
+                    <Route path="/payment-methods" element={<Navigate to="/admin/payment-methods" replace />} />
+                    <Route path="/extra-bed-types" element={<Navigate to="/admin/extra-bed-types" replace />} />
+                    <Route path="/staff" element={<Navigate to="/admin/staff" replace />} />
+                    <Route path="/administration/users" element={<Navigate to="/admin/users" replace />} />
+                    <Route path="/administration/roles" element={<Navigate to="/admin/roles" replace />} />
+                    <Route path="/administration/audit-trail" element={<Navigate to="/admin/audit-trail" replace />} />
+                    <Route path="/admin/reports" element={<Navigate to="/reports" replace />} />
                     <Route
                       path="/xx"
                       element={
