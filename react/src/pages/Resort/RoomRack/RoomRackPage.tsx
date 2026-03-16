@@ -59,6 +59,22 @@ const spanDays = (start: Date, end: Date): number => {
   return Math.round((endDay - startDay) / (24 * 60 * 60 * 1000)) + 1;
 };
 
+const reservationStatusLabel: Record<number, string> = {
+  [ReservationStatus.Draft]: 'Draft',
+  [ReservationStatus.Pending]: 'Pending',
+  [ReservationStatus.Confirmed]: 'Confirmed',
+  [ReservationStatus.Cancelled]: 'Cancelled',
+  [ReservationStatus.NoShow]: 'No Show',
+  [ReservationStatus.CheckedIn]: 'Checked In',
+  [ReservationStatus.Completed]: 'Completed',
+};
+
+function formatDateRange(startKey: string, endKey: string): string {
+  const start = new Date(startKey + 'T12:00:00');
+  const end = new Date(endKey + 'T12:00:00');
+  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+}
+
 export const RoomRackPage = () => {
   const navigate = useNavigate();
 
@@ -328,15 +344,12 @@ export const RoomRackPage = () => {
   return (
     <MainLayout>
       <div className="space-y-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Room Rack</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Room occupancy by date. Rows = rooms (by type), columns = dates.</p>
           </div>
-        </div>
-
-        <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
-          <div className="mb-2 flex flex-nowrap items-center gap-2">
+          <div className="flex flex-nowrap items-center gap-2">
             <div className="flex h-9 items-center gap-0 rounded border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400">
                 <CalendarIcon className="h-5 w-5" />
@@ -358,7 +371,6 @@ export const RoomRackPage = () => {
                 popperClassName="!z-[100]"
               />
             </div>
-
             <button
               type="button"
               onClick={() => {
@@ -408,7 +420,9 @@ export const RoomRackPage = () => {
               Today
             </button>
           </div>
+        </div>
 
+        <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
           <div className="relative flex flex-col">
             {/* Top scrollbar: use overflow-x-scroll and min height so Safari shows the track; width synced via state */}
             <div
@@ -427,11 +441,11 @@ export const RoomRackPage = () => {
               <table className="min-w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
-                    <th className="sticky left-0 z-[30] min-w-[100px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">Room</th>
+                    <th className="sticky top-0 left-0 z-[40] min-w-[160px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">Room</th>
                     {dateColumns.map((dateKey) => {
                       const d = new Date(dateKey + 'T12:00:00');
                       return (
-                        <th key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center font-medium text-gray-700 last:border-r-0 dark:text-gray-200">
+                        <th key={dateKey} className="sticky top-0 z-[20] min-w-[100px] border-b border-r bg-gray-50 p-2 text-center font-medium text-gray-700 last:border-r-0 dark:bg-gray-700 dark:text-gray-200">
                           <div>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                           <div className="text-xs font-normal text-gray-500 dark:text-gray-400">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                         </th>
@@ -443,20 +457,22 @@ export const RoomRackPage = () => {
                   {roomsByType.map(([roomTypeName, rooms]) => (
                     <React.Fragment key={roomTypeName}>
                       <tr className="bg-gray-100 dark:bg-gray-700">
-                        <td className="sticky left-0 z-[30] min-w-[100px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-gray-200 dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+                        <td className="sticky left-0 z-[30] min-w-[160px] border-b border-r bg-gray-100 p-2 font-medium text-gray-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-gray-200 dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
                           {roomTypeName}
                         </td>
-                        {dateColumns.map((dateKey) => (
-                          <td key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center last:border-r-0">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{bookingCountByRoomTypeAndDate(roomTypeName, dateKey)}</span>
-                            <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">bookings</span>
-                          </td>
-                        ))}
+                        {dateColumns.map((dateKey) => {
+                          const count = bookingCountByRoomTypeAndDate(roomTypeName, dateKey);
+                          return (
+                            <td key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center last:border-r-0" title={count > 0 ? 'No. of bookings' : undefined}>
+                              {count > 0 ? <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{count}</span> : null}
+                            </td>
+                          );
+                        })}
                       </tr>
                       {rooms.map((room) => {
                         const roomNum = room.roomNumber;
                         const n = dateColumns.length;
-                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean };
+                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string };
                         const segments: SegmentItem[] = [];
                         let i = 0;
                         while (i < dateColumns.length) {
@@ -517,6 +533,18 @@ export const RoomRackPage = () => {
                           const extendsAfter = isStayOrRes && endIndex === dateColumns.length && !(lastDayDto?.isDepartureDate);
                           const firstDayHalf = isStayOrRes && !!cell.isDepartureDate;
                           const lastDayHalf = isStayOrRes && !!lastDayDto?.isDepartureDate;
+                          const startDateKey = dateColumns[startIndex];
+                          const endDateKey = dateColumns[endIndex - 1];
+                          const dateRangeStr = formatDateRange(startDateKey, endDateKey);
+                          let tooltip: string;
+                          if (cell.type === 'stay') {
+                            tooltip = `In-house · Stay ${cell.stayNo}\nGuest: ${cell.guestName || '—'}\nDates: ${dateRangeStr}`;
+                          } else if (cell.type === 'reservation') {
+                            const statusLabel = cell.reservationStatus != null ? reservationStatusLabel[cell.reservationStatus] ?? 'Unknown' : 'Unknown';
+                            tooltip = `Reservation ${cell.reservationNo}\nGuest: ${cell.guestName || '—'}\nStatus: ${statusLabel}\nDates: ${dateRangeStr}`;
+                          } else {
+                            tooltip = cell.label;
+                          }
                           segments.push({
                             id: `${cellId}-${startIndex}`,
                             guestName: guestName || '—',
@@ -529,12 +557,13 @@ export const RoomRackPage = () => {
                             extendsAfter,
                             firstDayHalf: firstDayHalf || undefined,
                             lastDayHalf: lastDayHalf || undefined,
+                            tooltip,
                           });
                           i = endIndex;
                         }
                         return (
                           <tr key={room.id} className="border-b">
-                            <td className="sticky left-0 z-[30] h-[2.5rem] border-r bg-white p-2 font-medium text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-800 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)] align-middle">
+                            <td className="sticky left-0 z-[30] min-w-[160px] h-[2.5rem] border-r bg-white p-2 font-medium text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-800 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)] align-middle">
                               {roomNum}
                             </td>
                             <td colSpan={n} className="min-w-0 p-0 align-middle h-[2.5rem]">
@@ -609,7 +638,7 @@ export const RoomRackPage = () => {
                                         type="button"
                                         className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
                                         onClick={() => seg.navPath !== '#' && navigate(seg.navPath)}
-                                        title={seg.guestName}
+                                        title={seg.tooltip}
                                       >
                                         {seg.guestName}
                                       </button>
