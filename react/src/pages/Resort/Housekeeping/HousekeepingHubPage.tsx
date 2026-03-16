@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MainLayout } from '@components/layout/MainLayout';
+import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 
@@ -37,7 +37,7 @@ export const HousekeepingHubPage: React.FC = () => {
   const canAccess = isGranted(PermissionNames.Pages_Rooms);
 
   return (
-    <MainLayout>
+    <HousekeepingLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Housekeeping</h1>
@@ -81,6 +81,6 @@ export const HousekeepingHubPage: React.FC = () => {
           />
         </div>
       </div>
-    </MainLayout>
+    </HousekeepingLayout>
   );
 };

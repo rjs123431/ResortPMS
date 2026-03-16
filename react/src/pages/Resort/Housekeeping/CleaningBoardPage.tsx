@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
+import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import { HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
 
@@ -61,7 +61,7 @@ export const CleaningBoardPage = () => {
   };
 
   return (
-    <MainLayout>
+    <HousekeepingLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Cleaning Board</h1>
@@ -133,6 +133,6 @@ export const CleaningBoardPage = () => {
           ) : null}
         </section>
       </div>
-    </MainLayout>
+    </HousekeepingLayout>
   );
 };

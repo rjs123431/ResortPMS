@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
+import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import { HousekeepingStatus } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
 
@@ -53,7 +53,7 @@ export const HousekeepingRoomStatusPage = () => {
   const logs = logsData?.items ?? [];
 
   return (
-    <MainLayout>
+    <HousekeepingLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -153,6 +153,6 @@ export const HousekeepingRoomStatusPage = () => {
           ) : null}
         </section>
       </div>
-    </MainLayout>
+    </HousekeepingLayout>
   );
 };

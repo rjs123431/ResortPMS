@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { confirmAction } from '@/utils/alerts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MainLayout } from '@components/layout/MainLayout';
+import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import type { StaffListDto } from '@/types/resort.types';
 import { HousekeepingTaskStatus, HousekeepingTaskType } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
@@ -79,7 +79,7 @@ export const HousekeepingTasksPage = () => {
     };
 
     return (
-        <MainLayout>
+        <HousekeepingLayout>
             <div className="space-y-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -257,6 +257,6 @@ export const HousekeepingTasksPage = () => {
                 }}
                 onSelectStaff={handleAssignStaff}
             />
-        </MainLayout>
+        </HousekeepingLayout>
     );
 };
