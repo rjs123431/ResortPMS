@@ -8,32 +8,32 @@ public class RoomRackSettingsDto
     public int DateRangeDays { get; set; } = 14;
 
     [StringLength(20)]
-    public string ColorInHouse { get; set; } = "#DBEAFE";
+    public string ColorInHouse { get; set; } = "#DCFCE7";
 
     [StringLength(20)]
-    public string ColorInHouseDark { get; set; } = "#1E3A8A";
+    public string ColorInHouseDark { get; set; } = "#166534";
 
     [StringLength(20)]
-    public string ColorPendingReservation { get; set; } = "#FEF3C7";
+    public string ColorPendingReservation { get; set; } = "#DBEAFE";
 
     [StringLength(20)]
-    public string ColorPendingReservationDark { get; set; } = "#713F12";
+    public string ColorPendingReservationDark { get; set; } = "#1E40AF";
 
     [StringLength(20)]
-    public string ColorConfirmedReservation { get; set; } = "#D1FAE5";
+    public string ColorConfirmedReservation { get; set; } = "#DCFCE7";
 
     [StringLength(20)]
-    public string ColorConfirmedReservationDark { get; set; } = "#14532D";
+    public string ColorConfirmedReservationDark { get; set; } = "#166534";
 
     [StringLength(20)]
-    public string ColorCheckoutToday { get; set; } = "#BFDBFE";
+    public string ColorCheckoutToday { get; set; } = "#FFEDD5";
 
     [StringLength(20)]
-    public string ColorCheckoutTodayDark { get; set; } = "#1E40AF";
+    public string ColorCheckoutTodayDark { get; set; } = "#9A3412";
 
     [StringLength(20)]
-    public string ColorOnHoldRoom { get; set; } = "#E2E8F0";
+    public string ColorOnHoldRoom { get; set; } = "#F3F4F6";
 
     [StringLength(20)]
-    public string ColorOnHoldRoomDark { get; set; } = "#475569";
+    public string ColorOnHoldRoomDark { get; set; } = "#374151";
 }

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { ArrowLeftIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { useTheme } from '@contexts/ThemeContext';
 import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
@@ -120,6 +120,8 @@ export const RoomRackPage = () => {
     });
   }, [roomRackSettings, dateRangeDays]);
 
+  const todayKey = useMemo(() => toDateKey(new Date()), []);
+
   const [startDate, endDate] = stayRange;
   const setStartDate = (d: Date) => setStayRange(([, end]) => [d, end]);
   const setEndDate = (d: Date) => setStayRange(([start]) => [start, d]);
@@ -150,8 +152,6 @@ export const RoomRackPage = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const timelineDragRef = useRef<HTMLDivElement | null>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
   type GridSelection = {
     roomId: string;
@@ -170,31 +170,6 @@ export const RoomRackPage = () => {
   const [hoveredEmptyCell, setHoveredEmptyCell] = useState<{ roomId: string; dateIndex: number } | null>(null);
   const selectionRef = useRef<GridSelection | null>(null);
   selectionRef.current = selection;
-
-  const updateScrollArrows = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    setCanScrollLeft(scrollLeft > 2);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
-  }, []);
-
-  useEffect(() => {
-    const run = () => updateScrollArrows();
-    run();
-    const t = setTimeout(run, 0);
-    window.addEventListener('resize', run);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('resize', run);
-    };
-  }, [updateScrollArrows, dateColumns.length]);
-
-  const scrollBy = useCallback((delta: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: delta, behavior: 'smooth' });
-  }, []);
 
   const { data: roomRackData, isLoading: isRoomRackLoading } = useQuery({
     queryKey: ['room-rack-info', startKey, endKey],
@@ -520,7 +495,7 @@ export const RoomRackPage = () => {
           </div>
         </div>
 
-        <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+        <section className="rounded-lg bg-white px-5 py-3 shadow dark:bg-gray-600">
           <div className="relative flex flex-col">
             {/* Top scrollbar: use overflow-x-scroll and min height so Safari shows the track; width synced via state */}
             <div
@@ -534,7 +509,6 @@ export const RoomRackPage = () => {
             <div
               ref={scrollRef}
               className="min-h-0 flex-1 overflow-auto scrollbar-custom max-h-[min(70vh,800px)]"
-              onScroll={updateScrollArrows}
             >
               {isRoomRackLoading ? (
                 <div className="flex min-h-[min(70vh,800px)] items-center justify-center rounded border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50">
@@ -550,13 +524,32 @@ export const RoomRackPage = () => {
               <table className="min-w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
-                    <th className="sticky top-0 left-0 z-[40] min-w-[160px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">Room</th>
+                    <th className="sticky top-0 left-0 z-[40] min-w-[160px] border-b border-r bg-gray-50 p-2 text-left font-semibold text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-700 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+                      Room
+                    </th>
                     {dateColumns.map((dateKey) => {
                       const d = new Date(dateKey + 'T12:00:00');
+                      const isToday = dateKey === todayKey;
+                      const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
+                      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                       return (
-                        <th key={dateKey} className="sticky top-0 z-[20] min-w-[100px] border-b border-r bg-gray-50 p-2 text-center font-medium text-gray-700 last:border-r-0 dark:bg-gray-700 dark:text-gray-200">
+                        <th
+                          key={dateKey}
+                          className={`sticky top-0 z-[20] min-w-[100px] border-b border-r p-2 text-center font-medium last:border-r-0 ${
+                            isToday
+                              ? 'bg-primary-50 text-primary-800 dark:bg-primary-500 dark:text-primary-100'
+                              : isWeekend
+                                ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-50'
+                                : 'bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
+                          }`}
+                        >
                           <div>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                          <div className="text-xs font-normal text-gray-500 dark:text-gray-400">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                          <div className="text-xs font-normal text-gray-500 dark:text-gray-200">
+                            {d.toLocaleDateString('en-US', { weekday: 'short' })}
+                          </div>
+                          {isToday && (
+                            <div className="mt-1 h-0.5 w-6 mx-auto rounded-full bg-primary-500 dark:bg-primary-400" />
+                          )}
                         </th>
                       );
                     })}
@@ -630,22 +623,6 @@ export const RoomRackPage = () => {
                                 ? `/front-desk/reservations/${cell.reservationId}`
                                 : '#';
                           const isConfirmed = cell.type === 'reservation' && cell.reservationStatus === ReservationStatus.Confirmed;
-                          const bgClass =
-                            cell.type === 'stay'
-                              ? 'bg-blue-100 dark:bg-blue-900'
-                              : cell.type === 'reservation'
-                                ? isConfirmed
-                                  ? 'bg-green-100 dark:bg-green-900'
-                                  : 'bg-yellow-100 dark:bg-yellow-900'
-                                : 'bg-slate-200 dark:bg-slate-600';
-                          const textClass =
-                            cell.type === 'stay'
-                              ? 'text-blue-900 hover:underline dark:text-blue-100'
-                              : cell.type === 'reservation'
-                                ? isConfirmed
-                                  ? 'text-green-900 hover:underline dark:text-green-100'
-                                  : 'text-yellow-900 hover:underline dark:text-yellow-100'
-                                : 'text-slate-700 dark:text-slate-200 cursor-default';
                           const isStayOrRes = cell.type === 'stay' || cell.type === 'reservation';
                           const lastDayKey = dateColumns[endIndex - 1];
                           const lastDayDto = cellsByKey.get(`${roomNum.trim()}|${lastDayKey}`);
@@ -685,8 +662,22 @@ export const RoomRackPage = () => {
                             navPath,
                             startIndex,
                             endIndex,
-                            bgClass,
-                            textClass,
+                            bgClass:
+                              cell.type === 'stay'
+                                ? 'bg-blue-100 dark:bg-blue-900'
+                                : cell.type === 'reservation'
+                                  ? isConfirmed
+                                    ? 'bg-green-100 dark:bg-green-900'
+                                    : 'bg-yellow-100 dark:bg-yellow-900'
+                                  : 'bg-slate-200 dark:bg-slate-600',
+                            textClass:
+                              cell.type === 'stay'
+                                ? 'text-blue-900 hover:underline dark:text-blue-100'
+                                : cell.type === 'reservation'
+                                  ? isConfirmed
+                                    ? 'text-green-900 hover:underline dark:text-green-100'
+                                    : 'text-yellow-900 hover:underline dark:text-yellow-100'
+                                  : 'text-slate-700 dark:text-slate-200 cursor-default',
                             bgStyle,
                             extendsBefore,
                             extendsAfter,
@@ -700,7 +691,37 @@ export const RoomRackPage = () => {
                         return (
                           <tr key={room.id} className="border-b">
                             <td className="sticky left-0 z-[30] min-w-[160px] h-[2.5rem] border-r bg-white p-2 font-medium text-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] dark:bg-gray-800 dark:text-white dark:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)] align-middle">
-                              {roomNum}
+                              <div className="flex items-center justify-between gap-2">
+                                <span>{roomNum}</span>
+                                {room.roomStatusCode && (() => {
+                                  const code = room.roomStatusCode;
+                                  const bgByCode: Record<string, string> = {
+                                    VC: '#22C55E',
+                                    VD: '#F59E0B',
+                                    OC: '#3B82F6',
+                                    OD: '#F97316',
+                                    OOO: '#EF4444',
+                                  };
+                                  const bg = bgByCode[code] ?? '#6B7280';
+                                  const fg = contrastColor(bg);
+                                  return (
+                                    <span
+                                      className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold"
+                                      style={{ backgroundColor: bg, color: fg }}
+                                      title={
+                                        code === 'VC' ? 'Vacant Clean – Ready for check-in'
+                                        : code === 'VD' ? 'Vacant Dirty – Needs cleaning'
+                                        : code === 'OC' ? 'Occupied Clean – Guest inside, room serviced'
+                                        : code === 'OD' ? 'Occupied Dirty – Guest inside, needs service'
+                                        : code === 'OOO' ? 'Out of Order – Cannot be used'
+                                        : undefined
+                                      }
+                                    >
+                                      {code}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                             </td>
                             <td colSpan={n} className="min-w-0 p-0 align-middle h-[2.5rem]">
                               <div

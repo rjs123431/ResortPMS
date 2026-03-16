@@ -124,6 +124,8 @@ export interface RoomListDto {
   floor?: string;
   housekeepingStatus: HousekeepingStatus;
   isActive: boolean;
+  /** Compact current room status code derived from daily inventory + housekeeping, e.g. VC, VD, OC, OD, OOO. */
+  roomStatusCode?: string;
 }
 
 /** Room rack: daily inventory status (matches backend RoomDailyInventoryStatus). */

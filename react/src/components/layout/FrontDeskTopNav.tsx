@@ -27,7 +27,7 @@ export const FrontDeskTopNav: React.FC = () => {
 
   return (
     <div className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <nav className="px-3 sm:px-6 lg:px-8" aria-label="Front desk navigation">
+      <nav className="px-2 sm:px-3 lg:px-4" aria-label="Front desk navigation">
         <ul className="flex gap-1 overflow-x-auto py-2">
           {navItems.map(({ to, label }) => {
             const isActive = isActiveFor(to);

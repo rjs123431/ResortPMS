@@ -60,6 +60,13 @@ public class RoomRackAppService(
             .Where(i => roomIds.Contains(i.RoomId) && i.InventoryDate >= start && i.InventoryDate < end)
             .ToListAsync();
 
+        // Current room status (VC/VD/OC/OD/OOO) per room, based on today's daily inventory + housekeeping.
+        var today = Abp.Timing.Clock.Now.Date;
+        var todayInventoryByRoom = inventory
+            .Where(i => i.InventoryDate.Date == today)
+            .GroupBy(i => i.RoomId)
+            .ToDictionary(g => g.Key, g => g.First().Status);
+
         var resIds = inventory.Select(i => i.ReservationId).Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
         var stayIds = inventory.Select(i => i.StayId).Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
 
@@ -169,7 +176,12 @@ public class RoomRackAppService(
             }
         }
 
-        var roomListDtos = rooms.Select(r => MapToRoomListDto(r)).ToList();
+        var roomListDtos = rooms.Select(r =>
+        {
+            todayInventoryByRoom.TryGetValue(r.Id, out var invStatus);
+            var statusCode = GetRoomStatusCode(invStatus, r.HousekeepingStatus);
+            return MapToRoomListDto(r, statusCode);
+        }).ToList();
         var cells = inventory.Select(i =>
         {
             roomById.TryGetValue(i.RoomId, out var room);
@@ -259,7 +271,30 @@ public class RoomRackAppService(
         return new GetRoomRackResultDto { Rooms = roomListDtos, Cells = cells, UnassignedBookings = unassignedBookings };
     }
 
-    private static RoomListDto MapToRoomListDto(Room room)
+    private static string GetRoomStatusCode(RoomDailyInventoryStatus? invStatus, HousekeepingStatus housekeepingStatus)
+    {
+        if (invStatus == RoomDailyInventoryStatus.OutOfOrder)
+        {
+            return "OOO";
+        }
+
+        var isClean = housekeepingStatus == HousekeepingStatus.Clean
+                      || housekeepingStatus == HousekeepingStatus.Inspected
+                      || housekeepingStatus == HousekeepingStatus.Pickup;
+
+        var isOccupied = invStatus == RoomDailyInventoryStatus.InHouse
+                         || invStatus == RoomDailyInventoryStatus.HouseUse;
+
+        if (isOccupied)
+        {
+            return isClean ? "OC" : "OD";
+        }
+
+        // Treat Vacant / Reserved / Blocked / null as vacant from FO perspective.
+        return isClean ? "VC" : "VD";
+    }
+
+    private static RoomListDto MapToRoomListDto(Room room, string roomStatusCode)
     {
         var rt = room.RoomType;
         return new RoomListDto
@@ -278,6 +313,7 @@ public class RoomRackAppService(
             Floor = room.Floor ?? string.Empty,
             HousekeepingStatus = room.HousekeepingStatus,
             IsActive = room.IsActive,
+            RoomStatusCode = roomStatusCode,
         };
     }
 }

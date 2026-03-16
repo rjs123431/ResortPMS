@@ -77,6 +77,10 @@ public class RoomListDto : EntityDto<Guid>
     public string Floor { get; set; }
     public HousekeepingStatus HousekeepingStatus { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>
+    /// Compact current room status code derived from daily inventory + housekeeping, e.g. VC, VD, OC, OD, OOO.
+    /// </summary>
+    public string RoomStatusCode { get; set; }
 }
 
 [AutoMapTo(typeof(Room))]
