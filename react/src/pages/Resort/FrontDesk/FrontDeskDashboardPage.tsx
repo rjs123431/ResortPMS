@@ -22,33 +22,17 @@ export const FrontDeskDashboardPage: React.FC = () => {
   return (
     <>
       <div className="space-y-6">
-        <header className="space-y-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Front Desk Dashboard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Daily overview for arrivals, departures, occupancy, and quick front desk actions.
-          </p>
-        </header>
-
-        <section aria-label="Front desk KPIs" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {statCards.map((card) => (
-            <div
-              key={card.label}
-              className="flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
-            >
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
-              <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{card.value}</p>
-            </div>
-          ))}
-        </section>
-
-        <section aria-label="Quick actions" className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            Quick actions
-          </h2>
-          <div className="flex flex-wrap gap-3">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Front Desk Dashboard</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Daily overview for arrivals, departures, occupancy, and quick front desk actions.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:gap-2" aria-label="Quick actions">
             {canCheckIn && (
               <Link
-                to="/front-desk/check-in/walk-in"
+                to="/front-desk/walk-in"
                 className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
               >
                 + Walk-in
@@ -62,15 +46,19 @@ export const FrontDeskDashboardPage: React.FC = () => {
                 + New Reservation
               </Link>
             )}
-            {canAssignRoom && (
-              <Link
-                to="/front-desk/room-rack"
-                className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
-              >
-                + Assign Room
-              </Link>
-            )}
           </div>
+        </header>
+
+        <section aria-label="Front desk KPIs" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {statCards.map((card) => (
+            <div
+              key={card.label}
+              className="flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+            >
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
+              <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{card.value}</p>
+            </div>
+          ))}
         </section>
       </div>
     </>

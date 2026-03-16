@@ -17,16 +17,17 @@ export const FrontDeskTopNav: React.FC = () => {
   ] as const;
 
   const isActiveFor = (to: string) => {
+    if (to === base) return location.pathname === '/front-desk' || location.pathname === '/front-desk/';
     if (to === `${base}/reservations`) return location.pathname === '/front-desk/reservations' || location.pathname.startsWith('/front-desk/reservations/');
     if (to === `${base}/check-in`) return location.pathname === '/front-desk/check-in' || location.pathname.startsWith('/front-desk/check-in/');
     if (to === `${base}/stays`) return location.pathname === '/front-desk/stays' || location.pathname.startsWith('/front-desk/stays/');
     if (to === `${base}/check-out`) return location.pathname === '/front-desk/check-out' || location.pathname.startsWith('/front-desk/check-out/');
-    return location.pathname.startsWith(to);
+    return location.pathname === to || location.pathname.startsWith(to + '/');
   };
 
   return (
     <div className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <nav className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8" aria-label="Front desk navigation">
+      <nav className="px-3 sm:px-6 lg:px-8" aria-label="Front desk navigation">
         <ul className="flex gap-1 overflow-x-auto py-2">
           {navItems.map(({ to, label }) => {
             const isActive = isActiveFor(to);
