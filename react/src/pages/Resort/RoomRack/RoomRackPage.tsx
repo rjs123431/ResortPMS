@@ -9,6 +9,7 @@ import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
 import { ReservationStatus } from '@/types/resort.types';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
+import { RoomRackDetailPanel, type RoomRackPanelItem } from './RoomRackDetailPanel';
 
 /** Normalize to YYYY-MM-DD for grid comparison. Prefer date part from ISO strings to avoid timezone shift. */
 const toDateKey = (d: Date | string | undefined | null): string => {
@@ -120,6 +121,8 @@ export const RoomRackPage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [quickReservationOpen, setQuickReservationOpen] = useState(false);
   const [quickReservationPayload, setQuickReservationPayload] = useState<QuickReservationPayload | null>(null);
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  const [detailPanelItem, setDetailPanelItem] = useState<RoomRackPanelItem | null>(null);
   const [hoveredEmptyCell, setHoveredEmptyCell] = useState<{ roomId: string; dateIndex: number } | null>(null);
   const selectionRef = useRef<GridSelection | null>(null);
   selectionRef.current = selection;
@@ -472,7 +475,7 @@ export const RoomRackPage = () => {
                       {rooms.map((room) => {
                         const roomNum = room.roomNumber;
                         const n = dateColumns.length;
-                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string };
+                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
                         const segments: SegmentItem[] = [];
                         let i = 0;
                         while (i < dateColumns.length) {
@@ -545,6 +548,12 @@ export const RoomRackPage = () => {
                           } else {
                             tooltip = cell.label;
                           }
+                          let panelItem: RoomRackPanelItem | null = null;
+                          if (cell.type === 'stay') {
+                            panelItem = { type: 'stay', stayId: cell.stayId, stayNo: cell.stayNo ?? '', guestName: cell.guestName ?? '', dateRange: dateRangeStr };
+                          } else if (cell.type === 'reservation') {
+                            panelItem = { type: 'reservation', reservationId: cell.reservationId, reservationNo: cell.reservationNo ?? '', guestName: cell.guestName ?? '', status: cell.reservationStatus, dateRange: dateRangeStr };
+                          }
                           segments.push({
                             id: `${cellId}-${startIndex}`,
                             guestName: guestName || '—',
@@ -558,6 +567,7 @@ export const RoomRackPage = () => {
                             firstDayHalf: firstDayHalf || undefined,
                             lastDayHalf: lastDayHalf || undefined,
                             tooltip,
+                            panelItem,
                           });
                           i = endIndex;
                         }
@@ -637,7 +647,14 @@ export const RoomRackPage = () => {
                                       <button
                                         type="button"
                                         className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.textClass}`}
-                                        onClick={() => seg.navPath !== '#' && navigate(seg.navPath)}
+                                        onClick={() => {
+                                          if (seg.panelItem) {
+                                            setDetailPanelItem(seg.panelItem);
+                                            setDetailPanelOpen(true);
+                                          } else if (seg.navPath !== '#') {
+                                            navigate(seg.navPath);
+                                          }
+                                        }}
                                         title={seg.tooltip}
                                       >
                                         {seg.guestName}
@@ -685,6 +702,11 @@ export const RoomRackPage = () => {
         open={quickReservationOpen}
         onClose={() => { setQuickReservationOpen(false); setQuickReservationPayload(null); setSelection(null); }}
         payload={quickReservationPayload}
+      />
+      <RoomRackDetailPanel
+        open={detailPanelOpen}
+        onClose={() => { setDetailPanelOpen(false); setDetailPanelItem(null); }}
+        item={detailPanelItem}
       />
     </MainLayout>
   );
