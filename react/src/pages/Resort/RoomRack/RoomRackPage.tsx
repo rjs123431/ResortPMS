@@ -10,6 +10,7 @@ import type { RoomListDto } from '@/types/resort.types';
 import { ReservationStatus } from '@/types/resort.types';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 import { RoomRackDetailPanel, type RoomRackPanelItem } from './RoomRackDetailPanel';
+import { RoomRackBookingsDialog, type BookingsDialogItem } from './RoomRackBookingsDialog';
 
 /** Normalize to YYYY-MM-DD for grid comparison. Prefer date part from ISO strings to avoid timezone shift. */
 const toDateKey = (d: Date | string | undefined | null): string => {
@@ -316,6 +317,43 @@ export const RoomRackPage = () => {
     return (roomTypeName: string, dateKey: string) => countBy.get(`${roomTypeName}|${dateKey}`) ?? 0;
   }, [roomRackData?.cells, roomNumberToType]);
 
+  const bookingsListByRoomTypeAndDate = useMemo(() => {
+    const listBy = new Map<string, BookingsDialogItem[]>();
+    (roomRackData?.cells ?? []).forEach((cell) => {
+      if (cell.status !== 2 && cell.status !== 3) return;
+      const typeName = roomNumberToType.get((cell.roomNumber ?? '').trim());
+      if (!typeName) return;
+      const dateKey = toDateKey(cell.inventoryDate);
+      const k = `${typeName}|${dateKey}`;
+      const list = listBy.get(k) ?? [];
+      const roomNum = (cell.roomNumber ?? '').trim();
+      const guest = cell.guestName ?? '—';
+      if (cell.status === 2 && cell.reservationId) {
+        list.push({
+          type: 'reservation',
+          id: cell.reservationId,
+          number: cell.reservationNo ?? '',
+          guestName: guest,
+          roomNumber: roomNum,
+          status: cell.reservationStatus,
+        });
+      } else if (cell.status === 3 && cell.stayId) {
+        list.push({
+          type: 'stay',
+          id: cell.stayId,
+          number: cell.stayNo ?? '',
+          guestName: guest,
+          roomNumber: roomNum,
+        });
+      }
+      listBy.set(k, list);
+    });
+    return (roomTypeName: string, dateKey: string) => listBy.get(`${roomTypeName}|${dateKey}`) ?? [];
+  }, [roomRackData?.cells, roomNumberToType]);
+
+  const [bookingsDialogOpen, setBookingsDialogOpen] = useState(false);
+  const [bookingsDialogPayload, setBookingsDialogPayload] = useState<{ roomTypeName: string; dateKey: string } | null>(null);
+
   const topScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
@@ -476,7 +514,18 @@ export const RoomRackPage = () => {
                           const count = bookingCountByRoomTypeAndDate(roomTypeName, dateKey);
                           return (
                             <td key={dateKey} className="min-w-[100px] border-b border-r p-2 text-center last:border-r-0" title={count > 0 ? 'No. of bookings' : undefined}>
-                              {count > 0 ? <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{count}</span> : null}
+                              {count > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setBookingsDialogPayload({ roomTypeName, dateKey });
+                                    setBookingsDialogOpen(true);
+                                  }}
+                                  className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline dark:text-primary-400 dark:hover:text-primary-300"
+                                >
+                                  {count}
+                                </button>
+                              ) : null}
                             </td>
                           );
                         })}
@@ -716,6 +765,14 @@ export const RoomRackPage = () => {
         open={detailPanelOpen}
         onClose={() => { setDetailPanelOpen(false); setDetailPanelItem(null); }}
         item={detailPanelItem}
+      />
+
+      <RoomRackBookingsDialog
+        open={bookingsDialogOpen}
+        onClose={() => { setBookingsDialogOpen(false); setBookingsDialogPayload(null); }}
+        roomTypeName={bookingsDialogPayload?.roomTypeName ?? null}
+        dateKey={bookingsDialogPayload?.dateKey ?? null}
+        items={bookingsDialogPayload ? bookingsListByRoomTypeAndDate(bookingsDialogPayload.roomTypeName, bookingsDialogPayload.dateKey) : []}
       />
     </MainLayout>
   );
