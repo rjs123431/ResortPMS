@@ -182,7 +182,9 @@ export const RoomRatePlanGroupEditorPage = () => {
         }
       }
 
-      const operations: Array<Promise<unknown>> = [];
+      const normalizedChannelIds = Array.from(
+        new Set(groupForm.channelIds.map((channelId) => channelId.trim()).filter(Boolean)),
+      );
 
       for (const row of roomTypeRates) {
         if (row.enabled) {
@@ -200,11 +202,11 @@ export const RoomRatePlanGroupEditorPage = () => {
               priority: groupForm.priority,
               isDefault: groupForm.isDefault,
               isActive: groupForm.isActive,
-              channelIds: groupForm.channelIds,
+              channelIds: normalizedChannelIds,
               dayRates,
               dateOverrides: row.dateOverrides.map((x) => ({ ...x, roomRatePlanId: row.planId! })),
             };
-            operations.push(resortService.updateRoomRatePlan(payload));
+            await resortService.updateRoomRatePlan(payload);
           } else {
             const payload: CreateRoomRatePlanDto = {
               roomTypeId: row.roomTypeId,
@@ -215,24 +217,25 @@ export const RoomRatePlanGroupEditorPage = () => {
               priority: groupForm.priority,
               isDefault: groupForm.isDefault,
               isActive: groupForm.isActive,
-              channelIds: groupForm.channelIds,
+              channelIds: normalizedChannelIds,
               dayRates,
               dateOverrides: [],
             };
-            operations.push(resortService.createRoomRatePlan(payload));
+            await resortService.createRoomRatePlan(payload);
           }
         } else if (row.planId) {
-          operations.push(resortService.deleteRoomRatePlan(row.planId));
+          await resortService.deleteRoomRatePlan(row.planId);
         }
-      }
-
-      for (const operation of operations) {
-        await operation;
       }
     },
     onSuccess: async () => {
       notifySuccess('Rate plan saved successfully.');
-      await queryClient.invalidateQueries({ queryKey: ['resort-room-rate-plans-paged'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['resort-room-rate-plans-paged'] }),
+        queryClient.invalidateQueries({ queryKey: ['resort-room-rate-plan-details-by-group'] }),
+        queryClient.invalidateQueries({ queryKey: ['quick-reservation-room-rate'] }),
+        queryClient.invalidateQueries({ queryKey: ['room-type-availability-search'] }),
+      ]);
       navigate('/admin/room-rate-plans');
     },
     onError: (error) => {
