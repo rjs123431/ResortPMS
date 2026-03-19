@@ -90,7 +90,6 @@ export const RoomTypeListPage = () => {
     amenityItemsText: 'Free toiletries, Shower, Safe, Toilet, Towels, Desk',
     maxAdults: 2,
     maxChildren: 0,
-    baseRate: 0,
     isActive: true,
   });
 
@@ -130,7 +129,6 @@ export const RoomTypeListPage = () => {
       amenityItemsText: 'Free toiletries, Shower, Safe, Toilet, Towels, Desk',
       maxAdults: 2,
       maxChildren: 0,
-      baseRate: 0,
       isActive: true,
     });
   };
@@ -196,7 +194,7 @@ export const RoomTypeListPage = () => {
                 {items.map((item) => (
                   <tr className="border-b" key={item.id}>
                     <td className="p-2">{item.name}</td>
-                    <td className="p-2">{item.baseRate.toFixed(2)}</td>
+                    <td className="p-2">{item.maxAdults}</td>
                     <td className="p-2">{item.maxAdults}</td>
                     <td className="p-2">{item.maxChildren}</td>
                     <td className="p-2">{item.isActive ? 'Yes' : 'No'}</td>
@@ -234,7 +232,6 @@ export const RoomTypeListPage = () => {
                 description: encodeRoomTypeDescription(form),
                 maxAdults: form.maxAdults,
                 maxChildren: form.maxChildren,
-                baseRate: form.baseRate,
                 isActive: form.isActive,
               });
             } else {
@@ -243,7 +240,6 @@ export const RoomTypeListPage = () => {
                 description: encodeRoomTypeDescription(form),
                 maxAdults: form.maxAdults,
                 maxChildren: form.maxChildren,
-                baseRate: form.baseRate,
               });
             }
           }}

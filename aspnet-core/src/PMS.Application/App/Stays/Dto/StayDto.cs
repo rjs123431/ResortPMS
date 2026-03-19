@@ -164,7 +164,6 @@ public class AvailableRoomForChangeDto
     public string RoomNumber { get; set; }
     public Guid RoomTypeId { get; set; }
     public string RoomTypeName { get; set; }
-    public decimal BaseRate { get; set; }
     public string Floor { get; set; }
     public HousekeepingStatus HousekeepingStatus { get; set; }
     public bool IsUpgrade { get; set; }

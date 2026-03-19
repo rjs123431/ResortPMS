@@ -17,7 +17,6 @@ public class RoomTypeDto : EntityDto<Guid>
     [StringLength(512)] public string Description { get; set; }
     [Range(1, 20)] public int MaxAdults { get; set; } = 2;
     [Range(0, 10)] public int MaxChildren { get; set; } = 0;
-    public decimal BaseRate { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -27,7 +26,6 @@ public class RoomTypeListDto : EntityDto<Guid>
     public string Name { get; set; }
     public int MaxAdults { get; set; }
     public int MaxChildren { get; set; }
-    public decimal BaseRate { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -38,7 +36,6 @@ public class CreateRoomTypeDto
     [StringLength(512)] public string Description { get; set; }
     [Range(1, 20)] public int MaxAdults { get; set; } = 2;
     [Range(0, 10)] public int MaxChildren { get; set; } = 0;
-    [Range(0, double.MaxValue)] public decimal BaseRate { get; set; }
 }
 
 public class GetRoomTypesInput : PagedResultFilterRequestDto, IShouldNormalize

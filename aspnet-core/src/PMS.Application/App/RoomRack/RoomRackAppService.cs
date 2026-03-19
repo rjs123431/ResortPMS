@@ -309,7 +309,6 @@ public class RoomRackAppService(
             AmenityItems = [],
             MaxAdults = rt?.MaxAdults ?? 0,
             MaxChildren = rt?.MaxChildren ?? 0,
-            BaseRate = rt?.BaseRate ?? 0,
             Floor = room.Floor ?? string.Empty,
             HousekeepingStatus = room.HousekeepingStatus,
             IsActive = room.IsActive,

@@ -766,7 +766,7 @@ public class CheckInAppService(
         var roomTypeIds = roomsById.Select(x => x.RoomTypeId).Distinct().ToList();
         var roomTypes = await roomTypeRepository.GetAll()
             .Where(rt => roomTypeIds.Contains(rt.Id))
-            .Select(rt => new { rt.Id, rt.Name, rt.BaseRate })
+            .Select(rt => new { rt.Id, rt.Name })
             .ToListAsync();
 
         var roomTypeById = roomTypes.ToDictionary(x => x.Id, x => x);
@@ -783,7 +783,7 @@ public class CheckInAppService(
             lineByRoomId.TryGetValue(room.Id, out var inputLine);
 
             var nights = inputLine?.NumberOfNights > 0 ? inputLine.NumberOfNights : stayNights;
-            var unitPrice = inputLine?.RatePerNight > 0 ? inputLine.RatePerNight : roomType.BaseRate;
+            var unitPrice = inputLine?.RatePerNight > 0 ? inputLine.RatePerNight : 0m;
             var fallbackAmount = unitPrice * nights;
 
             var amount = inputLine?.Amount > 0 ? inputLine.Amount : fallbackAmount;

@@ -64,10 +64,6 @@ export const RoomTypeDialogForm = ({
               <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.name} onChange={(e) => onFormChange((s) => ({ ...s, name: e.target.value }))} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Base Rate Per Night</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" type="number" min={0} value={form.baseRate} onChange={(e) => onFormChange((s) => ({ ...s, baseRate: Number(e.target.value || 0) }))} />
-            </div>
-            <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Adults</label>
               <input className="w-full rounded border p-2 dark:bg-gray-700" type="number" min={1} value={form.maxAdults} onChange={(e) => onFormChange((s) => ({ ...s, maxAdults: Number(e.target.value || 1) }))} />
             </div>

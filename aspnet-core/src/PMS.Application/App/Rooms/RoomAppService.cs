@@ -35,7 +35,7 @@ public interface IRoomAppService : IApplicationService
     Task<Guid> CreateAsync(CreateRoomDto input);
     Task UpdateAsync(RoomDto input);
     Task UpdateHousekeepingStatusAsync(UpdateHousekeepingStatusDto input);
-    Task<System.Collections.Generic.List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input);
+    Task<List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input);
 }
 
 [AbpAuthorize(PermissionNames.Pages_RoomTypes)]
@@ -238,30 +238,39 @@ public class RoomAppService(
             }
         }
 
-        System.Collections.Generic.Dictionary<Guid, decimal> rateOverrides = null;
-        if (hasDateRange && items.Count > 0)
+        // Calculate rates from rate plans if date range is provided
+        var ratesByRoomType = new Dictionary<Guid, decimal>();
+        if (hasDateRange)
         {
-            var arrivalDate = input.ArrivalDate!.Value.Date;
-            var departureDate = input.DepartureDate!.Value.Date;
-            var roomTypeIds = items.Select(r => r.RoomTypeId).Distinct().ToList();
-            rateOverrides = new System.Collections.Generic.Dictionary<Guid, decimal>();
-            foreach (var rtId in roomTypeIds)
+            var arrivalDate = input.ArrivalDate!.Value;
+            var departureDate = input.DepartureDate!.Value;
+            var roomTypeIds = items.Select(room => room.RoomTypeId).Distinct().ToList();
+
+            foreach (var roomTypeId in roomTypeIds)
             {
-                var rate = await roomRatePlanAppService.GetEffectiveRatePerNightForStayAsync(rtId, arrivalDate, departureDate);
-                rateOverrides[rtId] = rate;
+                ratesByRoomType[roomTypeId] = await roomRatePlanAppService.GetEffectiveRatePerNightForStayAsync(
+                    roomTypeId,
+                    arrivalDate,
+                    departureDate);
             }
         }
 
-        return items.Select(r => MapToRoomListDto(r, rateOverrides)).ToList();
+        var result = new List<RoomListDto>();
+        foreach (var room in items)
+        {
+            var baseRate = ratesByRoomType.TryGetValue(room.RoomTypeId, out var rate) ? rate : 0m;
+            result.Add(MapToRoomListDto(room, baseRate));
+        }
+
+        return result;
     }
 
-    private static RoomListDto MapToRoomListDto(Room room, System.Collections.Generic.Dictionary<Guid, decimal> rateOverrides = null)
+    private RoomListDto MapToRoomListDto(Room room, decimal baseRate = 0)
     {
         var roomTypeName = room.RoomType?.Name ?? string.Empty;
         var roomTypeDescription = room.RoomType?.Description ?? string.Empty;
         var profile = GetRoomTypeProfile(roomTypeName, roomTypeDescription);
 
-        var baseRate = (rateOverrides != null && rateOverrides.TryGetValue(room.RoomTypeId, out var overridden)) ? overridden : (room.RoomType?.BaseRate ?? 0);
         return new RoomListDto
         {
             Id = room.Id,

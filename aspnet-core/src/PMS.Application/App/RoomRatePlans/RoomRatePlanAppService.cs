@@ -156,10 +156,7 @@ public class RoomRatePlanAppService(
         var arrival = arrivalDate.Date;
         var departure = departureDate.Date;
         if (arrival >= departure)
-            return 0;
-
-        var roomType = await roomTypeRepository.FirstOrDefaultAsync(roomTypeId);
-        var fallbackRate = roomType?.BaseRate ?? 0;
+            throw new UserFriendlyException("Invalid arrival or departure date");
 
         var plans = await ratePlanRepository.GetAll()
             .Where(rp => rp.RoomTypeId == roomTypeId && rp.IsActive)
@@ -171,31 +168,51 @@ public class RoomRatePlanAppService(
             .ToListAsync();
 
         if (plans.Count == 0)
-            return fallbackRate;
+            throw new UserFriendlyException("No active rate plan found for the specified dates. A rate plan is required to sell this room type.");
 
-        var plan = plans[0];
         decimal total = 0;
         int nights = 0;
         for (var d = arrival; d < departure; d = d.AddDays(1), nights++)
         {
-            var rate = GetRateForDate(plan, d, fallbackRate);
+            var rate = GetRateForDate(plans, d);
             total += rate;
         }
-        return nights > 0 ? Math.Round(total / nights, 4) : fallbackRate;
+        return nights > 0 ? Math.Round(total / nights, 4) : 0;
     }
 
-    private static decimal GetRateForDate(RoomRatePlan plan, DateTime date, decimal fallback)
+    private static decimal GetRateForDate(IReadOnlyList<RoomRatePlan> plans, DateTime date)
+    {
+        foreach (var plan in plans)
+        {
+            if (plan.StartDate.Date > date || (plan.EndDate.HasValue && plan.EndDate.Value.Date < date))
+                continue;
+
+            if (TryGetRateForDate(plan, date, out var rate))
+                return rate;
+        }
+
+        throw new UserFriendlyException($"No rate found for {date:yyyy-MM-dd}. Please ensure the rate plan has day-of-week rates configured.");
+    }
+
+    private static bool TryGetRateForDate(RoomRatePlan plan, DateTime date, out decimal rate)
     {
         var overrideEntry = plan.DateOverrides?.FirstOrDefault(o => o.RateDate.Date == date);
         if (overrideEntry != null)
-            return overrideEntry.OverridePrice;
+        {
+            rate = overrideEntry.OverridePrice;
+            return true;
+        }
 
         var dayOfWeek = date.DayOfWeek;
         var dayRate = plan.DayRates?.FirstOrDefault(d => d.DayOfWeek == dayOfWeek);
         if (dayRate != null)
-            return dayRate.BasePrice;
+        {
+            rate = dayRate.BasePrice;
+            return true;
+        }
 
-        return fallback;
+        rate = 0m;
+        return false;
     }
 
     private async Task ClearDefaultForRoomTypeAsync(Guid roomTypeId)

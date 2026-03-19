@@ -12,7 +12,6 @@ public class RoomType : AuditedEntity<Guid>, IPassivable
     public string Description { get; set; } = string.Empty;
     public int MaxAdults { get; set; } = 2;
     public int MaxChildren { get; set; } = 0;
-    public decimal BaseRate { get; set; }
     public bool IsActive { get; set; } = true;
 
     public virtual ICollection<Room> Rooms { get; set; } = [];

@@ -1085,7 +1085,6 @@ export interface AvailableRoomForChangeDto {
   roomNumber: string;
   roomTypeId: string;
   roomTypeName: string;
-  baseRate: number;
   floor?: string;
   housekeepingStatus: HousekeepingStatus;
   isUpgrade: boolean;

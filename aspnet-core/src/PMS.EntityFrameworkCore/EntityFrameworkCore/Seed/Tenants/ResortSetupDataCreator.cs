@@ -59,16 +59,16 @@ public class ResortSetupDataCreator
     {
         var definitions = new[]
         {
-            new { Name = "Native Room", Description = "Native Room", MaxAdults = 2, MaxChildren = 0, BaseRate = 2155m },
-            new { Name = "Garden View (Easy Access)", Description = "Garden View (Easy Access)", MaxAdults = 2, MaxChildren = 0, BaseRate = 3215m },
-            new { Name = "Sea View (Ground Floor)", Description = "Sea View (Ground Floor)", MaxAdults = 2, MaxChildren = 0, BaseRate = 3435m },
-            new { Name = "Saint Room", Description = "Saint Room", MaxAdults = 2, MaxChildren = 0, BaseRate = 3435m },
-            new { Name = "Sea View (Upper Floor)", Description = "Sea View (Upper Floor)", MaxAdults = 3, MaxChildren = 0, BaseRate = 4480m },
-            new { Name = "Seaside View", Description = "Seaside View", MaxAdults = 4, MaxChildren = 0, BaseRate = 5660m },
-            new { Name = "Garden View (6 pax)", Description = "Garden View", MaxAdults = 6, MaxChildren = 0, BaseRate = 6815m },
-            new { Name = "Garden View (8 pax)", Description = "Garden View", MaxAdults = 8, MaxChildren = 0, BaseRate = 8460m },
-            new { Name = "Barkada Room", Description = "Barkada Room", MaxAdults = 18, MaxChildren = 0, BaseRate = 18925m },
-            new { Name = "Villa", Description = "Villa (Breakfast & Kayaking not included)", MaxAdults = 3, MaxChildren = 0, BaseRate = 2099m },
+            new { Name = "Native Room", Description = "Native Room", MaxAdults = 2, MaxChildren = 0 },
+            new { Name = "Garden View (Easy Access)", Description = "Garden View (Easy Access)", MaxAdults = 2, MaxChildren = 0 },
+            new { Name = "Sea View (Ground Floor)", Description = "Sea View (Ground Floor)", MaxAdults = 2, MaxChildren = 0 },
+            new { Name = "Saint Room", Description = "Saint Room", MaxAdults = 2, MaxChildren = 0 },
+            new { Name = "Sea View (Upper Floor)", Description = "Sea View (Upper Floor)", MaxAdults = 3, MaxChildren = 0 },
+            new { Name = "Seaside View", Description = "Seaside View", MaxAdults = 4, MaxChildren = 0 },
+            new { Name = "Garden View (6 pax)", Description = "Garden View", MaxAdults = 6, MaxChildren = 0 },
+            new { Name = "Garden View (8 pax)", Description = "Garden View", MaxAdults = 8, MaxChildren = 0 },
+            new { Name = "Barkada Room", Description = "Barkada Room", MaxAdults = 18, MaxChildren = 0 },
+            new { Name = "Villa", Description = "Villa (Breakfast & Kayaking not included)", MaxAdults = 3, MaxChildren = 0 },
         };
 
         foreach (var def in definitions)
@@ -79,7 +79,6 @@ public class ResortSetupDataCreator
                 Description = def.Description,
                 MaxAdults = def.MaxAdults,
                 MaxChildren = def.MaxChildren,
-                BaseRate = def.BaseRate,
                 IsActive = true,
             });
         }
@@ -222,19 +221,6 @@ public class ResortSetupDataCreator
     {
         var weekdayRates = new Dictionary<string, decimal>
         {
-            { "Native Room", 2065m },
-            { "Garden View (Easy Access)", 2925m },
-            { "Sea View (Ground Floor)", 3125m },
-            { "Saint Room", 3125m },
-            { "Sea View (Upper Floor)", 4080m },
-            { "Seaside View", 5160m },
-            { "Garden View (6 pax)", 6235m },
-            { "Garden View (8 pax)", 7745m },
-            { "Barkada Room", 18125m },
-            { "Villa", 2099m },
-        };
-        var weekendRates = new Dictionary<string, decimal>
-        {
             { "Native Room", 2155m },
             { "Garden View (Easy Access)", 3215m },
             { "Sea View (Ground Floor)", 3435m },
@@ -246,10 +232,24 @@ public class ResortSetupDataCreator
             { "Barkada Room", 18925m },
             { "Villa", 2099m },
         };
+        var weekendRates = new Dictionary<string, decimal>
+        {
+            { "Native Room", 2695m },
+            { "Garden View (Easy Access)", 4019m },
+            { "Sea View (Ground Floor)", 4294m },
+            { "Saint Room", 4294m },
+            { "Sea View (Upper Floor)", 5600m },
+            { "Seaside View", 7075m },
+            { "Garden View (6 pax)", 8519m },
+            { "Garden View (8 pax)", 10575m },
+            { "Barkada Room", 23656m },
+            { "Villa", 2624m },
+        };
         foreach (var rtName in roomTypes.Keys)
         {
             var roomTypeId = roomTypes[rtName];
-            var baseRate = _context.RoomTypes.FirstOrDefault(x => x.Id == roomTypeId)?.BaseRate ?? 0m;
+            var weekdayRate = weekdayRates.TryGetValue(rtName, out var wd) ? wd : 2155m;
+            var weekendRate = weekendRates.TryGetValue(rtName, out var we) ? we : 2695m;
             // Weekdays Promo
             var promoPlan = new RoomRatePlan
             {
@@ -273,7 +273,7 @@ public class ResortSetupDataCreator
                 {
                     RoomRatePlanId = promoPlan.Id,
                     DayOfWeek = day,
-                    BasePrice = weekdayRates.TryGetValue(rtName, out var price) ? price : baseRate,
+                    BasePrice = weekdayRate,
                 });
             }
             _context.SaveChanges();
@@ -299,12 +299,27 @@ public class ResortSetupDataCreator
                 {
                     RoomRatePlanId = rackPlan.Id,
                     DayOfWeek = day,
-                    BasePrice = weekendRates.TryGetValue(rtName, out var price) ? price : baseRate,
+                    BasePrice = weekendRate,
                 });
             }
             _context.SaveChanges();
         }
     }
+
+    // Map initial room rates
+    private readonly Dictionary<string, decimal> RoomTypeBaseRates = new()
+    {
+        { "Native Room", 2155m },
+        { "Garden View (Easy Access)", 3215m },
+        { "Sea View (Ground Floor)", 3435m },
+        { "Saint Room", 3435m },
+        { "Sea View (Upper Floor)", 4480m },
+        { "Seaside View", 5660m },
+        { "Garden View (6 pax)", 6815m },
+        { "Garden View (8 pax)", 8460m },
+        { "Barkada Room", 18925m },
+        { "Villa", 2099m },
+    };
 
     private void EnsureStaff()
     {

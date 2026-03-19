@@ -12,7 +12,6 @@ internal class RoomTypeConfiguration : IEntityTypeConfiguration<RoomType>
 
         entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
         entity.Property(e => e.Description).HasMaxLength(512);
-        entity.Property(e => e.BaseRate).HasPrecision(18, 4);
 
         entity.HasIndex(e => e.Name).IsUnique();
     }

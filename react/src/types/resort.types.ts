@@ -264,7 +264,6 @@ export interface CreateRoomTypeDto {
   description?: string;
   maxAdults: number;
   maxChildren: number;
-  baseRate: number;
 }
 
 export interface RoomTypeDto extends CreateRoomTypeDto {

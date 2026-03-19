@@ -95,7 +95,6 @@ public class RoomChangeService(
             .FirstOrDefaultAsync(r => r.Id == requestId)
             ?? throw new UserFriendlyException(L("RoomChangeRequestNotFound"));
 
-        var currentRoomTypeBaseRate = request.FromRoom.RoomType.BaseRate;
         var departureDate = request.Stay.ExpectedCheckOutDateTime.Date;
         var today = Clock.Now.Date;
 
@@ -147,11 +146,10 @@ public class RoomChangeService(
             RoomNumber = r.RoomNumber,
             RoomTypeId = r.RoomTypeId,
             RoomTypeName = r.RoomType?.Name ?? string.Empty,
-            BaseRate = r.RoomType?.BaseRate ?? 0,
             Floor = r.Floor,
             HousekeepingStatus = r.HousekeepingStatus,
-            IsUpgrade = (r.RoomType?.BaseRate ?? 0) > currentRoomTypeBaseRate,
-            IsDowngrade = (r.RoomType?.BaseRate ?? 0) < currentRoomTypeBaseRate,
+            IsUpgrade = false,
+            IsDowngrade = false,
             IsSameType = r.RoomTypeId == request.FromRoomTypeId
         }).ToList();
     }
