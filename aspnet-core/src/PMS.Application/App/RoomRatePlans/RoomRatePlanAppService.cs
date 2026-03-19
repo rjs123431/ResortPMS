@@ -24,12 +24,13 @@ public interface IRoomRatePlanAppService : IApplicationService
     Task UpdateAsync(UpdateRoomRatePlanDto input);
     Task DeleteAsync(Guid id);
     /// <summary>Average rate per night for the stay; uses rate plan when applicable, else room type base rate.</summary>
-    Task<decimal> GetEffectiveRatePerNightForStayAsync(Guid roomTypeId, DateTime arrivalDate, DateTime departureDate);
+    Task<decimal> GetEffectiveRatePerNightForStayAsync(Guid roomTypeId, DateTime arrivalDate, DateTime departureDate, Guid? channelId = null);
 }
 
 public class RoomRatePlanAppService(
     IRepository<RoomRatePlan, Guid> ratePlanRepository,
     IRepository<RoomRatePlanGroup, Guid> ratePlanGroupRepository,
+    IRepository<RoomRatePlanGroupChannel, Guid> groupChannelRepository,
     IRepository<RoomRatePlanDay, Guid> dayRepository,
     IRepository<RatePlanDateOverride, Guid> overrideRepository,
     IRepository<RoomType, Guid> roomTypeRepository
@@ -41,6 +42,8 @@ public class RoomRatePlanAppService(
         var plan = await ratePlanRepository.GetAll()
             .Include(rp => rp.RoomType)
             .Include(rp => rp.RoomRatePlanGroup)
+                .ThenInclude(group => group.ChannelTargets)
+                    .ThenInclude(target => target.Channel)
             .Include(rp => rp.DayRates)
             .Include(rp => rp.DateOverrides)
             .FirstOrDefaultAsync(rp => rp.Id == id);
@@ -57,6 +60,8 @@ public class RoomRatePlanAppService(
         var query = ratePlanRepository.GetAll()
             .Include(rp => rp.RoomType)
             .Include(rp => rp.RoomRatePlanGroup)
+                .ThenInclude(group => group.ChannelTargets)
+                    .ThenInclude(target => target.Channel)
             .WhereIf(input.RoomTypeId.HasValue, rp => rp.RoomTypeId == input.RoomTypeId.Value)
             .WhereIf(input.IsActive.HasValue, rp => rp.RoomRatePlanGroup.IsActive == input.IsActive.Value);
 
@@ -110,6 +115,7 @@ public class RoomRatePlanAppService(
         group.IsDefault = input.IsDefault;
         group.IsActive = input.IsActive;
         await ratePlanGroupRepository.UpdateAsync(group);
+        await SaveGroupChannelsAsync(group.Id, input.ChannelIds);
 
         var plan = new RoomRatePlan
         {
@@ -133,6 +139,8 @@ public class RoomRatePlanAppService(
     {
         var plan = await ratePlanRepository.GetAll()
             .Include(rp => rp.RoomRatePlanGroup)
+                .ThenInclude(group => group.ChannelTargets)
+                    .ThenInclude(target => target.Channel)
             .Include(rp => rp.DayRates)
             .Include(rp => rp.DateOverrides)
             .FirstOrDefaultAsync(rp => rp.Id == input.Id);
@@ -183,6 +191,7 @@ public class RoomRatePlanAppService(
         group.IsDefault = input.IsDefault;
         group.IsActive = input.IsActive;
         await ratePlanGroupRepository.UpdateAsync(group);
+        await SaveGroupChannelsAsync(group.Id, input.ChannelIds);
 
         plan.RoomRatePlanGroupId = group.Id;
         plan.CheckInTime = input.CheckInTime;
@@ -214,7 +223,7 @@ public class RoomRatePlanAppService(
     }
 
     /// <inheritdoc />
-    public async Task<decimal> GetEffectiveRatePerNightForStayAsync(Guid roomTypeId, DateTime arrivalDate, DateTime departureDate)
+    public async Task<decimal> GetEffectiveRatePerNightForStayAsync(Guid roomTypeId, DateTime arrivalDate, DateTime departureDate, Guid? channelId = null)
     {
         var arrival = arrivalDate.Date;
         var departure = departureDate.Date;
@@ -223,10 +232,15 @@ public class RoomRatePlanAppService(
 
         var plans = await ratePlanRepository.GetAll()
             .Include(rp => rp.RoomRatePlanGroup)
+                .ThenInclude(group => group.ChannelTargets)
             .Where(rp => rp.RoomTypeId == roomTypeId)
             .Where(rp => rp.RoomRatePlanGroup.IsActive)
             .Where(rp => rp.RoomRatePlanGroup.StartDate <= departure && (rp.RoomRatePlanGroup.EndDate == null || rp.RoomRatePlanGroup.EndDate >= arrival))
+            .Where(rp =>
+                !rp.RoomRatePlanGroup.ChannelTargets.Any() ||
+                (channelId.HasValue && rp.RoomRatePlanGroup.ChannelTargets.Any(target => target.ChannelId == channelId.Value)))
             .OrderBy(rp => rp.RoomRatePlanGroup.Priority)
+            .ThenByDescending(rp => channelId.HasValue && rp.RoomRatePlanGroup.ChannelTargets.Any(target => target.ChannelId == channelId.Value))
             .ThenByDescending(rp => rp.RoomRatePlanGroup.IsDefault)
             .Include(rp => rp.DayRates)
             .Include(rp => rp.DateOverrides)
@@ -334,6 +348,10 @@ public class RoomRatePlanAppService(
     private static RoomRatePlanDto MapToDto(RoomRatePlan plan)
     {
         var group = plan.RoomRatePlanGroup;
+        var channelTargets = group?.ChannelTargets?
+            .Where(target => target.Channel != null)
+            .OrderBy(target => target.Channel.Name)
+            .ToList() ?? [];
         return new RoomRatePlanDto
         {
             Id = plan.Id,
@@ -346,6 +364,8 @@ public class RoomRatePlanAppService(
             Priority = group?.Priority ?? 0,
             IsDefault = group?.IsDefault ?? false,
             IsActive = group?.IsActive ?? false,
+            ChannelIds = channelTargets.Select(target => target.ChannelId).ToList(),
+            ChannelNames = channelTargets.Select(target => target.Channel.Name ?? string.Empty).ToList(),
             CheckInTime = plan.CheckInTime,
             CheckOutTime = plan.CheckOutTime,
             DayRates = plan.DayRates?.Select(d => new RoomRatePlanDayDto
@@ -369,6 +389,10 @@ public class RoomRatePlanAppService(
     private static RoomRatePlanListDto MapToListDto(RoomRatePlan plan)
     {
         var group = plan.RoomRatePlanGroup;
+        var channelTargets = group?.ChannelTargets?
+            .Where(target => target.Channel != null)
+            .OrderBy(target => target.Channel.Name)
+            .ToList() ?? [];
         return new RoomRatePlanListDto
         {
             Id = plan.Id,
@@ -381,9 +405,30 @@ public class RoomRatePlanAppService(
             Priority = group?.Priority ?? 0,
             IsDefault = group?.IsDefault ?? false,
             IsActive = group?.IsActive ?? false,
+            ChannelIds = channelTargets.Select(target => target.ChannelId).ToList(),
+            ChannelNames = channelTargets.Select(target => target.Channel.Name ?? string.Empty).ToList(),
             CheckInTime = plan.CheckInTime,
             CheckOutTime = plan.CheckOutTime,
         };
+    }
+
+    private async Task SaveGroupChannelsAsync(Guid groupId, List<Guid> channelIds)
+    {
+        var existing = await groupChannelRepository.GetAll().Where(target => target.RoomRatePlanGroupId == groupId).ToListAsync();
+        foreach (var target in existing)
+            await groupChannelRepository.DeleteAsync(target);
+
+        if (channelIds == null || channelIds.Count == 0)
+            return;
+
+        foreach (var channelId in channelIds.Distinct().Where(channelId => channelId != Guid.Empty))
+        {
+            await groupChannelRepository.InsertAsync(new RoomRatePlanGroupChannel
+            {
+                RoomRatePlanGroupId = groupId,
+                ChannelId = channelId,
+            });
+        }
     }
 
     private async Task SaveDayRatesAsync(Guid planId, List<RoomRatePlanDayDto> dayRates)

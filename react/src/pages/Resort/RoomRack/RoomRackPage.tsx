@@ -8,6 +8,7 @@ import { useTheme } from '@contexts/ThemeContext';
 import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
 import { ReservationStatus } from '@/types/resort.types';
+import { ChannelAvatar } from '@/lib/channelIcons';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 import { RoomRackDetailPanel, type RoomRackPanelItem } from './RoomRackDetailPanel';
 import { RoomRackBookingsDialog, type BookingsDialogItem } from './RoomRackBookingsDialog';
@@ -58,7 +59,7 @@ function getDateIndexFromPosition(pct: number, n: number): number | null {
 
 type CellInfo =
   | { type: 'stay'; stayNo: string; guestName: string; stayId: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
-  | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string; reservationStatus?: number; isArrivalDate?: boolean; isDepartureDate?: boolean }
+  | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string; reservationStatus?: number; channelName?: string; channelIcon?: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
   | { type: 'blocked'; label: string }
   | null;
 type CellInfoNonNull = Exclude<CellInfo, null>;
@@ -222,6 +223,8 @@ export const RoomRackPage = () => {
             guestName: cell.guestName ?? '',
             reservationId: cell.reservationId ?? '',
             reservationStatus: cell.reservationStatus,
+            channelName: cell.channelName,
+            channelIcon: cell.channelIcon,
             isArrivalDate: cell.isArrivalDate,
             isDepartureDate: cell.isDepartureDate,
           },
@@ -360,6 +363,8 @@ export const RoomRackPage = () => {
         guestName: cell.guestName ?? '—',
         roomNumber: (cell.roomNumber ?? '').trim(),
         status: cell.reservationStatus,
+        channelName: cell.channelName,
+        channelIcon: cell.channelIcon,
       });
       listBy.set(k, list);
     });
@@ -376,6 +381,8 @@ export const RoomRackPage = () => {
         guestName: ub.guestName ?? '—',
         roomNumber: '—',
         status: ub.reservationStatus,
+        channelName: ub.channelName,
+        channelIcon: ub.channelIcon,
       });
       listBy.set(k, list);
     });
@@ -587,7 +594,7 @@ export const RoomRackPage = () => {
                       {rooms.map((room) => {
                         const roomNum = room.roomNumber;
                         const n = dateColumns.length;
-                        type SegmentItem = { id: string; guestName: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; bgStyle?: { backgroundColor: string; color: string }; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
+                        type SegmentItem = { id: string; guestName: string; channelName?: string; channelIcon?: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; bgStyle?: { backgroundColor: string; color: string }; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
                         const segments: SegmentItem[] = [];
                         let i = 0;
                         while (i < dateColumns.length) {
@@ -648,7 +655,7 @@ export const RoomRackPage = () => {
                             tooltip = `In-house · Stay ${cell.stayNo}\nGuest: ${cell.guestName || '—'}\nDates: ${dateRangeStr}`;
                           } else if (cell.type === 'reservation') {
                             const statusLabel = cell.reservationStatus != null ? reservationStatusLabel[cell.reservationStatus] ?? 'Unknown' : 'Unknown';
-                            tooltip = `Reservation ${cell.reservationNo}\nGuest: ${cell.guestName || '—'}\nStatus: ${statusLabel}\nDates: ${dateRangeStr}`;
+                            tooltip = `Reservation ${cell.reservationNo}\nGuest: ${cell.guestName || '—'}\nChannel: ${cell.channelName || '—'}\nStatus: ${statusLabel}\nDates: ${dateRangeStr}`;
                           } else {
                             tooltip = cell.label;
                           }
@@ -656,11 +663,13 @@ export const RoomRackPage = () => {
                           if (cell.type === 'stay') {
                             panelItem = { type: 'stay', stayId: cell.stayId, stayNo: cell.stayNo ?? '', guestName: cell.guestName ?? '', dateRange: dateRangeStr };
                           } else if (cell.type === 'reservation') {
-                            panelItem = { type: 'reservation', reservationId: cell.reservationId, reservationNo: cell.reservationNo ?? '', guestName: cell.guestName ?? '', status: cell.reservationStatus, dateRange: dateRangeStr };
+                            panelItem = { type: 'reservation', reservationId: cell.reservationId, reservationNo: cell.reservationNo ?? '', guestName: cell.guestName ?? '', status: cell.reservationStatus, dateRange: dateRangeStr, channelName: cell.channelName, channelIcon: cell.channelIcon };
                           }
                           segments.push({
                             id: `${cellId}-${startIndex}`,
                             guestName: guestName || '—',
+                            channelName: cell.type === 'reservation' ? cell.channelName : undefined,
+                            channelIcon: cell.type === 'reservation' ? cell.channelIcon : undefined,
                             navPath,
                             startIndex,
                             endIndex,
@@ -796,7 +805,7 @@ export const RoomRackPage = () => {
                                     >
                                       <button
                                         type="button"
-                                        className={`flex-1 min-w-0 truncate px-1.5 py-0.5 text-left text-xs ${seg.bgStyle ? '' : seg.textClass}`}
+                                        className={`flex flex-1 items-center gap-1 min-w-0 px-1.5 py-0.5 text-left text-xs ${seg.bgStyle ? '' : seg.textClass}`}
                                         style={seg.bgStyle ? { color: seg.bgStyle.color } : undefined}
                                         onClick={() => {
                                           if (seg.panelItem) {
@@ -808,7 +817,8 @@ export const RoomRackPage = () => {
                                         }}
                                         title={seg.tooltip}
                                       >
-                                        {seg.guestName}
+                                        {seg.channelIcon ? <ChannelAvatar icon={seg.channelIcon} name={seg.channelName} className="h-3.5 w-3.5 shrink-0" /> : null}
+                                        <span className="truncate">{seg.guestName}</span>
                                       </button>
                                     </div>
                                   );

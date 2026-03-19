@@ -271,7 +271,8 @@ public class RoomAppService(
                 ratesByRoomType[roomTypeId] = await roomRatePlanAppService.GetEffectiveRatePerNightForStayAsync(
                     roomTypeId,
                     arrivalDate,
-                    departureDate);
+                    departureDate,
+                    input.ChannelId);
             }
         }
 

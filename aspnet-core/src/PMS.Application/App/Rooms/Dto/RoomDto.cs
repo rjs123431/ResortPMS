@@ -102,6 +102,7 @@ public class GetRoomsInput : PagedResultFilterRequestDto, IShouldNormalize
 public class GetAvailableRoomsInput
 {
     public Guid? RoomTypeId { get; set; }
+    public Guid? ChannelId { get; set; }
     public DateTime? ArrivalDate { get; set; }
     public DateTime? DepartureDate { get; set; }
     public Guid? ReservationId { get; set; }

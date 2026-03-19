@@ -31,6 +31,16 @@ public class RoomRatePlanGroup : AuditedEntity<Guid>, IPassivable
     public bool IsActive { get; set; } = true;
 
     public virtual ICollection<RoomRatePlan> RoomRatePlans { get; set; } = [];
+    public virtual ICollection<RoomRatePlanGroupChannel> ChannelTargets { get; set; } = [];
+}
+
+public class RoomRatePlanGroupChannel : Entity<Guid>
+{
+    public Guid RoomRatePlanGroupId { get; set; }
+    public Guid ChannelId { get; set; }
+
+    public virtual RoomRatePlanGroup RoomRatePlanGroup { get; set; }
+    public virtual Channel Channel { get; set; }
 }
 
 public class RoomRatePlan : AuditedEntity<Guid>

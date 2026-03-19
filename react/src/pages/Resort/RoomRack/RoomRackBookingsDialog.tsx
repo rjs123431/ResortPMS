@@ -2,9 +2,10 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { ReservationStatus } from '@/types/resort.types';
+import { ChannelAvatar } from '@/lib/channelIcons';
 
 export type BookingsDialogItem =
-  | { type: 'reservation'; id: string; number: string; guestName: string; roomNumber: string; status?: number }
+  | { type: 'reservation'; id: string; number: string; guestName: string; roomNumber: string; status?: number; channelName?: string; channelIcon?: string }
   | { type: 'stay'; id: string; number: string; guestName: string; roomNumber: string };
 
 const reservationStatusLabel: Record<number, string> = {
@@ -85,8 +86,9 @@ export const RoomRackBookingsDialog = ({
                         className="flex flex-col gap-0.5 rounded-lg border border-gray-200 dark:border-gray-600 p-3 hover:bg-gray-50 hover:border-primary-300 dark:hover:bg-gray-700 dark:hover:border-primary-600 transition-colors"
                         onClick={onClose}
                       >
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          Reservation {item.number}
+                        <span className="flex items-center gap-2 font-medium text-gray-900 dark:text-white">
+                          <ChannelAvatar icon={item.channelIcon} name={item.channelName} className="h-5 w-5" />
+                          <span>Reservation {item.number}</span>
                         </span>
                         <span className="text-sm text-gray-600 dark:text-gray-300">
                           Room {item.roomNumber} · {item.guestName}

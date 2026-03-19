@@ -13,6 +13,7 @@ type RoomRatePlanGroupListItem = {
   priority: number;
   isDefault: boolean;
   isActive: boolean;
+  channelNames: string[];
   roomTypeNames: string[];
   planIds: string[];
 };
@@ -55,6 +56,7 @@ export const RoomRatePlansPage = () => {
           priority: item.priority,
           isDefault: item.isDefault,
           isActive: item.isActive,
+          channelNames: [],
           roomTypeNames: [],
           planIds: [],
         });
@@ -63,6 +65,11 @@ export const RoomRatePlansPage = () => {
       const group = byCode.get(key)!;
       if (!group.roomTypeNames.includes(item.roomTypeName)) {
         group.roomTypeNames.push(item.roomTypeName);
+      }
+      for (const channelName of item.channelNames ?? []) {
+        if (!group.channelNames.includes(channelName)) {
+          group.channelNames.push(channelName);
+        }
       }
       group.planIds.push(item.id);
     }
@@ -123,6 +130,7 @@ export const RoomRatePlansPage = () => {
                   <th className="p-2">Priority</th>
                   <th className="p-2">Default</th>
                   <th className="p-2">Active</th>
+                  <th className="p-2">Channels</th>
                   <th className="p-2">Room Types</th>
                   <th className="p-2">Actions</th>
                 </tr>
@@ -137,6 +145,7 @@ export const RoomRatePlansPage = () => {
                     <td className="p-2">{group.priority}</td>
                     <td className="p-2">{group.isDefault ? 'Yes' : 'No'}</td>
                     <td className="p-2">{group.isActive ? 'Yes' : 'No'}</td>
+                    <td className="p-2">{group.channelNames.length > 0 ? group.channelNames.join(', ') : 'All channels'}</td>
                     <td className="p-2">{group.roomTypeNames.length}</td>
                     <td className="p-2">
                       {canEdit ? (

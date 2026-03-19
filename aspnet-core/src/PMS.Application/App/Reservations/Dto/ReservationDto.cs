@@ -16,6 +16,7 @@ public class ReservationDto : EntityDto<Guid>
     public string ReservationNo { get; set; }
     public Guid? ChannelId { get; set; }
     public string ChannelName { get; set; }
+    public string ChannelIcon { get; set; }
     public Guid? AgencyId { get; set; }
     public string AgencyName { get; set; }
     public Guid? GuestId { get; set; }
@@ -51,6 +52,7 @@ public class ReservationListDto : EntityDto<Guid>
     public string ReservationNo { get; set; }
     public Guid? ChannelId { get; set; }
     public string ChannelName { get; set; }
+    public string ChannelIcon { get; set; }
     public Guid? AgencyId { get; set; }
     public string AgencyName { get; set; }
     public Guid? GuestId { get; set; }

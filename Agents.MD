@@ -159,3 +159,21 @@ UI behavior:
 - `/admin/room-rate-plans` shows grouped rows (one row per group code).
 - `/admin/room-rate-plans/new` creates a group and room-type rates.
 - `/admin/room-rate-plans/:groupCode/edit` edits group metadata and per-room-type rates.
+
+---
+
+# Front Desk Layout (2026-03)
+
+Front desk pages should use the same sidebar width and general shell structure as housekeeping pages.
+
+- Use `FrontDeskSidebar` inside `FrontDeskLayout` instead of a separate top navigation row.
+- Keep the sidebar width pattern aligned with `HousekeepingSidebar` (`sm:min-w-[200px]` with icon-first compact behavior on smaller widths).
+- Put front desk navigation items in the sidebar, including:
+  - Dashboard
+  - Room Rack
+  - Reservations
+  - Arrivals
+  - Walk-In
+  - In House
+  - Departures
+  - Guests

@@ -536,7 +536,8 @@ public class ReservationAppService(
             var ratePerNight = await roomRatePlanAppService.GetEffectiveRatePerNightForStayAsync(
                 roomTypeRow.RoomTypeId,
                 arrivalDate,
-                departureDate);
+                departureDate,
+                reservation.ChannelId);
             var amount = ratePerNight * numberOfNights;
 
             for (var index = 0; index < roomTypeRow.Quantity; index++)
@@ -1063,6 +1064,7 @@ public class ReservationAppService(
 
         var dto = ObjectMapper.Map<ReservationDto>(reservation);
         dto.ChannelName = reservation.Channel?.Name ?? string.Empty;
+        dto.ChannelIcon = reservation.Channel?.Icon ?? string.Empty;
         dto.AgencyName = reservation.Agency?.Name ?? string.Empty;
         foreach (var extraBed in dto.ExtraBeds)
         {
@@ -1105,6 +1107,7 @@ public class ReservationAppService(
         {
             var source = items.FirstOrDefault(x => x.Id == item.Id);
             item.ChannelName = source?.Channel?.Name ?? string.Empty;
+            item.ChannelIcon = source?.Channel?.Icon ?? string.Empty;
             item.AgencyName = source?.Agency?.Name ?? string.Empty;
         }
 
@@ -1136,6 +1139,7 @@ public class ReservationAppService(
         {
             var source = items.FirstOrDefault(x => x.Id == item.Id);
             item.ChannelName = source?.Channel?.Name ?? string.Empty;
+            item.ChannelIcon = source?.Channel?.Icon ?? string.Empty;
             item.AgencyName = source?.Agency?.Name ?? string.Empty;
         }
 

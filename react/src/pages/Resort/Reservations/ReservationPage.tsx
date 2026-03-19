@@ -601,6 +601,7 @@ export const ReservationPage = () => {
               roomTypes={roomTypes}
               arrivalDate={startDate ? formatDateLocal(startDate) : undefined}
               departureDate={endDate ? formatDateLocal(endDate) : undefined}
+              channelId={selectedChannelId || undefined}
               selectedRoomTypeIds={selectedRoomTypeIds}
               onSelectedRoomTypeIdsChange={setSelectedRoomTypeIds}
               selectedAmounts={selectedAmounts}

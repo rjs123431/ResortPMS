@@ -108,6 +108,9 @@ public class ChannelDto : EntityDto<Guid>
     [StringLength(64)]
     public string Name { get; set; }
 
+    [StringLength(256)]
+    public string Icon { get; set; }
+
     public bool IsActive { get; set; }
 }
 
@@ -115,6 +118,7 @@ public class ChannelDto : EntityDto<Guid>
 public class ChannelListDto : EntityDto<Guid>
 {
     public string Name { get; set; }
+    public string Icon { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -124,6 +128,9 @@ public class CreateChannelDto
     [Required]
     [StringLength(64)]
     public string Name { get; set; }
+
+    [StringLength(256)]
+    public string Icon { get; set; }
 }
 
 public class GetChannelsInput : PagedResultFilterRequestDto, IShouldNormalize

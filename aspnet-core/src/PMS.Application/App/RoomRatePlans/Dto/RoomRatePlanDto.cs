@@ -22,6 +22,8 @@ public class RoomRatePlanDto : EntityDto<Guid>
     public int Priority { get; set; }
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; } = true;
+    public List<Guid> ChannelIds { get; set; } = new();
+    public List<string> ChannelNames { get; set; } = new();
     public TimeSpan CheckInTime { get; set; } = new TimeSpan(14, 0, 0);
     public TimeSpan CheckOutTime { get; set; } = new TimeSpan(12, 0, 0);
     public List<RoomRatePlanDayDto> DayRates { get; set; } = new();
@@ -40,6 +42,8 @@ public class RoomRatePlanListDto : EntityDto<Guid>
     public int Priority { get; set; }
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; }
+    public List<Guid> ChannelIds { get; set; } = new();
+    public List<string> ChannelNames { get; set; } = new();
     public TimeSpan CheckInTime { get; set; } = new TimeSpan(14, 0, 0);
     public TimeSpan CheckOutTime { get; set; } = new TimeSpan(12, 0, 0);
 }
@@ -56,6 +60,7 @@ public class CreateRoomRatePlanDto
     public int Priority { get; set; }
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; } = true;
+    public List<Guid> ChannelIds { get; set; } = new();
     public TimeSpan CheckInTime { get; set; } = new TimeSpan(14, 0, 0);
     public TimeSpan CheckOutTime { get; set; } = new TimeSpan(12, 0, 0);
     public List<RoomRatePlanDayDto> DayRates { get; set; } = new();

@@ -252,6 +252,7 @@ public class ChannelAppService(
     public async Task<Guid> CreateAsync(CreateChannelDto input)
     {
         var name = input.Name?.Trim() ?? string.Empty;
+        var icon = input.Icon?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name)) throw new UserFriendlyException("Channel name is required.");
 
         var exists = await channelRepository.GetAll().AnyAsync(x => x.Name == name);
@@ -259,6 +260,7 @@ public class ChannelAppService(
 
         var entity = ObjectMapper.Map<Channel>(input);
         entity.Name = name;
+        entity.Icon = icon;
         entity.IsActive = true;
 
         return await channelRepository.InsertAndGetIdAsync(entity);
@@ -269,6 +271,7 @@ public class ChannelAppService(
     {
         var entity = await channelRepository.GetAsync(input.Id);
         var name = input.Name?.Trim() ?? string.Empty;
+        var icon = input.Icon?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name)) throw new UserFriendlyException("Channel name is required.");
 
         var duplicate = await channelRepository.GetAll().AnyAsync(x => x.Id != input.Id && x.Name == name);
@@ -276,6 +279,7 @@ public class ChannelAppService(
 
         ObjectMapper.Map(input, entity);
         entity.Name = name;
+        entity.Icon = icon;
         await channelRepository.UpdateAsync(entity);
     }
 }

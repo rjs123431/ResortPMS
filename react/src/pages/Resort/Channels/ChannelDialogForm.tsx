@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import type { LookupDto } from '@/types/resort.types';
+import type { ChannelDto } from '@/types/resort.types';
+import { CHANNEL_ICON_OPTIONS, ChannelAvatar, DEFAULT_CHANNEL_ICON } from '@/lib/channelIcons';
 
 type ChannelDialogFormProps = {
   isOpen: boolean;
   editingId: string | null;
-  form: LookupDto;
+  form: ChannelDto;
   canCreate: boolean;
   canEdit: boolean;
   isSaving: boolean;
   onClose: () => void;
-  onFormChange: (updater: (prev: LookupDto) => LookupDto) => void;
+  onFormChange: (updater: (prev: ChannelDto) => ChannelDto) => void;
   onSave: () => void;
 };
 
@@ -41,7 +42,7 @@ export const ChannelDialogForm = ({
     <Dialog open={isOpen} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
       <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
-        <DialogPanel className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
+        <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <div className="mb-4 flex items-center justify-between">
             <DialogTitle as="h3" className="text-lg font-semibold">
               {editingId ? 'Edit Channel' : 'New Channel'}
@@ -54,6 +55,32 @@ export const ChannelDialogForm = ({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Channel Name</label>
             <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.name} onChange={(e) => onFormChange((s) => ({ ...s, name: e.target.value }))} />
+          </div>
+          <div className="mt-4">
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Icon</label>
+            <div className="mb-3 flex items-center gap-3 rounded-lg border border-dashed border-gray-300 px-3 py-2 dark:border-gray-600">
+              <ChannelAvatar icon={form.icon} name={form.name} className="h-10 w-10" />
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Selected icon</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Choose one of the preset image icons below.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {CHANNEL_ICON_OPTIONS.map((option) => {
+                const isSelected = (form.icon || DEFAULT_CHANNEL_ICON) === option.src;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition ${isSelected ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/30' : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-primary-500 dark:hover:bg-gray-700/50'}`}
+                    onClick={() => onFormChange((s) => ({ ...s, icon: option.src }))}
+                  >
+                    <ChannelAvatar icon={option.src} name={option.label} className="h-8 w-8" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           {editingId ? (
             <label className="mt-3 flex items-center gap-2 text-sm">

@@ -1,25 +1,45 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { CalendarDaysIcon, UserGroupIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
+import {
+  ArrowLeftEndOnRectangleIcon,
+  ArrowRightStartOnRectangleIcon,
+  CalendarDaysIcon,
+  HomeIcon,
+  Squares2X2Icon,
+  UserGroupIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 
 const navItems = [
+  { to: '/front-desk', label: 'Dashboard', title: 'Front desk dashboard', Icon: HomeIcon },
   { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon },
   { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon },
+  { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon },
+  { to: '/front-desk/walk-in', label: 'Walk-In', title: 'Create walk-in check-ins', Icon: UsersIcon },
+  { to: '/front-desk/stays', label: 'In House', title: 'Manage in-house stays', Icon: HomeIcon },
+  { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon },
   { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon },
 ] as const;
 
 export const FrontDeskSidebar: React.FC = () => {
   const location = useLocation();
 
+  const isActiveFor = (to: string) => {
+    if (to === '/front-desk') return location.pathname === '/front-desk' || location.pathname === '/front-desk/';
+    if (to === '/front-desk/reservations') return location.pathname === '/front-desk/reservations' || location.pathname.startsWith('/front-desk/reservations/');
+    if (to === '/front-desk/check-in') return location.pathname === '/front-desk/check-in' || location.pathname.startsWith('/front-desk/check-in/');
+    if (to === '/front-desk/stays') return location.pathname === '/front-desk/stays' || location.pathname.startsWith('/front-desk/stays/');
+    if (to === '/front-desk/check-out') return location.pathname === '/front-desk/check-out' || location.pathname.startsWith('/front-desk/check-out/');
+    return location.pathname === to || location.pathname.startsWith(to + '/');
+  };
+
   return (
     <aside className="shrink-0 h-full">
-      <nav className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <nav className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:border-r">
         <ul className="flex flex-col gap-0.5 py-2 pr-2 pl-2 sm:pr-3 sm:min-w-[200px]">
           {navItems.map(({ to, label, title, Icon }) => {
-            const isActive =
-              to === '/front-desk/reservations'
-                ? location.pathname === '/front-desk/reservations' || location.pathname.startsWith('/front-desk/reservations/')
-                : location.pathname.startsWith(to);
+            const isActive = isActiveFor(to);
+
             return (
               <li key={to}>
                 <NavLink

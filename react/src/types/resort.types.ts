@@ -149,6 +149,8 @@ export interface RoomRackDayCellDto {
   reservationNo: string;
   stayNo: string;
   guestName: string;
+  channelName?: string;
+  channelIcon?: string;
   /** Reservation status when cell is Reserved (e.g. Confirmed=2 → green, Pending=1 → yellow). */
   reservationStatus?: number;
   /** True when this date is the arrival date for the reservation/stay (bar starts at 2pm). */
@@ -166,6 +168,8 @@ export interface UnassignedBookingDto {
   reservationId: string;
   reservationNo: string;
   guestName: string;
+  channelName?: string;
+  channelIcon?: string;
   reservationStatus: number;
 }
 
@@ -300,6 +304,8 @@ export interface RoomRatePlanDto {
   priority: number;
   isDefault: boolean;
   isActive: boolean;
+  channelIds: string[];
+  channelNames: string[];
   dayRates: RoomRatePlanDayDto[];
   dateOverrides: RatePlanDateOverrideDto[];
 }
@@ -315,6 +321,8 @@ export interface RoomRatePlanListDto {
   priority: number;
   isDefault: boolean;
   isActive: boolean;
+  channelIds: string[];
+  channelNames: string[];
 }
 
 export interface CreateRoomRatePlanDto {
@@ -326,6 +334,7 @@ export interface CreateRoomRatePlanDto {
   priority: number;
   isDefault: boolean;
   isActive: boolean;
+  channelIds: string[];
   dayRates: RoomRatePlanDayDto[];
   dateOverrides: RatePlanDateOverrideDto[];
 }
@@ -386,6 +395,7 @@ export interface ReservationListDto {
   reservationNo: string;
   channelId?: string;
   channelName?: string;
+  channelIcon?: string;
   agencyId?: string;
   agencyName?: string;
   guestName: string;
@@ -625,6 +635,7 @@ export interface ReservationDetailDto {
   reservationNo: string;
   channelId?: string;
   channelName?: string;
+  channelIcon?: string;
   agencyId?: string;
   agencyName?: string;
   guestId?: string;
@@ -737,6 +748,23 @@ export interface CreateLookupDto {
 }
 
 export interface LookupDto extends CreateLookupDto {
+  id: string;
+  isActive: boolean;
+}
+
+export interface ChannelListDto {
+  id: string;
+  name: string;
+  icon?: string;
+  isActive: boolean;
+}
+
+export interface CreateChannelDto {
+  name: string;
+  icon?: string;
+}
+
+export interface ChannelDto extends CreateChannelDto {
   id: string;
   isActive: boolean;
 }

@@ -23,6 +23,8 @@ public class RoomRackDayCellDto
     public string ReservationNo { get; set; } = string.Empty;
     public string StayNo { get; set; } = string.Empty;
     public string GuestName { get; set; } = string.Empty;
+    public string ChannelName { get; set; } = string.Empty;
+    public string ChannelIcon { get; set; } = string.Empty;
     /// <summary>Reservation status when this cell is Reserved (Status=2). Confirmed=2 for green, Pending=1 for yellow.</summary>
     public int? ReservationStatus { get; set; }
     /// <summary>True when this date is the arrival date for the reservation/stay in this room (used to draw bar from 2pm on first day).</summary>
@@ -41,6 +43,8 @@ public class UnassignedBookingDto
     public Guid ReservationId { get; set; }
     public string ReservationNo { get; set; } = string.Empty;
     public string GuestName { get; set; } = string.Empty;
+    public string ChannelName { get; set; } = string.Empty;
+    public string ChannelIcon { get; set; } = string.Empty;
     public int ReservationStatus { get; set; }
 }
 

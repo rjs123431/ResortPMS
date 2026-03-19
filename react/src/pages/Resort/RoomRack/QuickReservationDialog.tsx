@@ -67,7 +67,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   });
 
   const latestRateQuery = useQuery({
-    queryKey: ['quick-reservation-room-rate', payload?.roomId, payload?.roomTypeId, payload?.checkInDate, payload?.checkOutDate],
+    queryKey: ['quick-reservation-room-rate', payload?.roomId, payload?.roomTypeId, payload?.checkInDate, payload?.checkOutDate, selectedChannelId],
     enabled: open && !!payload,
     queryFn: async () => {
       if (!payload) {
@@ -78,6 +78,10 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         payload.roomTypeId,
         payload.checkInDate,
         payload.checkOutDate,
+        undefined,
+        undefined,
+        undefined,
+        selectedChannelId || undefined,
       );
 
       const selectedRoom = rooms.find((room) => room.id === payload.roomId);
@@ -341,7 +345,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                 )}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reservation channel</label>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Channel</label>
                 <select
                   className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   value={selectedChannelId}
@@ -350,19 +354,6 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                   <option value="">Select channel</option>
                   {(channels ?? []).map((channel) => (
                     <option key={channel.id} value={channel.id}>{channel.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Agency</label>
-                <select
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={selectedAgencyId}
-                  onChange={(e) => setSelectedAgencyId(e.target.value)}
-                >
-                  <option value="">Select agency (optional)</option>
-                  {(agencies ?? []).map((agency) => (
-                    <option key={agency.id} value={agency.id}>{agency.name}</option>
                   ))}
                 </select>
               </div>
@@ -401,7 +392,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
               className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
               title="Create a draft reservation with no room assigned"
             >
-              Temp Reserve
+              Draft Reserve
             </button>
             <button
               type="button"

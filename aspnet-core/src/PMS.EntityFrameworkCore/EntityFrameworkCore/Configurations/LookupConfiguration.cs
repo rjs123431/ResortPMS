@@ -36,6 +36,7 @@ internal class ChannelConfiguration : IEntityTypeConfiguration<Channel>
         entity.ToTable("Channel");
 
         entity.Property(e => e.Name).HasMaxLength(64).IsRequired();
+        entity.Property(e => e.Icon).HasMaxLength(256).IsRequired(false);
 
         entity.HasIndex(e => e.Name).IsUnique();
     }

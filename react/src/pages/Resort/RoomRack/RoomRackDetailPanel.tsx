@@ -5,6 +5,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 import { LogoSpinner } from '@components/common/LogoSpinner';
+import { ChannelAvatar } from '@/lib/channelIcons';
 
 const reservationStatusLabel: Record<number, string> = {
   [ReservationStatus.Draft]: 'Draft',
@@ -17,7 +18,7 @@ const reservationStatusLabel: Record<number, string> = {
 };
 
 export type RoomRackPanelItem =
-  | { type: 'reservation'; reservationId: string; reservationNo: string; guestName: string; status?: number; dateRange: string }
+  | { type: 'reservation'; reservationId: string; reservationNo: string; guestName: string; status?: number; dateRange: string; channelName?: string; channelIcon?: string }
   | { type: 'stay'; stayId: string; stayNo: string; guestName: string; dateRange: string };
 
 interface RoomRackDetailPanelProps {
@@ -130,6 +131,10 @@ export const RoomRackDetailPanel: React.FC<RoomRackDetailPanelProps> = ({ open, 
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     Status: <span className="font-medium">{reservationStatusLabel[reservation.status] ?? 'Unknown'}</span>
                   </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <ChannelAvatar icon={reservation.channelIcon} name={reservation.channelName} className="h-5 w-5" />
+                    <span>Channel: {reservation.channelName || '—'}</span>
+                  </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300">Guest: {reservation.guestName || '—'}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {formatDate(reservation.arrivalDate)} – {formatDate(reservation.departureDate)}
@@ -164,6 +169,10 @@ export const RoomRackDetailPanel: React.FC<RoomRackDetailPanelProps> = ({ open, 
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     Status: <span className="font-medium">{item.status != null ? reservationStatusLabel[item.status] : '—'}</span>
                   </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <ChannelAvatar icon={item.channelIcon} name={item.channelName} className="h-5 w-5" />
+                    <span>Channel: {item.channelName || '—'}</span>
+                  </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300">Guest: {item.guestName || '—'}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">{item.dateRange}</p>
                 </div>

@@ -29,6 +29,7 @@ type RoomTypeAvailabilitySearchProps = {
   arrivalDate?: string;
   departureDate?: string;
   reservationId?: string;
+  channelId?: string;
   selectedRoomTypeIds: string[];
   onSelectedRoomTypeIdsChange: (roomTypeIds: string[]) => void;
   selectedAmounts: Record<string, number>;
@@ -48,6 +49,7 @@ export const RoomTypeAvailabilitySearch = ({
   arrivalDate,
   departureDate,
   reservationId,
+  channelId,
   selectedRoomTypeIds,
   onSelectedRoomTypeIdsChange,
   selectedAmounts,
@@ -75,6 +77,7 @@ export const RoomTypeAvailabilitySearch = ({
       reservationId,
       excludeReservedWithoutAssignedRoom,
       checkInReadyOnly,
+      channelId,
     ],
     queryFn: async () => {
       if (!searchCriteria) return [] as RoomListDto[];
@@ -88,6 +91,7 @@ export const RoomTypeAvailabilitySearch = ({
             reservationId,
             excludeReservedWithoutAssignedRoom,
             checkInReadyOnly,
+            channelId,
           )
         )
       );

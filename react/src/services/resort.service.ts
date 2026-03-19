@@ -1,9 +1,12 @@
 import { api } from './api.service';
 import {
   ApiResponse,
+  ChannelDto,
+  ChannelListDto,
   ChargeTypeDto,
   ChargeTypeListDto,
   CheckInResultDto,
+  CreateChannelDto,
   CreateChargeTypeDto,
   CreateLookupDto,
   CheckOutRecordDto,
@@ -231,6 +234,7 @@ export const resortService = {
     reservationId?: string,
     excludeReservedWithoutAssignedRoom?: boolean,
     checkInReadyOnly?: boolean,
+    channelId?: string,
   ) => {
     const params: Record<string, string> = {};
     if (roomTypeId) params.RoomTypeId = roomTypeId;
@@ -243,6 +247,7 @@ export const resortService = {
     if (checkInReadyOnly !== undefined) {
       params.CheckInReadyOnly = String(checkInReadyOnly);
     }
+    if (channelId) params.ChannelId = channelId;
 
     const response = await api.get<ApiResponse<RoomListDto[]>>('/api/services/app/Room/GetAvailableRooms', {
       params,
@@ -623,12 +628,12 @@ export const resortService = {
   },
 
   getChannels: async () => {
-    const response = await api.get<ApiResponse<LookupListDto[]>>('/api/services/app/Channel/GetAllActive');
+    const response = await api.get<ApiResponse<ChannelListDto[]>>('/api/services/app/Channel/GetAllActive');
     return response.data.result;
   },
 
   getChannelsPaged: async (filter = '', skipCount = 0, maxResultCount = 100) => {
-    const response = await api.get<ApiResponse<PagedResultDto<LookupListDto>>>('/api/services/app/Channel/GetAll', {
+    const response = await api.get<ApiResponse<PagedResultDto<ChannelListDto>>>('/api/services/app/Channel/GetAll', {
       params: {
         Filter: filter,
         Sorting: 'Name asc',
@@ -640,18 +645,18 @@ export const resortService = {
   },
 
   getChannel: async (id: string) => {
-    const response = await api.get<ApiResponse<LookupDto>>('/api/services/app/Channel/Get', {
+    const response = await api.get<ApiResponse<ChannelDto>>('/api/services/app/Channel/Get', {
       params: { id },
     });
     return response.data.result;
   },
 
-  createChannel: async (input: CreateLookupDto) => {
+  createChannel: async (input: CreateChannelDto) => {
     const response = await api.post<ApiResponse<string>>('/api/services/app/Channel/Create', input);
     return response.data.result;
   },
 
-  updateChannel: async (input: LookupDto) => {
+  updateChannel: async (input: ChannelDto) => {
     await api.put('/api/services/app/Channel/Update', input);
   },
 

@@ -20,6 +20,26 @@ internal class RoomRatePlanGroupConfiguration : IEntityTypeConfiguration<RoomRat
     }
 }
 
+internal class RoomRatePlanGroupChannelConfiguration : IEntityTypeConfiguration<RoomRatePlanGroupChannel>
+{
+    public void Configure(EntityTypeBuilder<RoomRatePlanGroupChannel> entity)
+    {
+        entity.ToTable("RoomRatePlanGroupChannel");
+
+        entity.HasIndex(e => new { e.RoomRatePlanGroupId, e.ChannelId }).IsUnique();
+
+        entity.HasOne(e => e.RoomRatePlanGroup)
+            .WithMany(group => group.ChannelTargets)
+            .HasForeignKey(e => e.RoomRatePlanGroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        entity.HasOne(e => e.Channel)
+            .WithMany(channel => channel.RoomRatePlanGroupChannels)
+            .HasForeignKey(e => e.ChannelId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal class RoomRatePlanConfiguration : IEntityTypeConfiguration<RoomRatePlan>
 {
     public void Configure(EntityTypeBuilder<RoomRatePlan> entity)
