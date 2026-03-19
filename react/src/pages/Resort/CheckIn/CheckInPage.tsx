@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 import { LoadPreCheckInDialog } from '../Shared/LoadPreCheckInDialog';
+import { formatMoney } from '@utils/helpers';
 
 const formatDateOnly = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -116,7 +117,7 @@ export const CheckInPage = () => {
                       <td className="border border-gray-200 p-2 dark:border-gray-700">{toDateOnly(reservation.arrivalDate)}</td>
                       <td className="border border-gray-200 p-2 dark:border-gray-700">{toDateOnly(reservation.departureDate)}</td>
                       <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{reservation.nights}</td>
-                      <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{reservation.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{formatMoney(reservation.totalAmount)}</td>
                       <td className="border border-gray-200 p-2 dark:border-gray-700">
                         <button
                           type="button"

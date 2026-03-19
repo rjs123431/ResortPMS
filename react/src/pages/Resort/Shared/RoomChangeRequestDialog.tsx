@@ -7,6 +7,7 @@ import {
   RoomChangeReason,
   HousekeepingStatus,
 } from '@/types/resort.types';
+import { formatMoney } from '@utils/helpers';
 
 export const ROOM_CHANGE_SOURCE_OPTIONS: Array<{ value: RoomChangeSource; label: string }> = [
   { value: RoomChangeSource.GuestRequest, label: 'Guest Request' },
@@ -253,7 +254,7 @@ export const RoomChangeRequestDialog = ({
                             {getHousekeepingStatusLabel(room.housekeepingStatus)}
                           </span>
                         </td>
-                        <td className="p-2 text-right">{room.baseRate?.toFixed(2) ?? '-'}</td>
+                        <td className="p-2 text-right">{room.baseRate != null ? formatMoney(room.baseRate) : '-'}</td>
                         <td className="p-2 text-center">
                           <input
                             type="radio"

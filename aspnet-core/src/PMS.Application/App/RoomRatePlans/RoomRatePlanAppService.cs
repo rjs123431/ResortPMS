@@ -264,9 +264,6 @@ public class RoomRatePlanAppService(
             });
         }
 
-        if (options.Count == 0)
-            throw new UserFriendlyException("No active rate plan found for the specified dates. A rate plan is required to sell this room type.");
-
         return options;
     }
 
@@ -295,7 +292,7 @@ public class RoomRatePlanAppService(
             .ToListAsync();
 
         if (plans.Count == 0)
-            throw new UserFriendlyException("No active rate plan found for the specified dates. A rate plan is required to sell this room type.");
+            return 0m;
 
         decimal total = 0;
         var nights = 0;

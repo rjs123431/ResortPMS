@@ -47,14 +47,27 @@ const toDateKey = (d: Date | string | undefined | null): string => {
 const CHECK_IN_HOUR_FRAC = 14 / 24; // 2pm = start of bar on check-in day
 const CHECK_OUT_HOUR_FRAC = 12 / 24; // 12 noon = end of bar on checkout day
 
-/** AM half (left) of a column = end of previous night → previous date; PM half (right) = check-in 2pm → current date. */
-function getDateIndexFromPosition(pct: number, n: number): number | null {
-  const colRaw = pct * n;
-  const colIndex = Math.floor(colRaw);
+function getSelectableDateIndexFromPosition(
+  pct: number,
+  n: number,
+  isDateOccupied: (dateIndex: number) => boolean,
+): number | null {
+  if (n <= 0) return null;
+
+  const clampedPct = Math.max(0, Math.min(1, pct));
+  const colRaw = clampedPct * n;
+  const colIndex = Math.min(n - 1, Math.max(0, Math.floor(colRaw)));
   const posInCol = colRaw - colIndex;
-  const dateIndex = posInCol < 0.5 ? colIndex - 1 : colIndex;
-  if (dateIndex < 0 || dateIndex >= n) return null;
-  return dateIndex;
+  const preferredIndex = posInCol < CHECK_OUT_HOUR_FRAC ? colIndex - 1 : colIndex;
+  const fallbackIndex = preferredIndex === colIndex ? colIndex - 1 : colIndex;
+
+  for (const candidateIndex of [preferredIndex, fallbackIndex]) {
+    if (candidateIndex < 0 || candidateIndex >= n) continue;
+    if (!isDateOccupied(candidateIndex)) return candidateIndex;
+  }
+
+  if (preferredIndex < 0 || preferredIndex >= n) return null;
+  return preferredIndex;
 }
 
 type CellInfo =
@@ -241,11 +254,10 @@ export const RoomRackPage = () => {
       const cell = cellsByKey.get(`${roomNumber.trim()}|${dateKey}`);
       if (!cell || cell.status === 1) return false;
       if (cell.status === 4 || cell.status === 5 || cell.status === 6) return true;
-      const nextIndex = dateIndex + 1;
-      if (nextIndex >= dateColumns.length) return false;
-      const nextKey = dateColumns[nextIndex];
-      const nextCell = cellsByKey.get(`${roomNumber.trim()}|${nextKey}`);
-      if (!nextCell || nextCell.status === 1) return false;
+
+      // A checkout/departure marker occupies the morning of this date, but not the following night.
+      if ((cell.status === 2 || cell.status === 3) && cell.isDepartureDate) return false;
+
       return true;
     },
     [cellsByKey, dateColumns]
@@ -260,7 +272,9 @@ export const RoomRackPage = () => {
       const n = dateColumns.length;
       const x = e.clientX - rect.left;
       const pct = Math.max(0, Math.min(1, x / rect.width));
-      const col = getDateIndexFromPosition(pct, n);
+      const col = getSelectableDateIndexFromPosition(pct, n, (dateIndex) =>
+        isDateOccupied(selection.roomNumber, dateIndex),
+      );
       if (col === null) return;
       const start = selection.startIndex;
       let newEnd = col;
@@ -746,7 +760,9 @@ export const RoomRackPage = () => {
                                   const rect = e.currentTarget.getBoundingClientRect();
                                   const x = e.clientX - rect.left;
                                   const pct = Math.max(0, Math.min(1, x / rect.width));
-                                  const dateIndex = getDateIndexFromPosition(pct, n);
+                                  const dateIndex = getSelectableDateIndexFromPosition(pct, n, (candidateIndex) =>
+                                    isDateOccupied(roomNum, candidateIndex),
+                                  );
                                   if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) {
                                     setHoveredEmptyCell(null);
                                     return;
@@ -760,7 +776,9 @@ export const RoomRackPage = () => {
                                   const rect = el.getBoundingClientRect();
                                   const x = e.clientX - rect.left;
                                   const pct = Math.max(0, Math.min(1, x / rect.width));
-                                  const dateIndex = getDateIndexFromPosition(pct, n);
+                                  const dateIndex = getSelectableDateIndexFromPosition(pct, n, (candidateIndex) =>
+                                    isDateOccupied(roomNum, candidateIndex),
+                                  );
                                   if (dateIndex === null || isDateOccupied(roomNum, dateIndex)) return;
                                   timelineDragRef.current = el;
                                   setSelection({

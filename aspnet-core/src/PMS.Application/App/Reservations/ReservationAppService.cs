@@ -1091,6 +1091,7 @@ public class ReservationAppService(
             .Include(r => r.Channel)
             .Include(r => r.Agency)
             .Include(r => r.Guest)
+            .Include(r => r.Rooms)
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
                 r => r.ReservationNo.Contains(input.Filter) ||
                      r.GuestName.Contains(input.Filter))
@@ -1111,6 +1112,13 @@ public class ReservationAppService(
             item.ChannelName = source?.Channel?.Name ?? string.Empty;
             item.ChannelIcon = source?.Channel?.Icon ?? string.Empty;
             item.AgencyName = source?.Agency?.Name ?? string.Empty;
+            item.RoomNumbers = source?.Rooms != null
+                ? string.Join(", ", source.Rooms
+                    .Where(rr => !string.IsNullOrEmpty(rr.RoomNumber))
+                    .Select(rr => rr.RoomNumber)
+                    .Distinct()
+                    .OrderBy(n => n))
+                : string.Empty;
         }
 
         return new PagedResultDto<ReservationListDto>(total, list);

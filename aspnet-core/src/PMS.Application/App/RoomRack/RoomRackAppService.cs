@@ -95,17 +95,22 @@ public class RoomRackAppService(
         var stayList = await stayRepository.GetAll()
             .AsNoTracking()
             .Where(s => allStayIds.Contains(s.Id))
-            .Select(s => new { s.Id, s.StayNo, s.GuestName })
+            .Select(s => new { s.Id, s.StayNo, s.GuestName, s.Status })
             .ToListAsync();
 
         var resMap = reservationList.ToDictionary(x => x.Id, x => (x.ReservationNo ?? string.Empty, x.GuestName ?? string.Empty, (int)x.Status, x.ChannelName ?? string.Empty, x.ChannelIcon ?? string.Empty));
 
+        var checkedOutStayIds = stayList
+            .Where(s => s.Status == StayStatus.CheckedOut)
+            .Select(s => s.Id)
+            .ToHashSet();
         var stayMap = stayList.ToDictionary(x => x.Id, x => (x.StayNo ?? string.Empty, x.GuestName ?? string.Empty));
         var roomById = rooms.ToDictionary(r => r.Id);
 
         var departureByRoomAndDate = new Dictionary<(Guid RoomId, DateTime Date), (Guid? StayId, Guid? ResId, string GuestName, string StayNo, string ResNo, int Status)>();
         foreach (var sr in stayRoomsDepInRange)
         {
+            if (checkedOutStayIds.Contains(sr.StayId)) continue;
             var key = (sr.RoomId, sr.DepartureDate.Date);
             if (departureByRoomAndDate.ContainsKey(key)) continue;
             stayMap.TryGetValue(sr.StayId, out var st);
@@ -251,6 +256,17 @@ public class RoomRackAppService(
                 stayNo = string.Empty;
                 guestName = string.Empty;
                 resStatus = null;
+                isArrival = false;
+                isDeparture = false;
+            }
+
+            // Do not display checked-out stays in the grid — show as Vacant
+            if (stayId.HasValue && checkedOutStayIds.Contains(stayId.Value))
+            {
+                status = (int)RoomDailyInventoryStatus.Vacant;
+                stayId = null;
+                stayNo = string.Empty;
+                guestName = string.Empty;
                 isArrival = false;
                 isDeparture = false;
             }

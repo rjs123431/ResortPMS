@@ -34,6 +34,8 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    Icon = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Sort = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
@@ -889,6 +891,7 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ReservationNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    RoomRatePlanCode = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: true),
                     ChannelId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -991,6 +994,31 @@ namespace PMS.Migrations
                         principalTable: "OptionGroup",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomRatePlanGroupChannel",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomRatePlanGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ChannelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomRatePlanGroupChannel", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomRatePlanGroupChannel_Channel_ChannelId",
+                        column: x => x.ChannelId,
+                        principalTable: "Channel",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomRatePlanGroupChannel_RoomRatePlanGroup_RoomRatePlanGroupId",
+                        column: x => x.RoomRatePlanGroupId,
+                        principalTable: "RoomRatePlanGroup",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -3677,6 +3705,17 @@ namespace PMS.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_RoomRatePlanGroupChannel_ChannelId",
+                table: "RoomRatePlanGroupChannel",
+                column: "ChannelId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomRatePlanGroupChannel_RoomRatePlanGroupId_ChannelId",
+                table: "RoomRatePlanGroupChannel",
+                columns: new[] { "RoomRatePlanGroupId", "ChannelId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoomStatusLog_RoomId_ChangedAt",
                 table: "RoomStatusLog",
                 columns: new[] { "RoomId", "ChangedAt" });
@@ -4259,6 +4298,9 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "RoomRatePlanDay");
+
+            migrationBuilder.DropTable(
+                name: "RoomRatePlanGroupChannel");
 
             migrationBuilder.DropTable(
                 name: "RoomStatusLog");

@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
@@ -92,11 +92,6 @@ export const ReservationDetailPage = () => {
   const [depositReferenceNo, setDepositReferenceNo] = useState('');
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
   const [isGuestDialogOpen, setIsGuestDialogOpen] = useState(false);
-  const [guestFilter, setGuestFilter] = useState('');
-  const [selectedGuestsForAdd, setSelectedGuestsForAdd] = useState<Record<string, string>>({});
-  const [guestAgeDrafts, setGuestAgeDrafts] = useState<Record<string, string>>({});
-  const guestAgeSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const [showCreateGuest, setShowCreateGuest] = useState(false);
   const [assignDialogReservationRoomId, setAssignDialogReservationRoomId] = useState('');
   const [assignDialogSelectedRoomId, setAssignDialogSelectedRoomId] = useState('');
   const [isAddRoomTypeDialogOpen, setIsAddRoomTypeDialogOpen] = useState(false);
@@ -108,9 +103,6 @@ export const ReservationDetailPage = () => {
 
   const closeGuestDialog = () => {
     setIsGuestDialogOpen(false);
-    setGuestFilter('');
-    setSelectedGuestsForAdd({});
-    setShowCreateGuest(false);
   };
 
   const closeAddRoomTypeDialog = () => {
@@ -138,9 +130,6 @@ export const ReservationDetailPage = () => {
           closeAddRoomTypeDialog();
         } else if (isGuestDialogOpen) {
           setIsGuestDialogOpen(false);
-          setGuestFilter('');
-          setSelectedGuestsForAdd({});
-          setShowCreateGuest(false);
         } else {
           setIsDepositDialogOpen(false);
         }
@@ -149,17 +138,6 @@ export const ReservationDetailPage = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAddRoomTypeDialogOpen, isDepositDialogOpen, isGuestDialogOpen]);
-
-  const [newGuest, setNewGuest] = useState({
-    guestCode: `GST${Date.now().toString().slice(-6)}`,
-    firstName: '',
-    lastName: '',
-    middleName: '',
-    email: '',
-    phone: '',
-    nationality: '',
-    notes: '',
-  });
 
   const { data: reservationDetail, isLoading } = useQuery({
     queryKey: ['resort-reservation-detail', id],
@@ -187,12 +165,6 @@ export const ReservationDetailPage = () => {
       const result = await resortService.getRooms('', 0, 500);
       return result.items;
     },
-  });
-
-  const { data: guestLookup, isLoading: isGuestLookupLoading } = useQuery({
-    queryKey: ['reservation-guest-search', guestFilter],
-    queryFn: () => resortService.getGuests(guestFilter, 0, 50),
-    enabled: isGuestDialogOpen,
   });
 
   const confirmMutation = useMutation({
@@ -224,15 +196,6 @@ export const ReservationDetailPage = () => {
     },
   });
 
-  const noShowMutation = useMutation({
-    mutationFn: () => resortService.markReservationNoShow(id as string),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Reservation marked as no-show.');
-    },
-  });
-
   const recordDepositMutation = useMutation({
     mutationFn: resortService.recordReservationDeposit,
     onSuccess: () => {
@@ -247,65 +210,13 @@ export const ReservationDetailPage = () => {
     },
   });
 
-  const addGuestsMutation = useMutation({
-    mutationFn: (guestRows: { guestId: string; age: number }[]) => resortService.addReservationGuests(id as string, guestRows),
-    onSuccess: () => {
-      setIsGuestDialogOpen(false);
-      setGuestFilter('');
-      setSelectedGuestsForAdd({});
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Guest(s) added to reservation.');
-    },
-  });
-
   const linkGuestMutation = useMutation({
     mutationFn: (guestId: string) => resortService.linkReservationGuest(id as string, guestId),
     onSuccess: () => {
       setIsGuestDialogOpen(false);
-      setGuestFilter('');
-      setSelectedGuestsForAdd({});
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
       notifySuccess('Guest linked to reservation.');
-    },
-  });
-
-  const createGuestMutation = useMutation({
-    mutationFn: () => resortService.createGuest(newGuest),
-    onSuccess: () => {
-      setShowCreateGuest(false);
-      setGuestFilter('');
-      setNewGuest({
-        guestCode: `GST${Date.now().toString().slice(-6)}`,
-        firstName: '',
-        lastName: '',
-        middleName: '',
-        email: '',
-        phone: '',
-        nationality: '',
-        notes: '',
-      });
-      void queryClient.invalidateQueries({ queryKey: ['reservation-guest-search'] });
-      notifySuccess('Guest created.');
-    },
-  });
-
-  const updateGuestAgeMutation = useMutation({
-    mutationFn: (input: { reservationGuestId: string; age: number }) =>
-      resortService.updateReservationGuestAge(id as string, input.reservationGuestId, input.age),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Guest age updated.');
-    },
-  });
-
-  const removeGuestMutation = useMutation({
-    mutationFn: (reservationGuestId: string) => resortService.removeReservationGuest(id as string, reservationGuestId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Guest removed from reservation.');
     },
   });
 
@@ -369,14 +280,8 @@ export const ReservationDetailPage = () => {
 
   const rooms = reservationDetail?.rooms ?? [];
   const extraBeds = reservationDetail?.extraBeds ?? [];
-  const guests = reservationDetail?.guests ?? [];
   const deposits = reservationDetail?.deposits ?? [];
   const depositAmountValue = Number(depositAmount || 0);
-  const depositBalance = useMemo(() => {
-    if (!reservationDetail) return 0;
-    return Math.max(0, reservationDetail.depositRequired - reservationDetail.depositPaid);
-  }, [reservationDetail]);
-
   const totalAmountBalance = useMemo(() => {
     if (!reservationDetail) return 0;
     return Math.max(0, reservationDetail.totalAmount - reservationDetail.depositPaid);
@@ -387,20 +292,16 @@ export const ReservationDetailPage = () => {
     [rooms],
   );
 
+  const computedExtraBedAmount = useMemo(
+    () => extraBeds.reduce((sum, bed) => sum + Number(bed.netAmount || 0), 0),
+    [extraBeds],
+  );
+
   /** Draft: no assign room, add guest, add deposit. Pending/Confirmed: allow all. */
   const canShowBookingActions = useMemo(() => {
     if (!reservationDetail) return false;
     return reservationDetail.status === ReservationStatus.Pending;
   }, [reservationDetail]);
-
-  const canAddGuests = canShowBookingActions;
-
-  const existingGuestIds = useMemo(() => new Set(guests.map((g) => g.guestId)), [guests]);
-
-  const selectableGuests = useMemo(
-    () => (guestLookup?.items ?? []).filter((g) => !existingGuestIds.has(g.id)),
-    [guestLookup?.items, existingGuestIds],
-  );
 
   const roomNumberById = useMemo(() => {
     const map = new Map<string, string>();
@@ -422,19 +323,23 @@ export const ReservationDetailPage = () => {
   }, [assignDialogReservationRoomId, reservationDetail?.rooms]);
 
   const canAssignRooms = canShowBookingActions;
-  const canAddExtraBeds = canShowBookingActions;
+  const canAddExtraBeds =
+    reservationDetail?.status === ReservationStatus.Draft ||
+    reservationDetail?.status === ReservationStatus.Pending;
   const canAddRoomTypes =
     reservationDetail?.status === ReservationStatus.Draft ||
     reservationDetail?.status === ReservationStatus.Pending;
   const canRemoveRoomTypes = canAddRoomTypes;
   const canRemoveExtraBeds = canAddExtraBeds;
+  const canAddPayments =
+    reservationDetail?.status === ReservationStatus.Draft ||
+    reservationDetail?.status === ReservationStatus.Pending;
   const addRoomTypeArrivalDate = toDateOnly(reservationDetail?.arrivalDate);
   const addRoomTypeDepartureDate = toDateOnly(reservationDetail?.departureDate);
-  const todayDateOnly = formatDateLocal(new Date());
-  const isArrivalToday = toDateOnly(reservationDetail?.arrivalDate) === todayDateOnly;
-  const canShowCheckInActions =
-    reservationDetail?.status === ReservationStatus.Confirmed && isArrivalToday;
   const isLinkGuestMode = !reservationDetail?.guestId;
+  const canLinkGuest =
+    !reservationDetail?.guestId &&
+    (reservationDetail?.status === ReservationStatus.Draft || reservationDetail?.status === ReservationStatus.Pending);
   const allRoomTypeIds = useMemo(() => (roomTypes ?? []).map((roomType) => roomType.id), [roomTypes]);
   const selectedRoomTypeIdsForAdd = useMemo(
     () => Object.entries(selectedRoomTypeAmounts).filter(([, amount]) => amount > 0).map(([roomTypeId]) => roomTypeId),
@@ -450,20 +355,6 @@ export const ReservationDetailPage = () => {
     setAssignDialogReservationRoomId('');
     setAssignDialogSelectedRoomId('');
   };
-
-  useEffect(() => {
-    const nextDrafts: Record<string, string> = {};
-    guests.forEach((g) => {
-      nextDrafts[g.id] = String(g.age ?? 0);
-    });
-    setGuestAgeDrafts(nextDrafts);
-  }, [guests]);
-
-  useEffect(() => {
-    return () => {
-      Object.values(guestAgeSaveTimersRef.current).forEach((timerId) => clearTimeout(timerId));
-    };
-  }, []);
 
   const handleConfirmReservation = async () => {
     if (!id) return;
@@ -652,7 +543,7 @@ export const ReservationDetailPage = () => {
                   <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <h4 className="text-base font-semibold">Guest Info</h4>
-                      {!reservationDetail.guestId && reservationDetail.status !== ReservationStatus.Cancelled ? (
+                      {canLinkGuest ? (
                         <button
                           type="button"
                           className="w-full rounded bg-primary-600 px-3 py-1.5 text-sm text-white hover:bg-primary-700 sm:w-auto"
@@ -848,11 +739,15 @@ export const ReservationDetailPage = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-500 dark:text-gray-400">Extra Bed Amount</span>
-                        <span className="font-semibold tabular-nums">{formatMoney(reservationDetail.extraBedAmount)}</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(computedExtraBedAmount)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-500 dark:text-gray-400">Total Amount</span>
                         <span className="font-semibold tabular-nums">{formatMoney(reservationDetail.totalAmount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Total Payments</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(reservationDetail.depositPaid)}</span>
                       </div>
                       <div className="flex items-center justify-between border-t border-gray-200 pt-2 dark:border-gray-700">
                         <span className="text-gray-500 dark:text-gray-400">Balance</span>
@@ -867,7 +762,7 @@ export const ReservationDetailPage = () => {
                     <h4 className="text-base font-semibold">Payments</h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Record payments applied before check-in.</p>
                   </div>
-                  {canAddGuests && (
+                  {canAddPayments && (
                     <button
                       type="button"
                       className="w-full rounded bg-primary-600 px-3 py-1.5 text-sm text-white sm:w-auto"
@@ -943,7 +838,7 @@ export const ReservationDetailPage = () => {
           ) : null}
         </section>
 
-        {reservationDetail?.status === ReservationStatus.Pending ? (
+        {canAddPayments ? (
           <Dialog open={isDepositDialogOpen} onClose={() => {}} className="relative z-50">
             <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
@@ -1037,7 +932,7 @@ export const ReservationDetailPage = () => {
           open={isGuestDialogOpen}
           onClose={closeGuestDialog}
           onSelectGuest={(guest: SelectedGuest) => {
-            if (!isLinkGuestMode) return;
+            if (!isLinkGuestMode || !canLinkGuest) return;
             linkGuestMutation.mutate(guest.id);
           }}
         />

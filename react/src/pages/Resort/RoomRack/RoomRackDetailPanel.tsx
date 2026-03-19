@@ -6,6 +6,7 @@ import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import { ChannelAvatar } from '@/lib/channelIcons';
+import { formatMoney } from '@utils/helpers';
 
 const reservationStatusLabel: Record<number, string> = {
   [ReservationStatus.Draft]: 'Draft',
@@ -32,9 +33,7 @@ function formatDate(value?: string) {
   return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
-}
+const formatCurrency = (n: number) => formatMoney(n);
 
 export const RoomRackDetailPanel: React.FC<RoomRackDetailPanelProps> = ({ open, onClose, item }) => {
   const navigate = useNavigate();

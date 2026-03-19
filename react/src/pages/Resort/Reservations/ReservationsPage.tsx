@@ -67,6 +67,7 @@ export const ReservationListPage = () => {
                   <th className="p-2">Guest</th>
                   <th className="p-2">Channel</th>
                   <th className="p-2">Agency</th>
+                  <th className="p-2">Room(s)</th>
                   <th className="p-2">Check-In</th>
                   <th className="p-2">Check-Out</th>
                   <th className="p-2">Status</th>
@@ -80,6 +81,7 @@ export const ReservationListPage = () => {
                     <td className="p-2">{r.guestName}</td>
                     <td className="p-2">{r.channelName || '-'}</td>
                     <td className="p-2">{r.agencyName || '-'}</td>
+                    <td className="p-2">{r.roomNumbers || '—'}</td>
                     <td className="p-2">{new Date(r.arrivalDate).toLocaleDateString()}</td>
                     <td className="p-2">{new Date(r.departureDate).toLocaleDateString()}</td>
                     <td className="p-2">

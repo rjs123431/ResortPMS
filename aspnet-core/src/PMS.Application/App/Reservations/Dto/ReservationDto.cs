@@ -70,6 +70,7 @@ public class ReservationListDto : EntityDto<Guid>
     public decimal TotalAmount { get; set; }
     public decimal DepositPercentage { get; set; }
     public decimal DepositPaid { get; set; }
+    public string RoomNumbers { get; set; } = string.Empty;
 }
 
 // ── Create DTO ───────────────────────────────────────────────────────────────

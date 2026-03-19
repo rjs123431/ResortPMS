@@ -15,6 +15,7 @@ import {
   type RoomTypeAvailabilityRow,
   type RoomTypeAvailabilitySearchCriteria,
 } from '../Shared/RoomTypeAvailabilitySearch';
+import { formatMoney } from '@utils/helpers';
 
 const formatDateLocal = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -27,8 +28,6 @@ const parseDateOnly = (value: string) => {
 };
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
-const formatMoney = (value: number) =>
-  round2(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const getErrorMessage = (error: unknown) => {
   if (error && typeof error === 'object') {
@@ -972,11 +971,11 @@ export const CheckInWalkInPage = () => {
                   <div className="mt-1 space-y-1">
                     {selectedPackage.lines.map((line) => (
                       <p key={line.roomTypeName} className="text-sm text-gray-600 dark:text-gray-300">
-                        {line.quantity} {line.roomTypeName} room{line.quantity > 1 ? 's' : ''} x {selectedPackage.nights} night{selectedPackage.nights > 1 ? 's' : ''} = {line.lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {line.quantity} {line.roomTypeName} room{line.quantity > 1 ? 's' : ''} x {selectedPackage.nights} night{selectedPackage.nights > 1 ? 's' : ''} = {formatMoney(line.lineTotal)}
                       </p>
                     ))}
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      Total: {selectedPackage.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Total: {formatMoney(selectedPackage.total)}
                     </p>
                   </div>
                 ) : (

@@ -14,6 +14,7 @@ import {
   RoomChangeRequestStatus,
   type StayRoomRecordDto,
 } from '@/types/resort.types';
+import { formatMoney } from '@utils/helpers';
 
 const getRequestTypeLabels = (value: GuestRequestType) => {
   const labels = GUEST_REQUEST_TYPE_OPTIONS
@@ -289,7 +290,7 @@ export const StayDetailPage = () => {
               <p><span className="font-medium">Check-In:</span> {toDateTime(stay?.checkInDateTime)}</p>
               <p><span className="font-medium">Expected Check-Out:</span> {toDateTime(stay?.expectedCheckOutDateTime)}</p>
               <p><span className="font-medium">Folio:</span> {statement?.folioNo ?? folio?.folioNo ?? '-'}</p>
-              <p><span className="font-medium">Balance:</span> {(folio?.balance ?? 0).toFixed(2)}</p>
+              <p><span className="font-medium">Balance:</span> {formatMoney(folio?.balance ?? 0)}</p>
             </div>
           )}
 
@@ -415,7 +416,7 @@ export const StayDetailPage = () => {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                Folio {folio.folioNo} | Balance: {folio.balance.toFixed(2)}
+                Folio {folio.folioNo} | Balance: {formatMoney(folio.balance)}
               </p>
 
               <div className="overflow-x-auto">
@@ -439,7 +440,7 @@ export const StayDetailPage = () => {
                           <td className="p-2">{toDateTime(transaction.transactionDate)}</td>
                           <td className="p-2">{transaction.chargeTypeName || getTransactionTypeLabel(transaction.transactionType)}</td>
                           <td className="p-2">{transaction.description || '-'}</td>
-                          <td className="p-2 text-right">{transaction.netAmount.toFixed(2)}</td>
+                          <td className="p-2 text-right">{formatMoney(transaction.netAmount)}</td>
                         </tr>
                       ))
                     )}
@@ -468,7 +469,7 @@ export const StayDetailPage = () => {
                           <td className="p-2">{toDateOnly(payment.paidDate)}</td>
                           <td className="p-2">{payment.paymentMethodName || '-'}</td>
                           <td className="p-2">{payment.referenceNo || '-'}</td>
-                          <td className="p-2 text-right">{payment.amount.toFixed(2)}</td>
+                          <td className="p-2 text-right">{formatMoney(payment.amount)}</td>
                         </tr>
                       ))
                     )}

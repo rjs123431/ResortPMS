@@ -415,6 +415,7 @@ export interface ReservationListDto {
   totalAmount: number;
   depositPercentage: number;
   depositPaid: number;
+  roomNumbers?: string;
 }
 
 export interface CreateReservationDto {

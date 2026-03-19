@@ -2,15 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog } from '@headlessui/react';
-import { LogoSpinner } from '@components/common/LogoSpinner';
 import { ClearRoomDialog } from '@pages/Resort/Shared/ClearRoomDialog';
 import { PostChargeDialog } from '@pages/Resort/Shared/PostChargeDialog';
 import { AddPaymentDialog } from '@pages/Resort/Shared/AddPaymentDialog';
 import { resortService } from '@services/resort.service';
 import type { FolioTransactionDto, StayRoomRecordDto } from '@/types/resort.types';
-
-const formatMoney = (value: number) =>
-  value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { formatMoney, formatMoneyWithCaret } from '@utils/helpers';
 
 const toDate = (value?: string) => {
   if (!value) return '-';
@@ -98,7 +95,7 @@ export const CheckOutPage = () => {
     queryFn: () => resortService.getChargeTypes(),
   });
 
-  const { data: statement, refetch, isFetching: isFetchingStatement, isError: isStatementError } = useQuery({
+  const { data: statement, refetch, isError: isStatementError } = useQuery({
     queryKey: ['resort-checkout-statement', stayId],
     queryFn: () => resortService.getCheckoutStatement(stayId!),
     enabled: !!stayId,
@@ -155,7 +152,7 @@ export const CheckOutPage = () => {
     mutationFn: () =>
       resortService.postRefund({
         stayId: stayId!,
-        amount: Number(refundAmount),
+        amount: Number(refundAmount.replace(/,/g, '')),
         description: refundDescription,
       }),
     onSuccess: () => {
@@ -237,7 +234,7 @@ export const CheckOutPage = () => {
   const setOverpaymentAsRefund = () => {
     if (!folio) return;
     const overpayment = Math.max(0, Math.abs(folio.balance));
-    setRefundAmount(overpayment.toFixed(2));
+    setRefundAmount(formatMoney(overpayment));
   };
 
   if (!stayId) {
@@ -489,12 +486,17 @@ export const CheckOutPage = () => {
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Refund Amount</label>
                 <input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   className="w-full rounded border p-2 dark:bg-gray-700"
                   value={refundAmount}
-                  onChange={(e) => setRefundAmount(e.target.value)}
+                  onChange={(e) => {
+                    const { value, caretPosition } = formatMoneyWithCaret(e.target.value, e.target.selectionStart ?? e.target.value.length);
+                    setRefundAmount(value);
+                    requestAnimationFrame(() => {
+                      e.target.setSelectionRange(caretPosition, caretPosition);
+                    });
+                  }}
                 />
               </div>
               <div className="md:col-span-2">
@@ -509,7 +511,7 @@ export const CheckOutPage = () => {
               <button
                 type="button"
                 className="rounded bg-amber-700 px-4 py-2 text-white disabled:opacity-50"
-                disabled={refundMutation.isPending || Number(refundAmount) <= 0 || !canProcessAnyRefund}
+                disabled={refundMutation.isPending || Number(refundAmount.replace(/,/g, '')) <= 0 || !canProcessAnyRefund}
                 onClick={() => refundMutation.mutate()}
               >
                 {refundMutation.isPending ? 'Posting...' : 'Process Refund'}

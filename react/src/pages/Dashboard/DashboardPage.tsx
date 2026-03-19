@@ -6,10 +6,9 @@ import { PermissionNames } from '@config/permissionNames';
 import { reportingService } from '@services/reporting.service';
 import type { DashboardKpisDto } from '@services/reporting.service';
 import { LogoSpinner } from '@components/common/LogoSpinner';
+import { formatMoney } from '@utils/helpers';
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
-}
+const formatCurrency = (value: number) => formatMoney(value);
 
 type RoomAvailabilitySample = {
   roomType: string;

@@ -22,6 +22,7 @@ import type {
 } from '@services/reporting.service';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import { downloadCsv } from '@utils/csvExport';
+import { formatMoney } from '@utils/helpers';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -38,9 +39,7 @@ const toDateStr = (d: Date) => {
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'short' });
 }
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
-}
+const formatCurrency = (n: number) => formatMoney(n);
 
 function DashboardTab() {
   const today = new Date().toISOString().slice(0, 10);
@@ -162,7 +161,7 @@ function OccupancyTab() {
             <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => [v, '']} labelFormatter={(l) => `Date: ${l}`} />
+              <Tooltip formatter={(v) => [v ?? 0, '']} labelFormatter={(l) => `Date: ${l}`} />
               <Bar dataKey="occupancy" name="Occupancy %" fill="var(--color-primary-500, #6366f1)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -267,7 +266,7 @@ function RevenueTab() {
             <LineChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-              <Tooltip formatter={(v: number) => [formatCurrency(v), '']} labelFormatter={(l) => `Date: ${l}`} />
+              <Tooltip formatter={(v) => [formatCurrency(Number(v ?? 0)), '']} labelFormatter={(l) => `Date: ${l}`} />
               <Legend />
               <Line type="monotone" dataKey="charges" name="Charges" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="payments" name="Payments" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
@@ -489,7 +488,7 @@ function PosSalesTab() {
             <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-              <Tooltip formatter={(v: number, name: string) => [name === 'sales' ? formatCurrency(v) : v, name === 'sales' ? 'Sales' : 'Orders'] as [string | number, string]} labelFormatter={(l) => `Date: ${l}`} />
+              <Tooltip formatter={(v, name) => [name === 'sales' ? formatCurrency(Number(v ?? 0)) : Number(v ?? 0), name === 'sales' ? 'Sales' : 'Orders'] as [string | number, string]} labelFormatter={(l) => `Date: ${l}`} />
               <Bar dataKey="sales" name="Sales" fill="#6366f1" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

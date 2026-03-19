@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { resortService } from '@services/resort.service';
+import { formatMoney } from '@utils/helpers';
 
 export type QuickReservationPayload = {
   checkInDate: string;
@@ -21,6 +22,7 @@ type QuickReservationDialogProps = {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const controlClassName = 'h-[42px] w-full rounded border border-gray-300 px-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error && typeof error === 'object') {
@@ -48,6 +50,13 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   const [lastName, setLastName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [depositPaymentAmount, setDepositPaymentAmount] = useState('0');
+  const [showDepositDialog, setShowDepositDialog] = useState(false);
+  const [depositPaymentMethodId, setDepositPaymentMethodId] = useState('');
+  const [depositReferenceNo, setDepositReferenceNo] = useState('');
+  const [depositPaymentAmountDraft, setDepositPaymentAmountDraft] = useState('0');
+  const [depositPaymentMethodIdDraft, setDepositPaymentMethodIdDraft] = useState('');
+  const [depositReferenceNoDraft, setDepositReferenceNoDraft] = useState('');
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [notes, setNotes] = useState('');
@@ -58,6 +67,12 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   const { data: channels } = useQuery({
     queryKey: ['resort-channels'],
     queryFn: () => resortService.getChannels(),
+    enabled: open,
+  });
+
+  const { data: paymentMethods } = useQuery({
+    queryKey: ['resort-payment-methods'],
+    queryFn: () => resortService.getPaymentMethods(),
     enabled: open,
   });
 
@@ -92,6 +107,13 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     setSelectedChannelId('');
     setSelectedAgencyId('');
     setSelectedRatePlanId('');
+    setDepositPaymentAmount('0');
+    setDepositPaymentMethodId('');
+    setDepositReferenceNo('');
+    setDepositPaymentAmountDraft('0');
+    setDepositPaymentMethodIdDraft('');
+    setDepositReferenceNoDraft('');
+    setShowDepositDialog(false);
   }, [open]);
 
   useEffect(() => {
@@ -125,6 +147,14 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     });
   }, [ratePlanOptionsQuery.data]);
 
+  useEffect(() => {
+    if (!open) return;
+    const methods = paymentMethods ?? [];
+    if (methods.length === 0) return;
+    setDepositPaymentMethodId((current) => current || methods[0].id);
+    setDepositPaymentMethodIdDraft((current) => current || methods[0].id);
+  }, [open, paymentMethods]);
+
   const createMutation = useMutation({
     mutationFn: async (isTemp: boolean) => {
       if (!payload) throw new Error('Missing reservation data.');
@@ -141,6 +171,14 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       const selectedRatePlan = (ratePlanOptionsQuery.data ?? []).find((option) => option.roomRatePlanId === selectedRatePlanId);
       const ratePerNight = selectedRatePlan?.pricePerNight ?? 0;
       const amount = round2(ratePerNight * nights);
+      const parsedDepositPayment = Number.parseFloat(depositPaymentAmount || '0');
+      const safeDepositPaymentAmount = Number.isFinite(parsedDepositPayment)
+        ? round2(clamp(parsedDepositPayment, 0, amount))
+        : 0;
+
+      if (safeDepositPaymentAmount > 0 && !depositPaymentMethodId) {
+        throw new Error('Payment method is required when payment amount is entered.');
+      }
 
       const roomEntry = {
         roomTypeId: payload.roomTypeId,
@@ -169,7 +207,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         netAmount: amount,
       };
 
-      return resortService.createReservation({
+      const reservationId = await resortService.createReservation({
         arrivalDate,
         departureDate,
         adults,
@@ -190,6 +228,17 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         extraBeds: [],
         additionalGuestIds: [],
       });
+
+      if (safeDepositPaymentAmount > 0 && depositPaymentMethodId) {
+        await resortService.recordReservationDeposit({
+          reservationId,
+          amount: safeDepositPaymentAmount,
+          paymentMethodId: depositPaymentMethodId,
+          referenceNo: depositReferenceNo.trim() || undefined,
+        });
+      }
+
+      return reservationId;
     },
     onSuccess: () => {
       onClose();
@@ -205,6 +254,26 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
 
   const handleCreateTempReservation = () => {
     createMutation.mutate(true);
+  };
+
+  const handleWalkInCheckIn = () => {
+    createMutation.mutate(true);
+  };
+
+  const handleOpenDepositDialog = () => {
+    setDepositPaymentAmountDraft(depositPaymentAmount);
+    setDepositPaymentMethodIdDraft(depositPaymentMethodId);
+    setDepositReferenceNoDraft(depositReferenceNo);
+    setShowDepositDialog(true);
+  };
+
+  const handleSaveDeposit = () => {
+    const parsedAmount = Number.parseFloat(depositPaymentAmountDraft || '0');
+    const safeAmount = Number.isFinite(parsedAmount) ? Math.max(0, parsedAmount) : 0;
+    setDepositPaymentAmount(String(round2(safeAmount)));
+    setDepositPaymentMethodId(depositPaymentMethodIdDraft);
+    setDepositReferenceNo(depositReferenceNoDraft.trim());
+    setShowDepositDialog(false);
   };
 
   if (!payload) return null;
@@ -237,111 +306,68 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     !createMutation.isPending;
 
   return (
-    <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+    <Dialog open={open} onClose={() => { }} className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
-      <div className="relative flex min-h-screen items-center justify-center p-4 pt-8 pointer-events-none">
+      <div className="relative flex min-h-screen items-start justify-center p-4 pt-8 pointer-events-none">
         <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick reservation</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick reservation</h2>
+            <button
+              type="button"
+              className="rounded bg-gray-200 px-2 py-1 text-sm dark:bg-gray-700"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
           <hr className="my-4" />
-          <dl className="mt-4 space-y-3">
-            <div className="flex flex-wrap gap-4">
-              <div>
+          <dl className="mt-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+              <div className="sm:min-w-[170px]">
                 <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Dates</dt>
                 <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{dateRangeLabel}</dd>
               </div>
-              <div>
+              <div className="sm:min-w-[170px]">
                 <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room type</dt>
                 <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomTypeName}</dd>
               </div>
-              <div className="min-w-[180px]">
-                <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Channel</dt>
-                <dd className="mt-0.5">
-                  <select
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    value={selectedChannelId}
-                    onChange={(e) => setSelectedChannelId(e.target.value)}
-                  >
-                    {(channels ?? []).map((channel) => (
-                      <option key={channel.id} value={channel.id}>{channel.name}</option>
-                    ))}
-                  </select>
-                </dd>
-              </div>
-              <div>
+              <div className="sm:min-w-[166px]">
                 <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room</dt>
                 <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomNumber}</dd>
+              </div>
+              <div className="sm:min-w-[100px] sm:flex-1">
+                <select
+                  className={controlClassName}
+                  value={selectedChannelId}
+                  onChange={(e) => setSelectedChannelId(e.target.value)}
+                >
+                  {(channels ?? []).map((channel) => (
+                    <option key={channel.id} value={channel.id}>{channel.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </dl>
 
           <div className="mt-4 space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate plan</label>
-                <select
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={selectedRatePlanId}
-                  onChange={(e) => setSelectedRatePlanId(e.target.value)}
-                  disabled={!selectedChannelId || ratePlanOptionsQuery.isLoading || ratePlanOptions.length === 0}
-                >
-                  <option value="">Select rate plan</option>
-                  {ratePlanOptions.map((ratePlan) => (
-                    <option key={ratePlan.roomRatePlanId} value={ratePlan.roomRatePlanId}>
-                      {ratePlan.code} - {ratePlan.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate per night</label>
-                <div className="w-full rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                  {!selectedChannelId
-                    ? 'Select channel first'
-                    : ratePlanOptionsQuery.isLoading
-                      ? 'Loading rate plans...'
-                      : ratePerNight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                {ratePerNight > 0 && !ratePlanOptionsQuery.isLoading && (
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    {nights} night{nights !== 1 ? 's' : ''} × {ratePerNight.toFixed(2)} = {(ratePerNight * nights).toFixed(2)}
-                  </p>
-                )}
-                {ratePlanOptionsQuery.isError && (
-                  <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
-                    {getErrorMessage(ratePlanOptionsQuery.error, 'Unable to load room rate plans.')}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Notes</label>
-                <textarea
-                  rows={2}
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Adults</label>
-                <div className="flex items-center overflow-hidden rounded border border-gray-300 dark:border-gray-600">
+                <div className="flex h-[42px] items-center overflow-hidden rounded border border-gray-300 dark:border-gray-600">
                   <button
                     type="button"
                     onClick={() => setAdults((value) => clamp(value - 1, 1, 20))}
-                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    className="h-full px-3 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                   >
                     -
                   </button>
-                  <div className="flex-1 bg-white px-3 py-1.5 text-center text-sm text-gray-900 dark:bg-gray-700 dark:text-white">
+                  <div className="flex h-full flex-1 items-center justify-center bg-white px-3 text-center text-sm text-gray-900 dark:bg-gray-700 dark:text-white">
                     {adults}
                   </div>
                   <button
                     type="button"
                     onClick={() => setAdults((value) => clamp(value + 1, 1, 20))}
-                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    className="h-full px-3 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                   >
                     +
                   </button>
@@ -349,52 +375,104 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Children</label>
-                <div className="flex items-center overflow-hidden rounded border border-gray-300 dark:border-gray-600">
+                <div className="flex h-[42px] items-center overflow-hidden rounded border border-gray-300 dark:border-gray-600">
                   <button
                     type="button"
                     onClick={() => setChildren((value) => clamp(value - 1, 0, 10))}
-                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    className="h-full px-3 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                   >
                     -
                   </button>
-                  <div className="flex-1 bg-white px-3 py-1.5 text-center text-sm text-gray-900 dark:bg-gray-700 dark:text-white">
+                  <div className="flex h-full flex-1 items-center justify-center bg-white px-3 text-center text-sm text-gray-900 dark:bg-gray-700 dark:text-white">
                     {children}
                   </div>
                   <button
                     type="button"
                     onClick={() => setChildren((value) => clamp(value + 1, 0, 10))}
-                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    className="h-full px-3 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                   >
                     +
                   </button>
                 </div>
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate plan</label>
+                <select
+                  className={controlClassName}
+                  value={selectedRatePlanId}
+                  onChange={(e) => setSelectedRatePlanId(e.target.value)}
+                  disabled={!selectedChannelId || ratePlanOptionsQuery.isLoading || ratePlanOptions.length === 0}
+                >
+                  <option value="">Select rate plan</option>
+                  {ratePlanOptions.map((ratePlan) => (
+                    <option key={ratePlan.roomRatePlanId} value={ratePlan.roomRatePlanId}>
+                      {ratePlan.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate per night</label>
+                <div className="flex h-[42px] w-full items-center rounded border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  {!selectedChannelId
+                    ? 'Select channel first'
+                    : ratePlanOptionsQuery.isLoading
+                      ? 'Loading rate plans...'
+                      : formatMoney(ratePerNight)}
+                </div>
+                {ratePerNight > 0 && !ratePlanOptionsQuery.isLoading && (
+                  <>
+                    <p className="mt-0.5 text-end text-xs text-gray-500 dark:text-gray-400">
+                      x {nights} night{nights !== 1 ? 's' : ''} = {formatMoney(ratePerNight * nights)}
+                    </p>
+                    <p className="mt-0.5 text-end text-xs text-gray-500 dark:text-gray-400">
+                      Payment: {' '}
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-primary-600 underline hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                        onClick={handleOpenDepositDialog}
+                      >
+                        {formatMoney(Number.parseFloat(depositPaymentAmount || '0') || 0)}
+                      </button>
+                    </p>
+                  </>
+
+                )}
+                {ratePlanOptionsQuery.isError && (
+                  <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                    {getErrorMessage(ratePlanOptionsQuery.error, 'Unable to load room rate plans.')}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">First name</label>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">First Name</label>
                 <input
                   type="text"
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className={controlClassName}
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Last name</label>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Last Name</label>
                 <input
                   type="text"
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className={controlClassName}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Contact number</label>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Phone</label>
                 <input
                   type="text"
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className={controlClassName}
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value)}
                 />
@@ -403,11 +481,22 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Email (optional)</label>
                 <input
                   type="email"
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className={controlClassName}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Notes</label>
+              <textarea
+                rows={2}
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional"
+              />
             </div>
           </div>
 
@@ -417,34 +506,98 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
             </p>
           )}
 
-          <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <div className="mt-6 flex flex-wrap justify-between gap-2">
             <button
               type="button"
-              onClick={onClose}
-              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleCreateTempReservation}
+              onClick={handleWalkInCheckIn}
               disabled={!canSubmit || createMutation.isPending}
               className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
-              title="Create a draft reservation with no room assigned"
+              title="Create a walk-in/check-in draft"
             >
-              Draft Reserve
+              Walk In/Check In
             </button>
-            <button
-              type="button"
-              onClick={handleCreateReservation}
-              disabled={!canSubmit || createMutation.isPending}
-              className="rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Reserve
-            </button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCreateTempReservation}
+                disabled={!canSubmit || createMutation.isPending}
+                className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
+                title="Create a draft reservation with no room assigned"
+              >
+                Draft Reserve
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateReservation}
+                disabled={!canSubmit || createMutation.isPending}
+                className="rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reserve
+              </button>
+            </div>
           </div>
         </DialogPanel>
       </div>
+
+      <Dialog open={showDepositDialog} onClose={() => setShowDepositDialog(false)} className="fixed inset-0 z-[60] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+        <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+          <DialogPanel className="w-full max-w-xs rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Deposit Payment</h3>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Payment Method</label>
+                <select
+                  className={controlClassName}
+                  value={depositPaymentMethodIdDraft}
+                  onChange={(e) => setDepositPaymentMethodIdDraft(e.target.value)}
+                >
+                  <option value="">Select payment method</option>
+                  {(paymentMethods ?? []).map((method) => (
+                    <option key={method.id} value={method.id}>{method.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Amount</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className={controlClassName}
+                  value={depositPaymentAmountDraft}
+                  onChange={(e) => setDepositPaymentAmountDraft(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Ref No</label>
+                <input
+                  type="text"
+                  className={controlClassName}
+                  value={depositReferenceNoDraft}
+                  onChange={(e) => setDepositReferenceNoDraft(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDepositDialog(false)}
+                className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDeposit}
+                className="rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
+              >
+                Ok
+              </button>
+            </div>
+          </DialogPanel>
+        </div>
+      </Dialog>
     </Dialog>
   );
 };
