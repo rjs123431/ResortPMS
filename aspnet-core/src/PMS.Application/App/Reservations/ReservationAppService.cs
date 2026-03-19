@@ -121,6 +121,7 @@ public class ReservationAppService(
         {
             Id = reservationId,
             ReservationNo = reservationNo,
+            RoomRatePlanCode = (input.RoomRatePlanCode ?? string.Empty).Trim(),
             ChannelId = input.ChannelId,
             AgencyId = input.AgencyId,
             GuestId = input.GuestId,
@@ -277,6 +278,7 @@ public class ReservationAppService(
         reservation.ArrivalDate = input.ArrivalDate.Date.Add(checkInTime);
         reservation.DepartureDate = input.DepartureDate.Date.Add(checkOutTime);
         reservation.Nights = (int)(input.DepartureDate.Date - input.ArrivalDate.Date).TotalDays;
+        reservation.RoomRatePlanCode = (input.RoomRatePlanCode ?? string.Empty).Trim();
         reservation.ChannelId = input.ChannelId;
         reservation.AgencyId = input.AgencyId;
         reservation.Adults = input.Adults;

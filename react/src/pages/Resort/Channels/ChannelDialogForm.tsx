@@ -56,6 +56,15 @@ export const ChannelDialogForm = ({
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Channel Name</label>
             <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.name} onChange={(e) => onFormChange((s) => ({ ...s, name: e.target.value }))} />
           </div>
+          <div className="mt-3">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Sort</label>
+            <input
+              type="number"
+              className="w-full rounded border p-2 dark:bg-gray-700"
+              value={form.sort}
+              onChange={(e) => onFormChange((s) => ({ ...s, sort: Number(e.target.value) || 0 }))}
+            />
+          </div>
           <div className="mt-4">
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Icon</label>
             <div className="mb-3 flex items-center gap-3 rounded-lg border border-dashed border-gray-300 px-3 py-2 dark:border-gray-600">

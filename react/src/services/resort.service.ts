@@ -41,6 +41,7 @@ import {
   RoomTypeListDto,
   RoomRatePlanDto,
   RoomRatePlanListDto,
+  RoomTypeRatePlanOptionDto,
   CreateRoomRatePlanDto,
   UpdateRoomRatePlanDto,
   StayListDto,
@@ -165,6 +166,23 @@ export const resortService = {
   getRoomRatePlan: async (id: string) => {
     const response = await api.get<ApiResponse<RoomRatePlanDto>>('/api/services/app/RoomRatePlan/Get', {
       params: { id },
+    });
+    return response.data.result;
+  },
+
+  getRoomTypeRatePlanOptions: async (roomTypeId: string, arrivalDate: string, departureDate: string, channelId?: string) => {
+    const params: Record<string, string> = {
+      RoomTypeId: roomTypeId,
+      ArrivalDate: arrivalDate,
+      DepartureDate: departureDate,
+    };
+
+    if (channelId && channelId.length > 0) {
+      params.ChannelId = channelId;
+    }
+
+    const response = await api.get<ApiResponse<RoomTypeRatePlanOptionDto[]>>('/api/services/app/RoomRatePlan/GetRoomTypeRatePlanOptions', {
+      params,
     });
     return response.data.result;
   },
@@ -636,7 +654,7 @@ export const resortService = {
     const response = await api.get<ApiResponse<PagedResultDto<ChannelListDto>>>('/api/services/app/Channel/GetAll', {
       params: {
         Filter: filter,
-        Sorting: 'Name asc',
+        Sorting: 'Sort asc, Name asc',
         SkipCount: skipCount,
         MaxResultCount: maxResultCount,
       },

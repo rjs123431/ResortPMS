@@ -111,6 +111,8 @@ public class ChannelDto : EntityDto<Guid>
     [StringLength(256)]
     public string Icon { get; set; }
 
+    public int Sort { get; set; }
+
     public bool IsActive { get; set; }
 }
 
@@ -119,6 +121,7 @@ public class ChannelListDto : EntityDto<Guid>
 {
     public string Name { get; set; }
     public string Icon { get; set; }
+    public int Sort { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -131,6 +134,8 @@ public class CreateChannelDto
 
     [StringLength(256)]
     public string Icon { get; set; }
+
+    public int Sort { get; set; }
 }
 
 public class GetChannelsInput : PagedResultFilterRequestDto, IShouldNormalize
@@ -139,7 +144,7 @@ public class GetChannelsInput : PagedResultFilterRequestDto, IShouldNormalize
 
     public void Normalize()
     {
-        Sorting ??= "Name";
+        Sorting ??= "Sort asc, Name asc";
     }
 }
 

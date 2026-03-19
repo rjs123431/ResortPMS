@@ -23,6 +23,7 @@ public interface IRoomRatePlanAppService : IApplicationService
     Task<Guid> CreateAsync(CreateRoomRatePlanDto input);
     Task UpdateAsync(UpdateRoomRatePlanDto input);
     Task DeleteAsync(Guid id);
+    Task<List<RoomTypeRatePlanOptionDto>> GetRoomTypeRatePlanOptionsAsync(GetRoomTypeRatePlanOptionsInput input);
     /// <summary>Average rate per night for the stay; uses rate plan when applicable, else room type base rate.</summary>
     Task<decimal> GetEffectiveRatePerNightForStayAsync(Guid roomTypeId, DateTime arrivalDate, DateTime departureDate, Guid? channelId = null);
 }
@@ -222,6 +223,53 @@ public class RoomRatePlanAppService(
         }
     }
 
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Create)]
+    public async Task<List<RoomTypeRatePlanOptionDto>> GetRoomTypeRatePlanOptionsAsync(GetRoomTypeRatePlanOptionsInput input)
+    {
+        var arrival = input.ArrivalDate.Date;
+        var departure = input.DepartureDate.Date;
+        if (arrival >= departure)
+            throw new UserFriendlyException("Invalid arrival or departure date");
+
+        var plans = await ratePlanRepository.GetAll()
+            .Include(rp => rp.RoomRatePlanGroup)
+                .ThenInclude(group => group.ChannelTargets)
+            .Include(rp => rp.DayRates)
+            .Include(rp => rp.DateOverrides)
+            .Where(rp => rp.RoomTypeId == input.RoomTypeId)
+            .Where(rp => rp.RoomRatePlanGroup.IsActive)
+            .Where(rp => rp.RoomRatePlanGroup.StartDate <= departure && (rp.RoomRatePlanGroup.EndDate == null || rp.RoomRatePlanGroup.EndDate >= arrival))
+            .Where(rp =>
+                !rp.RoomRatePlanGroup.ChannelTargets.Any() ||
+                (input.ChannelId.HasValue && rp.RoomRatePlanGroup.ChannelTargets.Any(target => target.ChannelId == input.ChannelId.Value)))
+            .OrderBy(rp => rp.RoomRatePlanGroup.Priority)
+            .ThenByDescending(rp => input.ChannelId.HasValue && rp.RoomRatePlanGroup.ChannelTargets.Any(target => target.ChannelId == input.ChannelId.Value))
+            .ThenByDescending(rp => rp.RoomRatePlanGroup.IsDefault)
+            .ThenBy(rp => rp.RoomRatePlanGroup.Name)
+            .ToListAsync();
+
+        var options = new List<RoomTypeRatePlanOptionDto>();
+        foreach (var plan in plans)
+        {
+            if (!TryGetAverageRateForStay(plan, arrival, departure, out var pricePerNight))
+                continue;
+
+            options.Add(new RoomTypeRatePlanOptionDto
+            {
+                RoomRatePlanId = plan.Id,
+                Code = plan.RoomRatePlanGroup?.Code ?? string.Empty,
+                Name = plan.RoomRatePlanGroup?.Name ?? string.Empty,
+                PricePerNight = pricePerNight,
+                Priority = plan.RoomRatePlanGroup?.Priority ?? int.MaxValue,
+            });
+        }
+
+        if (options.Count == 0)
+            throw new UserFriendlyException("No active rate plan found for the specified dates. A rate plan is required to sell this room type.");
+
+        return options;
+    }
+
     /// <inheritdoc />
     public async Task<decimal> GetEffectiveRatePerNightForStayAsync(Guid roomTypeId, DateTime arrivalDate, DateTime departureDate, Guid? channelId = null)
     {
@@ -250,13 +298,33 @@ public class RoomRatePlanAppService(
             throw new UserFriendlyException("No active rate plan found for the specified dates. A rate plan is required to sell this room type.");
 
         decimal total = 0;
-        int nights = 0;
+        var nights = 0;
         for (var d = arrival; d < departure; d = d.AddDays(1), nights++)
         {
             var rate = GetRateForDate(plans, d);
             total += rate;
         }
         return nights > 0 ? Math.Round(total / nights, 4) : 0;
+    }
+
+    private static bool TryGetAverageRateForStay(RoomRatePlan plan, DateTime arrival, DateTime departure, out decimal averageRate)
+    {
+        decimal total = 0;
+        var nights = 0;
+
+        for (var date = arrival; date < departure; date = date.AddDays(1), nights++)
+        {
+            if (!TryGetRateForDate(plan, date, out var nightlyRate))
+            {
+                averageRate = 0m;
+                return false;
+            }
+
+            total += nightlyRate;
+        }
+
+        averageRate = nights > 0 ? Math.Round(total / nights, 4) : 0m;
+        return true;
     }
 
     private static decimal GetRateForDate(IReadOnlyList<RoomRatePlan> plans, DateTime date)

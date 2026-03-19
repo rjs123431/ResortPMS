@@ -238,13 +238,13 @@ public class ChannelAppService(
             .WhereIf(input.IsActive.HasValue, x => x.IsActive == input.IsActive);
 
         var total = await query.CountAsync();
-        var items = await query.OrderBy(input.Sorting ?? "Name").PageBy(input).ToListAsync();
+        var items = await query.OrderBy(input.Sorting ?? "Sort asc, Name asc").PageBy(input).ToListAsync();
         return new PagedResultDto<ChannelListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<ChannelListDto>>(items));
     }
 
     public async Task<System.Collections.Generic.List<ChannelListDto>> GetAllActiveAsync()
     {
-        var items = await channelRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+        var items = await channelRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Sort).ThenBy(x => x.Name).ToListAsync();
         return ObjectMapper.Map<System.Collections.Generic.List<ChannelListDto>>(items);
     }
 
@@ -261,6 +261,7 @@ public class ChannelAppService(
         var entity = ObjectMapper.Map<Channel>(input);
         entity.Name = name;
         entity.Icon = icon;
+        entity.Sort = input.Sort;
         entity.IsActive = true;
 
         return await channelRepository.InsertAndGetIdAsync(entity);
@@ -280,6 +281,7 @@ public class ChannelAppService(
         ObjectMapper.Map(input, entity);
         entity.Name = name;
         entity.Icon = icon;
+        entity.Sort = input.Sort;
         await channelRepository.UpdateAsync(entity);
     }
 }

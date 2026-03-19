@@ -11,6 +11,7 @@ internal class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         entity.ToTable("Reservation");
 
         entity.Property(e => e.ReservationNo).HasMaxLength(32).IsUnicode(false).IsRequired();
+        entity.Property(e => e.RoomRatePlanCode).HasMaxLength(32).IsUnicode(false);
         entity.Property(e => e.GuestName).HasMaxLength(256);
         entity.Property(e => e.FirstName).HasMaxLength(128);
         entity.Property(e => e.LastName).HasMaxLength(128);

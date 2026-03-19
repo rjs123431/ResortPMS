@@ -9,6 +9,7 @@ public class Channel : AuditedEntity<Guid>, IPassivable
 {
     public string Name { get; set; } = string.Empty;
     public string Icon { get; set; } = string.Empty;
+    public int Sort { get; set; }
     public bool IsActive { get; set; } = true;
 
     public virtual ICollection<RoomRatePlanGroupChannel> RoomRatePlanGroupChannels { get; set; } = [];

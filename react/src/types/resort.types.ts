@@ -325,6 +325,14 @@ export interface RoomRatePlanListDto {
   channelNames: string[];
 }
 
+export interface RoomTypeRatePlanOptionDto {
+  roomRatePlanId: string;
+  code: string;
+  name: string;
+  pricePerNight: number;
+  priority: number;
+}
+
 export interface CreateRoomRatePlanDto {
   roomTypeId: string;
   code: string;
@@ -393,6 +401,7 @@ export interface ReservationExtraBedDto {
 export interface ReservationListDto {
   id: string;
   reservationNo: string;
+  roomRatePlanCode?: string;
   channelId?: string;
   channelName?: string;
   channelIcon?: string;
@@ -412,6 +421,7 @@ export interface CreateReservationDto {
   guestId?: string;
   channelId?: string;
   agencyId?: string;
+  roomRatePlanCode?: string;
   arrivalDate: string;
   departureDate: string;
   adults: number;
@@ -633,6 +643,7 @@ export interface ReservationDepositDto {
 export interface ReservationDetailDto {
   id: string;
   reservationNo: string;
+  roomRatePlanCode?: string;
   channelId?: string;
   channelName?: string;
   channelIcon?: string;
@@ -756,12 +767,14 @@ export interface ChannelListDto {
   id: string;
   name: string;
   icon?: string;
+  sort: number;
   isActive: boolean;
 }
 
 export interface CreateChannelDto {
   name: string;
   icon?: string;
+  sort: number;
 }
 
 export interface ChannelDto extends CreateChannelDto {

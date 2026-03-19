@@ -14,6 +14,7 @@ namespace PMS.App.Reservations.Dto;
 public class ReservationDto : EntityDto<Guid>
 {
     public string ReservationNo { get; set; }
+    public string RoomRatePlanCode { get; set; }
     public Guid? ChannelId { get; set; }
     public string ChannelName { get; set; }
     public string ChannelIcon { get; set; }
@@ -50,6 +51,7 @@ public class ReservationDto : EntityDto<Guid>
 public class ReservationListDto : EntityDto<Guid>
 {
     public string ReservationNo { get; set; }
+    public string RoomRatePlanCode { get; set; }
     public Guid? ChannelId { get; set; }
     public string ChannelName { get; set; }
     public string ChannelIcon { get; set; }
@@ -76,6 +78,7 @@ public class CreateReservationDto : IValidatableObject
     public Guid? GuestId { get; set; }
     public Guid? ChannelId { get; set; }
     public Guid? AgencyId { get; set; }
+    [StringLength(32)] public string RoomRatePlanCode { get; set; }
     [Required] public DateTime ArrivalDate { get; set; }
     [Required] public DateTime DepartureDate { get; set; }
     [Range(1, 20)] public int Adults { get; set; } = 1;
@@ -121,6 +124,7 @@ public class UpdateReservationDto
     [Required] public Guid Id { get; set; }
     public Guid? ChannelId { get; set; }
     public Guid? AgencyId { get; set; }
+    [StringLength(32)] public string RoomRatePlanCode { get; set; }
     [Required] public DateTime ArrivalDate { get; set; }
     [Required] public DateTime DepartureDate { get; set; }
     [Range(1, 20)] public int Adults { get; set; } = 1;

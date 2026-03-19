@@ -8,6 +8,7 @@ namespace PMS.App;
 public class Reservation : FullAuditedEntity<Guid>
 {
     public string ReservationNo { get; set; } = string.Empty;
+    public string RoomRatePlanCode { get; set; } = string.Empty;
     public Guid? ChannelId { get; set; }
     public Guid? AgencyId { get; set; }
     public Guid? GuestId { get; set; }

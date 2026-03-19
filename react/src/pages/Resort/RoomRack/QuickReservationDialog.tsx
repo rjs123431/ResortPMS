@@ -53,6 +53,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   const [notes, setNotes] = useState('');
   const [selectedChannelId, setSelectedChannelId] = useState('');
   const [selectedAgencyId, setSelectedAgencyId] = useState('');
+  const [selectedRatePlanId, setSelectedRatePlanId] = useState('');
 
   const { data: channels } = useQuery({
     queryKey: ['resort-channels'],
@@ -60,36 +61,20 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     enabled: open,
   });
 
-  const { data: agencies } = useQuery({
-    queryKey: ['resort-agencies'],
-    queryFn: () => resortService.getAgencies(),
-    enabled: open,
-  });
-
-  const latestRateQuery = useQuery({
-    queryKey: ['quick-reservation-room-rate', payload?.roomId, payload?.roomTypeId, payload?.checkInDate, payload?.checkOutDate, selectedChannelId],
-    enabled: open && !!payload,
+  const ratePlanOptionsQuery = useQuery({
+    queryKey: ['quick-reservation-rate-plans', payload?.roomTypeId, payload?.checkInDate, payload?.checkOutDate, selectedChannelId],
+    enabled: open && !!payload && !!selectedChannelId,
     queryFn: async () => {
       if (!payload) {
         throw new Error('Missing reservation data.');
       }
 
-      const rooms = await resortService.getAvailableRooms(
+      return resortService.getRoomTypeRatePlanOptions(
         payload.roomTypeId,
         payload.checkInDate,
         payload.checkOutDate,
-        undefined,
-        undefined,
-        undefined,
         selectedChannelId || undefined,
       );
-
-      const selectedRoom = rooms.find((room) => room.id === payload.roomId);
-      if (!selectedRoom) {
-        throw new Error('Selected room is no longer available for the chosen dates.');
-      }
-
-      return selectedRoom.baseRate;
     },
   });
 
@@ -106,7 +91,39 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     if (!open) return;
     setSelectedChannelId('');
     setSelectedAgencyId('');
+    setSelectedRatePlanId('');
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const options = channels ?? [];
+    if (options.length === 0) return;
+
+    setSelectedChannelId((current) => {
+      if (current && options.some((channel) => channel.id === current)) {
+        return current;
+      }
+
+      return options[0].id;
+    });
+  }, [channels, open]);
+
+  useEffect(() => {
+    const options = ratePlanOptionsQuery.data ?? [];
+    if (options.length === 0) {
+      setSelectedRatePlanId('');
+      return;
+    }
+
+    setSelectedRatePlanId((current) => {
+      if (current && options.some((option) => option.roomRatePlanId === current)) {
+        return current;
+      }
+
+      return options[0].roomRatePlanId;
+    });
+  }, [ratePlanOptionsQuery.data]);
 
   const createMutation = useMutation({
     mutationFn: async (isTemp: boolean) => {
@@ -121,7 +138,8 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       const arrivalDate = payload.checkInDate.includes('T') ? payload.checkInDate : `${payload.checkInDate}T${checkInTime}`;
       const departureDate = payload.checkOutDate.includes('T') ? payload.checkOutDate : `${payload.checkOutDate}T${checkOutTime}`;
       const nights = Math.max(1, Math.ceil((new Date(departureDate).getTime() - new Date(arrivalDate).getTime()) / (24 * 60 * 60 * 1000)));
-      const ratePerNight = latestRateQuery.data ?? 0;
+      const selectedRatePlan = (ratePlanOptionsQuery.data ?? []).find((option) => option.roomRatePlanId === selectedRatePlanId);
+      const ratePerNight = selectedRatePlan?.pricePerNight ?? 0;
       const amount = round2(ratePerNight * nights);
 
       const roomEntry = {
@@ -156,6 +174,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         departureDate,
         adults,
         children,
+        roomRatePlanCode: selectedRatePlan?.code,
         channelId: selectedChannelId,
         agencyId: selectedAgencyId || undefined,
         totalAmount: isTemp ? 0 : amount,
@@ -190,7 +209,9 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
 
   if (!payload) return null;
 
-  const ratePerNight = latestRateQuery.data ?? 0;
+  const ratePlanOptions = ratePlanOptionsQuery.data ?? [];
+  const selectedRatePlan = ratePlanOptions.find((option) => option.roomRatePlanId === selectedRatePlanId) ?? ratePlanOptions[0];
+  const ratePerNight = selectedRatePlan?.pricePerNight ?? 0;
 
   const checkIn = new Date(payload.checkInDate + 'T12:00:00');
   const checkOut = new Date(payload.checkOutDate + 'T12:00:00');
@@ -209,8 +230,9 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     lastName.trim() !== '' &&
     contactNumber.trim() !== '' &&
     selectedChannelId !== '' &&
-    !latestRateQuery.isLoading &&
-    !latestRateQuery.isError &&
+    selectedRatePlanId !== '' &&
+    !ratePlanOptionsQuery.isLoading &&
+    !ratePlanOptionsQuery.isError &&
     ratePerNight > 0 &&
     !createMutation.isPending;
 
@@ -231,6 +253,20 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                 <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room type</dt>
                 <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomTypeName}</dd>
               </div>
+              <div className="min-w-[180px]">
+                <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Channel</dt>
+                <dd className="mt-0.5">
+                  <select
+                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    value={selectedChannelId}
+                    onChange={(e) => setSelectedChannelId(e.target.value)}
+                  >
+                    {(channels ?? []).map((channel) => (
+                      <option key={channel.id} value={channel.id}>{channel.name}</option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
               <div>
                 <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room</dt>
                 <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomNumber}</dd>
@@ -241,35 +277,54 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
           <div className="mt-4 space-y-4">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">First name</label>
-                <input
-                  type="text"
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate plan</label>
+                <select
                   className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                />
+                  value={selectedRatePlanId}
+                  onChange={(e) => setSelectedRatePlanId(e.target.value)}
+                  disabled={!selectedChannelId || ratePlanOptionsQuery.isLoading || ratePlanOptions.length === 0}
+                >
+                  <option value="">Select rate plan</option>
+                  {ratePlanOptions.map((ratePlan) => (
+                    <option key={ratePlan.roomRatePlanId} value={ratePlan.roomRatePlanId}>
+                      {ratePlan.code} - {ratePlan.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Last name</label>
-                <input
-                  type="text"
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                />
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate per night</label>
+                <div className="w-full rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  {!selectedChannelId
+                    ? 'Select channel first'
+                    : ratePlanOptionsQuery.isLoading
+                      ? 'Loading rate plans...'
+                      : ratePerNight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                {ratePerNight > 0 && !ratePlanOptionsQuery.isLoading && (
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {nights} night{nights !== 1 ? 's' : ''} × {ratePerNight.toFixed(2)} = {(ratePerNight * nights).toFixed(2)}
+                  </p>
+                )}
+                {ratePlanOptionsQuery.isError && (
+                  <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                    {getErrorMessage(ratePlanOptionsQuery.error, 'Unable to load room rate plans.')}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Contact number</label>
-                <input
-                  type="text"
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Notes</label>
+                <textarea
+                  rows={2}
                   className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Optional"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Adults</label>
                 <div className="flex items-center overflow-hidden rounded border border-gray-300 dark:border-gray-600">
@@ -314,6 +369,36 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">First name</label>
+                <input
+                  type="text"
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Last name</label>
+                <input
+                  type="text"
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Contact number</label>
+                <input
+                  type="text"
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                />
+              </div>
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Email (optional)</label>
                 <input
@@ -323,51 +408,6 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate per night</label>
-                <div className="w-full rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                  {latestRateQuery.isLoading
-                    ? 'Loading latest rate...'
-                    : ratePerNight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                {ratePerNight > 0 && !latestRateQuery.isLoading && (
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    {nights} night{nights !== 1 ? 's' : ''} × {ratePerNight.toFixed(2)} = {(ratePerNight * nights).toFixed(2)}
-                  </p>
-                )}
-                {latestRateQuery.isError && (
-                  <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
-                    {getErrorMessage(latestRateQuery.error, 'Unable to load the latest nightly rate.')}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Channel</label>
-                <select
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={selectedChannelId}
-                  onChange={(e) => setSelectedChannelId(e.target.value)}
-                >
-                  <option value="">Select channel</option>
-                  {(channels ?? []).map((channel) => (
-                    <option key={channel.id} value={channel.id}>{channel.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Notes</label>
-              <textarea
-                rows={2}
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional"
-              />
             </div>
           </div>
 

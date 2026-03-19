@@ -100,3 +100,26 @@ public class GetRoomRatePlansInput : PagedResultFilterRequestDto, IShouldNormali
     public bool? IsActive { get; set; }
     public void Normalize() { Sorting ??= "Priority asc, Name asc"; }
 }
+
+public class GetRoomTypeRatePlanOptionsInput
+{
+    [Required]
+    public Guid RoomTypeId { get; set; }
+
+    [Required]
+    public DateTime ArrivalDate { get; set; }
+
+    [Required]
+    public DateTime DepartureDate { get; set; }
+
+    public Guid? ChannelId { get; set; }
+}
+
+public class RoomTypeRatePlanOptionDto
+{
+    public Guid RoomRatePlanId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public decimal PricePerNight { get; set; }
+    public int Priority { get; set; }
+}

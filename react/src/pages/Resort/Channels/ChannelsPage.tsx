@@ -15,7 +15,7 @@ export const ChannelListPage = () => {
   const [filter, setFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ChannelDto>({ id: '', name: '', icon: DEFAULT_CHANNEL_ICON, isActive: true });
+  const [form, setForm] = useState<ChannelDto>({ id: '', name: '', icon: DEFAULT_CHANNEL_ICON, sort: 0, isActive: true });
 
   const { data, isLoading } = useQuery({
     queryKey: ['resort-channels-paged', filter],
@@ -68,7 +68,7 @@ export const ChannelListPage = () => {
                   type="button"
                   className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
                   onClick={() => {
-                    setForm({ id: '', name: '', icon: DEFAULT_CHANNEL_ICON, isActive: true });
+                    setForm({ id: '', name: '', icon: DEFAULT_CHANNEL_ICON, sort: 0, isActive: true });
                     setShowCreate(true);
                   }}
                 >
@@ -86,6 +86,7 @@ export const ChannelListPage = () => {
                 <tr className="border-b text-left">
                   <th className="p-2">Icon</th>
                   <th className="p-2">Name</th>
+                  <th className="p-2">Sort</th>
                   <th className="p-2">Active</th>
                   <th className="p-2">Actions</th>
                 </tr>
@@ -97,6 +98,7 @@ export const ChannelListPage = () => {
                       <ChannelAvatar icon={item.icon} name={item.name} className="h-8 w-8" />
                     </td>
                     <td className="p-2">{item.name}</td>
+                    <td className="p-2">{item.sort}</td>
                     <td className="p-2">{item.isActive ? 'Yes' : 'No'}</td>
                     <td className="p-2">
                       {canEdit ? (
@@ -128,7 +130,7 @@ export const ChannelListPage = () => {
             if (editingId) {
               updateMutation.mutate(form);
             } else {
-              createMutation.mutate({ name: form.name, icon: form.icon });
+              createMutation.mutate({ name: form.name, icon: form.icon, sort: form.sort });
             }
           }}
         />
