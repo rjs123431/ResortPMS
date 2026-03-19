@@ -105,6 +105,39 @@ public class ReservationAppService(
 
         if (!isTempReservation)
         {
+            // Validate room type capacity for unassigned rooms
+            var unassignedByType = input.Rooms
+                .Where(r => !r.RoomId.HasValue)
+                .GroupBy(r => r.RoomTypeId)
+                .ToList();
+
+            var capacityBlockingStatuses = new[] { ReservationStatus.Pending, ReservationStatus.Confirmed, ReservationStatus.CheckedIn };
+
+            foreach (var unassignedGroup in unassignedByType)
+            {
+                var requestedCount = unassignedGroup.Count();
+
+                var totalRoomsForType = await roomRepository.GetAll()
+                    .CountAsync(r => r.RoomTypeId == unassignedGroup.Key && r.IsActive);
+
+                // Count all reservation rooms (assigned or unassigned) of this type that overlap the dates
+                var occupiedCount = await reservationRoomRepository.GetAll()
+                    .Where(rr =>
+                        rr.RoomTypeId == unassignedGroup.Key &&
+                        rr.ArrivalDate < departureDate &&
+                        rr.DepartureDate > arrivalDate &&
+                        (rr.Reservation.Status == ReservationStatus.Pending ||
+                         rr.Reservation.Status == ReservationStatus.Confirmed ||
+                         rr.Reservation.Status == ReservationStatus.CheckedIn))
+                    .CountAsync();
+
+                if (occupiedCount + requestedCount > totalRoomsForType)
+                {
+                    var roomType = await roomTypeRepository.FirstOrDefaultAsync(unassignedGroup.Key);
+                    throw new UserFriendlyException($"Not enough rooms available for room type '{roomType?.Name ?? "requested"}' for the selected dates.");
+                }
+            }
+
             // Atomically reserve inventory for each assigned room to prevent double booking under concurrency
             foreach (var room in input.Rooms)
             {

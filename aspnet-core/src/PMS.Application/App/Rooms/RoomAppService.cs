@@ -232,7 +232,7 @@ public class RoomAppService(
                 .AsNoTracking()
                 .Where(rr => rr.RoomId == null)
                 .WhereIf(input.ReservationId.HasValue, rr => rr.ReservationId != input.ReservationId.Value)
-                .Where(rr => rr.ArrivalDate < departureDate && rr.DepartureDate > arrivalDate)
+                .Where(rr => rr.ArrivalDate.Date < departureDate && rr.DepartureDate.Date > arrivalDate)
                 .Where(rr => blockingReservationStatuses.Contains(rr.Reservation.Status))
                 .GroupBy(rr => rr.RoomTypeId)
                 .Select(g => new { RoomTypeId = g.Key, Count = g.Count() })

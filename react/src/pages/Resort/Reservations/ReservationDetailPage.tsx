@@ -7,13 +7,19 @@ import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus } from '@/types/resort.types';
+import {
+  ReservationStatus,
+  type ReservationDetailDto,
+  type ReservationDepositDto,
+  type ReservationRoomDetailDto,
+} from '@/types/resort.types';
 import { confirmAction, notifySuccess } from '@/utils/alerts';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
 import { SearchGuestDialog, type SelectedGuest } from '../Shared/SearchGuestDialog';
 import {
   RoomTypeAvailabilitySearch,
+  type RoomTypeAvailabilityRow,
   type RoomTypeAvailabilitySearchCriteria,
 } from '../Shared/RoomTypeAvailabilitySearch';
 
@@ -82,6 +88,12 @@ const getStatusBadgeClass = (status: ReservationStatus) => {
   }
 };
 
+const TEMP_ROOM_PREFIX = 'temp-room-';
+const TEMP_EXTRA_BED_PREFIX = 'temp-extra-bed-';
+const TEMP_DEPOSIT_PREFIX = 'temp-deposit-';
+
+const createTempId = (prefix: string) => `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 export const ReservationDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -100,6 +112,16 @@ export const ReservationDetailPage = () => {
   const [addRoomTypeSearchCriteria, setAddRoomTypeSearchCriteria] = useState<RoomTypeAvailabilitySearchCriteria | null>(null);
   const [selectedRoomTypeAmounts, setSelectedRoomTypeAmounts] = useState<Record<string, number>>({});
   const [addRoomTypeSearchError, setAddRoomTypeSearchError] = useState('');
+  const [addRoomTypeAvailabilityRows, setAddRoomTypeAvailabilityRows] = useState<RoomTypeAvailabilityRow[]>([]);
+
+  const [draftReservation, setDraftReservation] = useState<ReservationDetailDto | null>(null);
+  const [pendingLinkedGuestId, setPendingLinkedGuestId] = useState<string | null>(null);
+  const [pendingAddedRoomTypeCounts, setPendingAddedRoomTypeCounts] = useState<Record<string, number>>({});
+  const [pendingRemovedRoomIds, setPendingRemovedRoomIds] = useState<string[]>([]);
+  const [pendingRoomAssignments, setPendingRoomAssignments] = useState<Record<string, string>>({});
+  const [pendingAddedExtraBeds, setPendingAddedExtraBeds] = useState<Array<{ tempId: string; extraBedTypeId: string; quantity: number }>>([]);
+  const [pendingRemovedExtraBedIds, setPendingRemovedExtraBedIds] = useState<string[]>([]);
+  const [pendingAddedDeposits, setPendingAddedDeposits] = useState<Array<Omit<ReservationDepositDto, 'id'> & { tempId: string }>>([]);
 
   const closeGuestDialog = () => {
     setIsGuestDialogOpen(false);
@@ -196,96 +218,121 @@ export const ReservationDetailPage = () => {
     },
   });
 
-  const recordDepositMutation = useMutation({
-    mutationFn: resortService.recordReservationDeposit,
-    onSuccess: () => {
-      setIsDepositDialogOpen(false);
-      setDepositAmount('');
-      setDepositPaymentMethodId('');
-      setDepositPaidDate(formatDateLocal(new Date()));
-      setDepositReferenceNo('');
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Deposit added.');
-    },
-  });
+  const hasUnsavedChanges =
+    Boolean(pendingLinkedGuestId) ||
+    Object.keys(pendingAddedRoomTypeCounts).length > 0 ||
+    pendingRemovedRoomIds.length > 0 ||
+    Object.keys(pendingRoomAssignments).length > 0 ||
+    pendingAddedExtraBeds.length > 0 ||
+    pendingRemovedExtraBedIds.length > 0 ||
+    pendingAddedDeposits.length > 0;
 
-  const linkGuestMutation = useMutation({
-    mutationFn: (guestId: string) => resortService.linkReservationGuest(id as string, guestId),
-    onSuccess: () => {
-      setIsGuestDialogOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Guest linked to reservation.');
-    },
-  });
+  useEffect(() => {
+    if (!reservationDetail || hasUnsavedChanges) return;
+    setDraftReservation({
+      ...reservationDetail,
+      rooms: [...reservationDetail.rooms],
+      extraBeds: [...reservationDetail.extraBeds],
+      deposits: [...reservationDetail.deposits],
+      guests: [...reservationDetail.guests],
+    });
+  }, [reservationDetail, hasUnsavedChanges]);
 
-  const removeRoomMutation = useMutation({
-    mutationFn: (reservationRoomId: string) => resortService.removeReservationRoom(id as string, reservationRoomId),
+  const saveChangesMutation = useMutation({
+    mutationFn: async () => {
+      if (!id) return;
+
+      if (pendingLinkedGuestId) {
+        await resortService.linkReservationGuest(id, pendingLinkedGuestId);
+      }
+
+      const roomTypesToAdd = Object.entries(pendingAddedRoomTypeCounts)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([roomTypeId, quantity]) => ({ roomTypeId, quantity }));
+      if (roomTypesToAdd.length > 0) {
+        await resortService.addReservationRoomTypes(id, roomTypesToAdd);
+      }
+
+      for (const reservationRoomId of pendingRemovedRoomIds) {
+        await resortService.removeReservationRoom(id, reservationRoomId);
+      }
+
+      for (const [reservationRoomId, roomId] of Object.entries(pendingRoomAssignments)) {
+        await resortService.assignReservationRoom({ reservationId: id, reservationRoomId, roomId });
+      }
+
+      const extraBedsToAdd = pendingAddedExtraBeds
+        .map(({ extraBedTypeId, quantity }) => ({ extraBedTypeId, quantity }))
+        .filter((x) => Boolean(x.extraBedTypeId) && x.quantity > 0);
+      if (extraBedsToAdd.length > 0) {
+        await resortService.addReservationExtraBeds(id, extraBedsToAdd);
+      }
+
+      for (const reservationExtraBedId of pendingRemovedExtraBedIds) {
+        await resortService.removeReservationExtraBed(id, reservationExtraBedId);
+      }
+
+      for (const deposit of pendingAddedDeposits) {
+        await resortService.recordReservationDeposit({
+          reservationId: id,
+          amount: deposit.amount,
+          paymentMethodId: deposit.paymentMethodId,
+          paidDate: deposit.paidDate,
+          referenceNo: deposit.referenceNo || undefined,
+        });
+      }
+    },
     onSuccess: () => {
+      setPendingLinkedGuestId(null);
+      setPendingAddedRoomTypeCounts({});
+      setPendingRemovedRoomIds([]);
+      setPendingRoomAssignments({});
+      setPendingAddedExtraBeds([]);
+      setPendingRemovedExtraBedIds([]);
+      setPendingAddedDeposits([]);
+
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
       void queryClient.invalidateQueries({ queryKey: ['room-rack-info'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail-available-rooms', id] });
-      notifySuccess('Room type removed from reservation.');
-    },
-  });
-
-  const removeExtraBedMutation = useMutation({
-    mutationFn: (reservationExtraBedId: string) => resortService.removeReservationExtraBed(id as string, reservationExtraBedId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Extra bed removed from reservation.');
-    },
-  });
-
-  const assignRoomMutation = useMutation({
-    mutationFn: resortService.assignReservationRoom,
-    onSuccess: () => {
-      setAssignDialogReservationRoomId('');
-      setAssignDialogSelectedRoomId('');
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail-available-rooms', id] });
       void queryClient.invalidateQueries({ queryKey: ['resort-rooms-lookup'] });
-      notifySuccess('Room assignment updated.');
-    },
-  });
-  const addRoomTypesMutation = useMutation({
-    mutationFn: async (input: { roomTypeIds: string[]; amounts: Record<string, number> }) => {
-      const roomTypes = input.roomTypeIds.map((roomTypeId) => ({
-        roomTypeId,
-        quantity: Math.max(1, Math.floor(input.amounts[roomTypeId] ?? 1)),
-      }));
-      return resortService.addReservationRoomTypes(id as string, roomTypes);
-    },
-    onSuccess: () => {
-      closeAddRoomTypeDialog();
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Room type(s) added to reservation.');
+      notifySuccess('Changes saved.');
     },
   });
 
-  const addExtraBedsMutation = useMutation({
-    mutationFn: async (input: { extraBedTypeId: string; quantity: number }) =>
-      resortService.addReservationExtraBeds(id as string, [input]),
-    onSuccess: () => {
-      setIsAddExtraBedDialogOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
-      notifySuccess('Extra bed added to reservation.');
-    },
-  });
+  const discardChanges = () => {
+    if (!reservationDetail) return;
+    setDraftReservation({
+      ...reservationDetail,
+      rooms: [...reservationDetail.rooms],
+      extraBeds: [...reservationDetail.extraBeds],
+      deposits: [...reservationDetail.deposits],
+      guests: [...reservationDetail.guests],
+    });
+    setPendingLinkedGuestId(null);
+    setPendingAddedRoomTypeCounts({});
+    setPendingRemovedRoomIds([]);
+    setPendingRoomAssignments({});
+    setPendingAddedExtraBeds([]);
+    setPendingRemovedExtraBedIds([]);
+    setPendingAddedDeposits([]);
+    setAssignDialogReservationRoomId('');
+    setAssignDialogSelectedRoomId('');
+    setIsDepositDialogOpen(false);
+    setIsAddExtraBedDialogOpen(false);
+    closeAddRoomTypeDialog();
+  };
 
-  const rooms = reservationDetail?.rooms ?? [];
-  const extraBeds = reservationDetail?.extraBeds ?? [];
-  const deposits = reservationDetail?.deposits ?? [];
+  const effectiveReservation = draftReservation ?? reservationDetail;
+
+  const rooms = effectiveReservation?.rooms ?? [];
+  const extraBeds = effectiveReservation?.extraBeds ?? [];
+  const deposits = effectiveReservation?.deposits ?? [];
   const depositAmountValue = Number(depositAmount || 0);
   const totalAmountBalance = useMemo(() => {
-    if (!reservationDetail) return 0;
-    return Math.max(0, reservationDetail.totalAmount - reservationDetail.depositPaid);
-  }, [reservationDetail]);
+    if (!effectiveReservation) return 0;
+    return Math.max(0, effectiveReservation.totalAmount - effectiveReservation.depositPaid);
+  }, [effectiveReservation]);
 
   const computedRoomAmount = useMemo(
     () => rooms.reduce((sum, room) => sum + Number(room.netAmount || 0), 0),
@@ -299,9 +346,9 @@ export const ReservationDetailPage = () => {
 
   /** Draft: no assign room, add guest, add deposit. Pending/Confirmed: allow all. */
   const canShowBookingActions = useMemo(() => {
-    if (!reservationDetail) return false;
-    return reservationDetail.status === ReservationStatus.Pending;
-  }, [reservationDetail]);
+    if (!effectiveReservation) return false;
+    return effectiveReservation.status === ReservationStatus.Pending;
+  }, [effectiveReservation]);
 
   const roomNumberById = useMemo(() => {
     const map = new Map<string, string>();
@@ -312,34 +359,34 @@ export const ReservationDetailPage = () => {
   }, [roomLookup]);
 
   const assignDialogRoomLine = useMemo(
-    () => reservationDetail?.rooms?.find((room) => room.id === assignDialogReservationRoomId),
-    [reservationDetail, assignDialogReservationRoomId],
+    () => effectiveReservation?.rooms?.find((room) => room.id === assignDialogReservationRoomId),
+    [effectiveReservation, assignDialogReservationRoomId],
   );
 
   const isChangeRoomDialog = useMemo(() => {
     if (!assignDialogReservationRoomId) return false;
-    const roomLine = (reservationDetail?.rooms ?? []).find((row) => row.id === assignDialogReservationRoomId);
+    const roomLine = (effectiveReservation?.rooms ?? []).find((row) => row.id === assignDialogReservationRoomId);
     return Boolean(roomLine?.roomId);
-  }, [assignDialogReservationRoomId, reservationDetail?.rooms]);
+  }, [assignDialogReservationRoomId, effectiveReservation?.rooms]);
 
   const canAssignRooms = canShowBookingActions;
   const canAddExtraBeds =
-    reservationDetail?.status === ReservationStatus.Draft ||
-    reservationDetail?.status === ReservationStatus.Pending;
+    effectiveReservation?.status === ReservationStatus.Draft ||
+    effectiveReservation?.status === ReservationStatus.Pending;
   const canAddRoomTypes =
-    reservationDetail?.status === ReservationStatus.Draft ||
-    reservationDetail?.status === ReservationStatus.Pending;
+    effectiveReservation?.status === ReservationStatus.Draft ||
+    effectiveReservation?.status === ReservationStatus.Pending;
   const canRemoveRoomTypes = canAddRoomTypes;
   const canRemoveExtraBeds = canAddExtraBeds;
   const canAddPayments =
-    reservationDetail?.status === ReservationStatus.Draft ||
-    reservationDetail?.status === ReservationStatus.Pending;
-  const addRoomTypeArrivalDate = toDateOnly(reservationDetail?.arrivalDate);
-  const addRoomTypeDepartureDate = toDateOnly(reservationDetail?.departureDate);
-  const isLinkGuestMode = !reservationDetail?.guestId;
+    effectiveReservation?.status === ReservationStatus.Draft ||
+    effectiveReservation?.status === ReservationStatus.Pending;
+  const addRoomTypeArrivalDate = toDateOnly(effectiveReservation?.arrivalDate);
+  const addRoomTypeDepartureDate = toDateOnly(effectiveReservation?.departureDate);
+  const isLinkGuestMode = !effectiveReservation?.guestId;
   const canLinkGuest =
-    !reservationDetail?.guestId &&
-    (reservationDetail?.status === ReservationStatus.Draft || reservationDetail?.status === ReservationStatus.Pending);
+    !effectiveReservation?.guestId &&
+    (effectiveReservation?.status === ReservationStatus.Draft || effectiveReservation?.status === ReservationStatus.Pending);
   const allRoomTypeIds = useMemo(() => (roomTypes ?? []).map((roomType) => roomType.id), [roomTypes]);
   const selectedRoomTypeIdsForAdd = useMemo(
     () => Object.entries(selectedRoomTypeAmounts).filter(([, amount]) => amount > 0).map(([roomTypeId]) => roomTypeId),
@@ -354,6 +401,245 @@ export const ReservationDetailPage = () => {
   const closeAssignRoomDialog = () => {
     setAssignDialogReservationRoomId('');
     setAssignDialogSelectedRoomId('');
+  };
+
+  const handleAddRoomTypesDraft = (input: { roomTypeIds: string[]; amounts: Record<string, number> }) => {
+    if (!effectiveReservation) return;
+
+    const roomTypeMap = new Map((roomTypes ?? []).map((roomType) => [roomType.id, roomType]));
+    const availabilityMap = new Map(addRoomTypeAvailabilityRows.map((row) => [row.roomTypeId, row]));
+
+    const nextRooms: ReservationRoomDetailDto[] = [...(draftReservation?.rooms ?? effectiveReservation.rooms)];
+    const nextAddedCounts = { ...pendingAddedRoomTypeCounts };
+
+    input.roomTypeIds.forEach((roomTypeId) => {
+      const quantity = Math.max(1, Math.floor(input.amounts[roomTypeId] ?? 1));
+      if (quantity <= 0) return;
+
+      const roomType = roomTypeMap.get(roomTypeId);
+      const availability = availabilityMap.get(roomTypeId);
+      const ratePerNight = availability?.baseRate ?? 0;
+      const nights = effectiveReservation.nights > 0 ? effectiveReservation.nights : 1;
+      const netAmount = ratePerNight * nights;
+
+      for (let index = 0; index < quantity; index += 1) {
+        nextRooms.push({
+          id: createTempId(TEMP_ROOM_PREFIX),
+          roomTypeId,
+          roomTypeName: roomType?.name ?? availability?.roomTypeName ?? 'Room Type',
+          roomId: undefined,
+          roomNumber: undefined,
+          arrivalDate: effectiveReservation.arrivalDate,
+          departureDate: effectiveReservation.departureDate,
+          ratePerNight,
+          numberOfNights: nights,
+          amount: netAmount,
+          discountPercent: 0,
+          discountAmount: 0,
+          seniorCitizenCount: 0,
+          seniorCitizenPercent: 0,
+          seniorCitizenDiscountAmount: 0,
+          netAmount,
+        });
+      }
+
+      nextAddedCounts[roomTypeId] = (nextAddedCounts[roomTypeId] ?? 0) + quantity;
+    });
+
+    setDraftReservation((prev) => (prev ? { ...prev, rooms: nextRooms } : prev));
+    setPendingAddedRoomTypeCounts(nextAddedCounts);
+    closeAddRoomTypeDialog();
+  };
+
+  const handleRemoveRoomDraft = (reservationRoomId: string) => {
+    setDraftReservation((prev) => {
+      if (!prev) return prev;
+      const target = prev.rooms.find((room) => room.id === reservationRoomId);
+      const updatedRooms = prev.rooms.filter((room) => room.id !== reservationRoomId);
+
+      if (target?.id.startsWith(TEMP_ROOM_PREFIX)) {
+        setPendingAddedRoomTypeCounts((counts) => {
+          const nextCounts = { ...counts };
+          const current = nextCounts[target.roomTypeId] ?? 0;
+          if (current <= 1) delete nextCounts[target.roomTypeId];
+          else nextCounts[target.roomTypeId] = current - 1;
+          return nextCounts;
+        });
+      } else {
+        setPendingRemovedRoomIds((prevRemoved) =>
+          prevRemoved.includes(reservationRoomId) ? prevRemoved : [...prevRemoved, reservationRoomId],
+        );
+        setPendingRoomAssignments((prevAssignments) => {
+          const nextAssignments = { ...prevAssignments };
+          delete nextAssignments[reservationRoomId];
+          return nextAssignments;
+        });
+      }
+
+      return { ...prev, rooms: updatedRooms };
+    });
+  };
+
+  const handleAssignRoomDraft = (reservationRoomId: string, roomId: string) => {
+    const roomNumber = roomNumberById.get(roomId);
+
+    setDraftReservation((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rooms: prev.rooms.map((room) =>
+          room.id === reservationRoomId
+            ? {
+                ...room,
+                roomId,
+                roomNumber: roomNumber ?? room.roomNumber,
+              }
+            : room,
+        ),
+      };
+    });
+
+    if (!reservationRoomId.startsWith(TEMP_ROOM_PREFIX)) {
+      const originalRoomId = reservationDetail?.rooms.find((room) => room.id === reservationRoomId)?.roomId;
+      setPendingRoomAssignments((prevAssignments) => {
+        const nextAssignments = { ...prevAssignments };
+        if (originalRoomId === roomId) {
+          delete nextAssignments[reservationRoomId];
+        } else {
+          nextAssignments[reservationRoomId] = roomId;
+        }
+        return nextAssignments;
+      });
+    }
+
+    closeAssignRoomDialog();
+  };
+
+  const handleAddExtraBedDraft = (extraBedTypeId: string, quantity: number) => {
+    const selectedType = (extraBedTypes ?? []).find((item) => item.id === extraBedTypeId);
+    if (!effectiveReservation || !selectedType) return;
+
+    const safeQuantity = Math.max(1, Math.floor(quantity));
+    const nights = effectiveReservation.nights > 0 ? effectiveReservation.nights : 1;
+    const ratePerNight = selectedType.basePrice;
+    const netAmount = safeQuantity * ratePerNight * nights;
+    const tempId = createTempId(TEMP_EXTRA_BED_PREFIX);
+
+    setDraftReservation((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        extraBeds: [
+          ...prev.extraBeds,
+          {
+            id: tempId,
+            extraBedTypeId,
+            extraBedTypeName: selectedType.name,
+            arrivalDate: effectiveReservation.arrivalDate,
+            departureDate: effectiveReservation.departureDate,
+            quantity: safeQuantity,
+            ratePerNight,
+            numberOfNights: nights,
+            amount: netAmount,
+            discountPercent: 0,
+            discountAmount: 0,
+            seniorCitizenCount: 0,
+            seniorCitizenPercent: 0,
+            seniorCitizenDiscountAmount: 0,
+            netAmount,
+          },
+        ],
+      };
+    });
+
+    setPendingAddedExtraBeds((prev) => [...prev, { tempId, extraBedTypeId, quantity: safeQuantity }]);
+    setIsAddExtraBedDialogOpen(false);
+  };
+
+  const handleRemoveExtraBedDraft = (reservationExtraBedId: string) => {
+    setDraftReservation((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        extraBeds: prev.extraBeds.filter((bed) => bed.id !== reservationExtraBedId),
+      };
+    });
+
+    if (reservationExtraBedId.startsWith(TEMP_EXTRA_BED_PREFIX)) {
+      setPendingAddedExtraBeds((prev) => prev.filter((item) => item.tempId !== reservationExtraBedId));
+      return;
+    }
+
+    setPendingRemovedExtraBedIds((prev) =>
+      prev.includes(reservationExtraBedId) ? prev : [...prev, reservationExtraBedId],
+    );
+  };
+
+  const handleAddDepositDraft = () => {
+    if (!effectiveReservation) return;
+
+    const amount = Number(depositAmount);
+    if (!amount || amount <= 0 || amount > totalAmountBalance || !depositPaymentMethodId || !depositPaidDate) return;
+
+    const paymentMethodName = (paymentMethods ?? []).find((method) => method.id === depositPaymentMethodId)?.name ?? '';
+    const tempId = createTempId(TEMP_DEPOSIT_PREFIX);
+
+    setDraftReservation((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        depositPaid: (prev.depositPaid ?? 0) + amount,
+        deposits: [
+          ...prev.deposits,
+          {
+            id: tempId,
+            amount,
+            paymentMethodId: depositPaymentMethodId,
+            paymentMethodName,
+            paidDate: depositPaidDate,
+            referenceNo: depositReferenceNo || undefined,
+          },
+        ],
+      };
+    });
+
+    setPendingAddedDeposits((prev) => [
+      ...prev,
+      {
+        tempId,
+        amount,
+        paymentMethodId: depositPaymentMethodId,
+        paymentMethodName,
+        paidDate: depositPaidDate,
+        referenceNo: depositReferenceNo || undefined,
+      },
+    ]);
+
+    setIsDepositDialogOpen(false);
+    setDepositAmount('');
+    setDepositPaymentMethodId('');
+    setDepositPaidDate(formatDateLocal(new Date()));
+    setDepositReferenceNo('');
+  };
+
+  const handleLinkGuestDraft = (guest: SelectedGuest) => {
+    if (!isLinkGuestMode || !canLinkGuest) return;
+
+    setDraftReservation((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        guestId: guest.id,
+        guestName: guest.fullName,
+        firstName: guest.fullName,
+        lastName: '',
+        phone: guest.phone ?? prev.phone,
+        email: guest.email ?? prev.email,
+      };
+    });
+
+    setPendingLinkedGuestId(guest.id);
+    setIsGuestDialogOpen(false);
   };
 
   const handleConfirmReservation = async () => {
@@ -456,7 +742,6 @@ export const ReservationDetailPage = () => {
                       roomTypes={roomTypes}
                       arrivalDate={addRoomTypeArrivalDate || undefined}
                       departureDate={addRoomTypeDepartureDate || undefined}
-                      reservationId={id}
                       selectedRoomTypeIds={roomTypeFilterIds}
                       onSelectedRoomTypeIdsChange={setRoomTypeFilterIds}
                       selectedAmounts={selectedRoomTypeAmounts}
@@ -465,6 +750,7 @@ export const ReservationDetailPage = () => {
                       onSearch={setAddRoomTypeSearchCriteria}
                       errorMessage={addRoomTypeSearchError}
                       onErrorMessageChange={setAddRoomTypeSearchError}
+                      onAvailabilityChange={({ availabilityRows }) => setAddRoomTypeAvailabilityRows(availabilityRows)}
                     />
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
@@ -478,15 +764,15 @@ export const ReservationDetailPage = () => {
                     <button
                       type="button"
                       className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
-                      disabled={addRoomTypesMutation.isPending || selectedRoomTypeIdsForAdd.length === 0}
+                      disabled={selectedRoomTypeIdsForAdd.length === 0}
                       onClick={() => {
-                        addRoomTypesMutation.mutate({
+                        handleAddRoomTypesDraft({
                           roomTypeIds: selectedRoomTypeIdsForAdd,
                           amounts: selectedRoomTypeAmounts,
                         });
                       }}
                     >
-                      {addRoomTypesMutation.isPending ? 'Adding...' : 'Add Room Type(s)'}
+                      Add Room Type(s)
                     </button>
                   </div>
                 </DialogPanel>
@@ -556,19 +842,19 @@ export const ReservationDetailPage = () => {
                     <div className="mt-3 border-t border-gray-200 pt-4 dark:border-gray-700">
                       <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">GUEST NAME</p>
                       <p className="mt-1 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
-                        {(reservationDetail.firstName?.trim() || reservationDetail.lastName?.trim())
-                          ? `${reservationDetail.firstName?.trim() ?? ''} ${reservationDetail.lastName?.trim() ?? ''}`.trim()
-                          : reservationDetail.guestName}
+                        {(effectiveReservation?.firstName?.trim() || effectiveReservation?.lastName?.trim())
+                          ? `${effectiveReservation?.firstName?.trim() ?? ''} ${effectiveReservation?.lastName?.trim() ?? ''}`.trim()
+                          : effectiveReservation?.guestName}
                       </p>
 
                       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-gray-200 dark:sm:divide-gray-700">
                         <div className="sm:pr-4">
                           <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">CONTACT NUMBER</p>
-                          <p className="mt-1 text-base font-medium text-gray-500 dark:text-gray-400">{reservationDetail.phone?.trim() ? reservationDetail.phone : '-'}</p>
+                          <p className="mt-1 text-base font-medium text-gray-500 dark:text-gray-400">{effectiveReservation?.phone?.trim() ? effectiveReservation.phone : '-'}</p>
                         </div>
                         <div className="sm:pl-4">
                           <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">EMAIL</p>
-                          <p className="mt-1 text-base font-medium text-gray-500 dark:text-gray-400 break-all">{reservationDetail.email?.trim() ? reservationDetail.email : '-'}</p>
+                          <p className="mt-1 text-base font-medium text-gray-500 dark:text-gray-400 break-all">{effectiveReservation?.email?.trim() ? effectiveReservation.email : '-'}</p>
                         </div>
                       </div>
                     </div>
@@ -636,7 +922,7 @@ export const ReservationDetailPage = () => {
                             <td className="p-2 text-right">
                               {canAssignRooms || canRemoveRoomTypes ? (
                                 <div className="flex justify-end gap-2">
-                                  {canAssignRooms ? (
+                                  {canAssignRooms && !room.id.startsWith(TEMP_ROOM_PREFIX) ? (
                                     <button
                                       type="button"
                                       className="rounded bg-primary-600 px-2 py-1 text-xs text-white"
@@ -648,9 +934,8 @@ export const ReservationDetailPage = () => {
                                   {canRemoveRoomTypes ? (
                                     <button
                                       type="button"
-                                      className="rounded bg-rose-600 px-2 py-1 text-xs text-white disabled:opacity-50"
-                                      disabled={removeRoomMutation.isPending}
-                                      onClick={() => removeRoomMutation.mutate(room.id)}
+                                      className="rounded bg-rose-600 px-2 py-1 text-xs text-white"
+                                      onClick={() => handleRemoveRoomDraft(room.id)}
                                     >
                                       Remove
                                     </button>
@@ -677,8 +962,7 @@ export const ReservationDetailPage = () => {
                   {canAddExtraBeds ? (
                     <button
                       type="button"
-                      className="w-full rounded bg-primary-600 px-3 py-1.5 text-sm text-white hover:bg-primary-700 disabled:opacity-50 sm:w-auto"
-                      disabled={addExtraBedsMutation.isPending}
+                      className="w-full rounded bg-primary-600 px-3 py-1.5 text-sm text-white hover:bg-primary-700 sm:w-auto"
                       onClick={() => setIsAddExtraBedDialogOpen(true)}
                     >
                       Add Extra Bed
@@ -712,9 +996,8 @@ export const ReservationDetailPage = () => {
                               {canRemoveExtraBeds ? (
                                 <button
                                   type="button"
-                                  className="rounded bg-rose-600 px-2 py-1 text-xs text-white disabled:opacity-50"
-                                  disabled={removeExtraBedMutation.isPending}
-                                  onClick={() => removeExtraBedMutation.mutate(bed.id)}
+                                  className="rounded bg-rose-600 px-2 py-1 text-xs text-white"
+                                  onClick={() => handleRemoveExtraBedDraft(bed.id)}
                                 >
                                   Remove
                                 </button>
@@ -743,11 +1026,11 @@ export const ReservationDetailPage = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-500 dark:text-gray-400">Total Amount</span>
-                        <span className="font-semibold tabular-nums">{formatMoney(reservationDetail.totalAmount)}</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(effectiveReservation?.totalAmount)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-500 dark:text-gray-400">Total Payments</span>
-                        <span className="font-semibold tabular-nums">{formatMoney(reservationDetail.depositPaid)}</span>
+                        <span className="font-semibold tabular-nums">{formatMoney(effectiveReservation?.depositPaid)}</span>
                       </div>
                       <div className="flex items-center justify-between border-t border-gray-200 pt-2 dark:border-gray-700">
                         <span className="text-gray-500 dark:text-gray-400">Balance</span>
@@ -803,9 +1086,29 @@ export const ReservationDetailPage = () => {
                 </div>
               </div>
 
-              {(reservationDetail.status === ReservationStatus.Pending || reservationDetail.status === ReservationStatus.Draft) ? (
-                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 pt-4 dark:border-gray-700">
-                  {reservationDetail.status === ReservationStatus.Pending ? (
+              {(effectiveReservation?.status === ReservationStatus.Pending || effectiveReservation?.status === ReservationStatus.Draft) ? (
+                <div className="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:text-gray-200"
+                      disabled={!hasUnsavedChanges || saveChangesMutation.isPending}
+                      onClick={discardChanges}
+                    >
+                      Discard Changes
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full rounded bg-primary-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
+                      disabled={!hasUnsavedChanges || saveChangesMutation.isPending}
+                      onClick={() => saveChangesMutation.mutate()}
+                    >
+                      {saveChangesMutation.isPending ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                  {effectiveReservation?.status === ReservationStatus.Pending ? (
                     <button
                       type="button"
                       className="w-full rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
@@ -823,6 +1126,7 @@ export const ReservationDetailPage = () => {
                   >
                     {cancelMutation.isPending ? 'Cancelling…' : 'Cancel'}
                   </button>
+                  </div>
                 </div>
               ) : null}
 
@@ -830,9 +1134,7 @@ export const ReservationDetailPage = () => {
                 open={isAddExtraBedDialogOpen}
                 extraBedTypes={extraBedTypes ?? []}
                 onClose={() => setIsAddExtraBedDialogOpen(false)}
-                onAdd={(extraBedTypeId, quantity) => {
-                  addExtraBedsMutation.mutate({ extraBedTypeId, quantity });
-                }}
+                onAdd={handleAddExtraBedDraft}
               />
             </div>
           ) : null}
@@ -902,25 +1204,15 @@ export const ReservationDetailPage = () => {
                     type="button"
                     className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
                     disabled={
-                      recordDepositMutation.isPending ||
-                      !reservationDetail ||
+                      !effectiveReservation ||
                       depositAmountValue <= 0 ||
                       depositAmountValue > totalAmountBalance ||
                       !depositPaymentMethodId ||
                       !depositPaidDate
                     }
-                    onClick={() => {
-                      if (!reservationDetail) return;
-                      recordDepositMutation.mutate({
-                        reservationId: reservationDetail.id,
-                        amount: Number(depositAmount),
-                        paymentMethodId: depositPaymentMethodId,
-                        paidDate: depositPaidDate,
-                        referenceNo: depositReferenceNo || undefined,
-                      });
-                    }}
+                    onClick={handleAddDepositDraft}
                   >
-                    {recordDepositMutation.isPending ? 'Saving...' : 'Record Deposit'}
+                    Add Deposit (Draft)
                   </button>
                 </div>
               </DialogPanel>
@@ -931,10 +1223,7 @@ export const ReservationDetailPage = () => {
         <SearchGuestDialog
           open={isGuestDialogOpen}
           onClose={closeGuestDialog}
-          onSelectGuest={(guest: SelectedGuest) => {
-            if (!isLinkGuestMode || !canLinkGuest) return;
-            linkGuestMutation.mutate(guest.id);
-          }}
+          onSelectGuest={handleLinkGuestDraft}
         />
 
         <AssignRoomDialog
@@ -946,17 +1235,13 @@ export const ReservationDetailPage = () => {
           arrivalDate={assignDialogRoomLine?.arrivalDate}
           departureDate={assignDialogRoomLine?.departureDate}
           reservationId={id}
-          excludeRoomIds={(reservationDetail?.rooms ?? [])
+          excludeRoomIds={rooms
             .filter((room) => room.id !== assignDialogReservationRoomId && Boolean(room.roomId))
             .map((room) => room.roomId as string)}
           onSelectRoom={(roomId) => {
             setAssignDialogSelectedRoomId(roomId);
-            if (id && assignDialogReservationRoomId) {
-              assignRoomMutation.mutate({
-                reservationId: id,
-                reservationRoomId: assignDialogReservationRoomId,
-                roomId,
-              });
+            if (assignDialogReservationRoomId) {
+              handleAssignRoomDraft(assignDialogReservationRoomId, roomId);
             }
           }}
           onClose={closeAssignRoomDialog}

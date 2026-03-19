@@ -104,6 +104,7 @@ export const RoomTypeAvailabilitySearch = ({
         searchCriteria.arrivalDate &&
         searchCriteria.departureDate,
     ),
+    staleTime: 5 * 1000,
   });
 
   const availabilityRows = useMemo<RoomTypeAvailabilityRow[]>(() => {
