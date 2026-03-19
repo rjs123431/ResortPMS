@@ -10,7 +10,6 @@ export type QuickReservationPayload = {
   roomTypeId: string;
   roomNumber: string;
   roomId: string;
-  /** Base rate per night for this room type (from room rack). */
   baseRate?: number;
 };
 
@@ -21,6 +20,27 @@ type QuickReservationDialogProps = {
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error && typeof error === 'object') {
+    const apiError = error as {
+      message?: string;
+      response?: {
+        data?: {
+          error?: {
+            message?: string;
+            details?: string;
+          };
+        };
+      };
+    };
+
+    return apiError.response?.data?.error?.message || apiError.response?.data?.error?.details || apiError.message || fallback;
+  }
+
+  return fallback;
+};
 
 export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservationDialogProps) => {
   const queryClient = useQueryClient();
@@ -30,7 +50,6 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
   const [email, setEmail] = useState('');
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
-  const [ratePerNight, setRatePerNight] = useState(0);
   const [notes, setNotes] = useState('');
   const [selectedChannelId, setSelectedChannelId] = useState('');
   const [selectedAgencyId, setSelectedAgencyId] = useState('');
@@ -47,6 +66,29 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     enabled: open,
   });
 
+  const latestRateQuery = useQuery({
+    queryKey: ['quick-reservation-room-rate', payload?.roomId, payload?.roomTypeId, payload?.checkInDate, payload?.checkOutDate],
+    enabled: open && !!payload,
+    queryFn: async () => {
+      if (!payload) {
+        throw new Error('Missing reservation data.');
+      }
+
+      const rooms = await resortService.getAvailableRooms(
+        payload.roomTypeId,
+        payload.checkInDate,
+        payload.checkOutDate,
+      );
+
+      const selectedRoom = rooms.find((room) => room.id === payload.roomId);
+      if (!selectedRoom) {
+        throw new Error('Selected room is no longer available for the chosen dates.');
+      }
+
+      return selectedRoom.baseRate;
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,12 +97,6 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
-
-  useEffect(() => {
-    if (open && payload?.baseRate != null && payload.baseRate >= 0) {
-      setRatePerNight(payload.baseRate);
-    }
-  }, [open, payload?.baseRate]);
 
   useEffect(() => {
     if (!open) return;
@@ -75,12 +111,15 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       if (!lastName.trim()) throw new Error('Last name is required.');
       if (!contactNumber.trim()) throw new Error('Contact number is required.');
       if (!selectedChannelId) throw new Error('Reservation channel is required.');
+
       const checkInTime = '14:00:00';
       const checkOutTime = '12:00:00';
       const arrivalDate = payload.checkInDate.includes('T') ? payload.checkInDate : `${payload.checkInDate}T${checkInTime}`;
       const departureDate = payload.checkOutDate.includes('T') ? payload.checkOutDate : `${payload.checkOutDate}T${checkOutTime}`;
       const nights = Math.max(1, Math.ceil((new Date(departureDate).getTime() - new Date(arrivalDate).getTime()) / (24 * 60 * 60 * 1000)));
+      const ratePerNight = latestRateQuery.data ?? 0;
       const amount = round2(ratePerNight * nights);
+
       const roomEntry = {
         roomTypeId: payload.roomTypeId,
         roomId: payload.roomId || undefined,
@@ -94,6 +133,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         seniorCitizenDiscountAmount: 0,
         netAmount: amount,
       };
+
       const tempRoomEntry = {
         roomTypeId: payload.roomTypeId,
         ratePerNight: round2(ratePerNight),
@@ -106,6 +146,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
         seniorCitizenDiscountAmount: 0,
         netAmount: amount,
       };
+
       return resortService.createReservation({
         arrivalDate,
         departureDate,
@@ -145,6 +186,8 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
 
   if (!payload) return null;
 
+  const ratePerNight = latestRateQuery.data ?? 0;
+
   const checkIn = new Date(payload.checkInDate + 'T12:00:00');
   const checkOut = new Date(payload.checkOutDate + 'T12:00:00');
   const sameYear = checkIn.getFullYear() === checkOut.getFullYear();
@@ -162,52 +205,54 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     lastName.trim() !== '' &&
     contactNumber.trim() !== '' &&
     selectedChannelId !== '' &&
+    !latestRateQuery.isLoading &&
+    !latestRateQuery.isError &&
+    ratePerNight > 0 &&
     !createMutation.isPending;
 
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
-        <div className="relative flex min-h-screen items-start justify-center p-4 pt-8 pointer-events-none">
-          <DialogPanel className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick reservation</h2>
-            <hr className="my-4" />
-            <dl className="mt-4 space-y-3">
-              <div className="flex flex-wrap gap-4">
-                <div>
-                  <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Dates</dt>
-                  <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{dateRangeLabel}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room type</dt>
-                  <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomTypeName}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room</dt>
-                  <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomNumber}</dd>
-                </div>
+      <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+      <div className="relative flex min-h-screen items-center justify-center p-4 pt-8 pointer-events-none">
+        <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick reservation</h2>
+          <hr className="my-4" />
+          <dl className="mt-4 space-y-3">
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Dates</dt>
+                <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{dateRangeLabel}</dd>
               </div>
-            </dl>
+              <div>
+                <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room type</dt>
+                <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomTypeName}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room</dt>
+                <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomNumber}</dd>
+              </div>
+            </div>
+          </dl>
 
-            <div className="mt-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">First name</label>
-                  <input
-                    type="text"
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Last name</label>
-                  <input
-                    type="text"
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                  />
-                </div>
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">First name</label>
+                <input
+                  type="text"
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Last name</label>
+                <input
+                  type="text"
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Contact number</label>
@@ -218,6 +263,53 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                   onChange={(e) => setContactNumber(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Adults</label>
+                <div className="flex items-center overflow-hidden rounded border border-gray-300 dark:border-gray-600">
+                  <button
+                    type="button"
+                    onClick={() => setAdults((value) => clamp(value - 1, 1, 20))}
+                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    -
+                  </button>
+                  <div className="flex-1 bg-white px-3 py-1.5 text-center text-sm text-gray-900 dark:bg-gray-700 dark:text-white">
+                    {adults}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAdults((value) => clamp(value + 1, 1, 20))}
+                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Children</label>
+                <div className="flex items-center overflow-hidden rounded border border-gray-300 dark:border-gray-600">
+                  <button
+                    type="button"
+                    onClick={() => setChildren((value) => clamp(value - 1, 0, 10))}
+                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    -
+                  </button>
+                  <div className="flex-1 bg-white px-3 py-1.5 text-center text-sm text-gray-900 dark:bg-gray-700 dark:text-white">
+                    {children}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setChildren((value) => clamp(value + 1, 0, 10))}
+                    className="px-3 py-1.5 text-base font-semibold text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Email (optional)</label>
                 <input
@@ -227,120 +319,101 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reservation channel</label>
-                  <select
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    value={selectedChannelId}
-                    onChange={(e) => setSelectedChannelId(e.target.value)}
-                  >
-                    <option value="">Select channel</option>
-                    {(channels ?? []).map((channel) => (
-                      <option key={channel.id} value={channel.id}>{channel.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Agency</label>
-                  <select
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    value={selectedAgencyId}
-                    onChange={(e) => setSelectedAgencyId(e.target.value)}
-                  >
-                    <option value="">Select agency (optional)</option>
-                    {(agencies ?? []).map((agency) => (
-                      <option key={agency.id} value={agency.id}>{agency.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Adults</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    value={adults}
-                    onChange={(e) => setAdults(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Children</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    value={children}
-                    onChange={(e) => setChildren(Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
-                  />
-                </div>
-              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Rate per night</label>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={ratePerNight || ''}
-                  onChange={(e) => setRatePerNight(Math.max(0, Number(e.target.value) || 0))}
-                />
-                {ratePerNight > 0 && (
+                <div className="w-full rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  {latestRateQuery.isLoading
+                    ? 'Loading latest rate...'
+                    : ratePerNight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                {ratePerNight > 0 && !latestRateQuery.isLoading && (
                   <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                     {nights} night{nights !== 1 ? 's' : ''} × {ratePerNight.toFixed(2)} = {(ratePerNight * nights).toFixed(2)}
                   </p>
                 )}
+                {latestRateQuery.isError && (
+                  <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                    {getErrorMessage(latestRateQuery.error, 'Unable to load the latest nightly rate.')}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Notes</label>
-                <textarea
-                  rows={2}
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reservation channel</label>
+                <select
                   className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional"
-                />
+                  value={selectedChannelId}
+                  onChange={(e) => setSelectedChannelId(e.target.value)}
+                >
+                  <option value="">Select channel</option>
+                  {(channels ?? []).map((channel) => (
+                    <option key={channel.id} value={channel.id}>{channel.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Agency</label>
+                <select
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={selectedAgencyId}
+                  onChange={(e) => setSelectedAgencyId(e.target.value)}
+                >
+                  <option value="">Select agency (optional)</option>
+                  {(agencies ?? []).map((agency) => (
+                    <option key={agency.id} value={agency.id}>{agency.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {createMutation.isError && (
-              <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-                {createMutation.error instanceof Error ? createMutation.error.message : 'Failed to create reservation.'}
-              </p>
-            )}
-
-            <div className="mt-6 flex flex-wrap gap-2 justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateTempReservation}
-                disabled={!canSubmit || createMutation.isPending}
-                className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Create a draft reservation with no room assigned"
-              >
-                Temp Reserve
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateReservation}
-                disabled={!canSubmit || createMutation.isPending}
-                className="rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Reserve
-              </button>
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Notes</label>
+              <textarea
+                rows={2}
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional"
+              />
             </div>
-          </DialogPanel>
-        </div>
-      </Dialog>
+          </div>
+
+          {createMutation.isError && (
+            <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+              {getErrorMessage(createMutation.error, 'Failed to create reservation.')}
+            </p>
+          )}
+
+          <div className="mt-6 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateTempReservation}
+              disabled={!canSubmit || createMutation.isPending}
+              className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
+              title="Create a draft reservation with no room assigned"
+            >
+              Temp Reserve
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateReservation}
+              disabled={!canSubmit || createMutation.isPending}
+              className="rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Reserve
+            </button>
+          </div>
+        </DialogPanel>
+      </div>
+    </Dialog>
   );
 };

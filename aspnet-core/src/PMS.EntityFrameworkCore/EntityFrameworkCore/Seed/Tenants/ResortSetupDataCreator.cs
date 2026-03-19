@@ -216,7 +216,7 @@ public class ResortSetupDataCreator
         _context.SaveChanges();
     }
 
-    // Seed RoomRatePlans for Weekdays Promo and Rack Rate (Weekend/Regular)
+    // Seed RoomRatePlans using one shared REGULAR RATE group with merged weekday/weekend rates.
     private void EnsureRoomRatePlans(Dictionary<string, Guid> roomTypes)
     {
         var weekdayRates = new Dictionary<string, decimal>
@@ -245,61 +245,47 @@ public class ResortSetupDataCreator
             { "Barkada Room", 23656m },
             { "Villa", 2624m },
         };
+
+        var regularRateGroup = new RoomRatePlanGroup
+        {
+            Code = "REGULAR_RATE",
+            Name = "REGULAR RATE",
+            StartDate = DateTime.Today,
+            EndDate = null,
+            Priority = 1,
+            IsDefault = true,
+            IsActive = true,
+        };
+        _context.RoomRatePlanGroups.Add(regularRateGroup);
+        _context.SaveChanges();
+
         foreach (var rtName in roomTypes.Keys)
         {
             var roomTypeId = roomTypes[rtName];
             var weekdayRate = weekdayRates.TryGetValue(rtName, out var wd) ? wd : 2155m;
             var weekendRate = weekendRates.TryGetValue(rtName, out var we) ? we : 2695m;
-            // Weekdays Promo
-            var promoPlan = new RoomRatePlan
+
+            var regularPlan = new RoomRatePlan
             {
                 RoomTypeId = roomTypeId,
-                Code = "WEEKDAY_PROMO",
-                Name = "Weekdays Promo",
-                StartDate = DateTime.Today,
-                EndDate = null,
-                Priority = 1,
-                IsDefault = false,
-                IsActive = true,
+                RoomRatePlanGroupId = regularRateGroup.Id,
                 CheckInTime = new TimeSpan(14, 0, 0),
                 CheckOutTime = new TimeSpan(12, 0, 0),
             };
-            _context.RoomRatePlans.Add(promoPlan);
+            _context.RoomRatePlans.Add(regularPlan);
             _context.SaveChanges();
+
             foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
             {
-                if (day == DayOfWeek.Saturday || day == DayOfWeek.Sunday) continue;
+                var rate = day == DayOfWeek.Saturday || day == DayOfWeek.Sunday
+                    ? weekendRate
+                    : weekdayRate;
+
                 _context.RoomRatePlanDays.Add(new RoomRatePlanDay
                 {
-                    RoomRatePlanId = promoPlan.Id,
+                    RoomRatePlanId = regularPlan.Id,
                     DayOfWeek = day,
-                    BasePrice = weekdayRate,
-                });
-            }
-            _context.SaveChanges();
-            // Weekend/Rack Rate
-            var rackPlan = new RoomRatePlan
-            {
-                RoomTypeId = roomTypeId,
-                Code = "RACK_RATE",
-                Name = "Rack Rate (Weekend/Regular)",
-                StartDate = DateTime.Today,
-                EndDate = null,
-                Priority = 2,
-                IsDefault = true,
-                IsActive = true,
-                CheckInTime = new TimeSpan(14, 0, 0),
-                CheckOutTime = new TimeSpan(12, 0, 0),
-            };
-            _context.RoomRatePlans.Add(rackPlan);
-            _context.SaveChanges();
-            foreach (DayOfWeek day in new[] { DayOfWeek.Saturday, DayOfWeek.Sunday })
-            {
-                _context.RoomRatePlanDays.Add(new RoomRatePlanDay
-                {
-                    RoomRatePlanId = rackPlan.Id,
-                    DayOfWeek = day,
-                    BasePrice = weekendRate,
+                    BasePrice = rate,
                 });
             }
             _context.SaveChanges();

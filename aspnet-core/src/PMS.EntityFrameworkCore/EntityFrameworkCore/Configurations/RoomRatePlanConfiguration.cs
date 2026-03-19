@@ -5,24 +5,40 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace PMS.EntityFrameworkCore.Configurations;
 
+internal class RoomRatePlanGroupConfiguration : IEntityTypeConfiguration<RoomRatePlanGroup>
+{
+    public void Configure(EntityTypeBuilder<RoomRatePlanGroup> entity)
+    {
+        entity.ToTable("RoomRatePlanGroup");
+
+        entity.Property(e => e.Code).HasMaxLength(32).IsRequired();
+        entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
+        entity.Property(e => e.StartDate).HasColumnType("date");
+        entity.Property(e => e.EndDate).HasColumnType("date");
+
+        entity.HasIndex(e => e.Code).IsUnique();
+    }
+}
+
 internal class RoomRatePlanConfiguration : IEntityTypeConfiguration<RoomRatePlan>
 {
     public void Configure(EntityTypeBuilder<RoomRatePlan> entity)
     {
         entity.ToTable("RoomRatePlan");
 
-        entity.Property(e => e.Code).HasMaxLength(32).IsRequired();
-        entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
-        entity.Property(e => e.StartDate).HasColumnType("date");
-        entity.Property(e => e.EndDate).HasColumnType("date");
         entity.Property(e => e.CheckInTime).HasDefaultValue(new TimeSpan(14, 0, 0));
         entity.Property(e => e.CheckOutTime).HasDefaultValue(new TimeSpan(12, 0, 0));
 
-        entity.HasIndex(e => new { e.RoomTypeId, e.Code }).IsUnique();
+        entity.HasIndex(e => new { e.RoomTypeId, e.RoomRatePlanGroupId }).IsUnique();
 
         entity.HasOne(e => e.RoomType)
             .WithMany(rt => rt.RatePlans)
             .HasForeignKey(e => e.RoomTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(e => e.RoomRatePlanGroup)
+            .WithMany(g => g.RoomRatePlans)
+            .HasForeignKey(e => e.RoomRatePlanGroupId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

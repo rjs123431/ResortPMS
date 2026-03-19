@@ -179,13 +179,14 @@ export const resortService = {
     await api.delete('/api/services/app/RoomRatePlan/Delete', { params: { id } });
   },
 
-  getRooms: async (filter = '', skipCount = 0, maxResultCount = 100) => {
+  getRooms: async (filter = '', skipCount = 0, maxResultCount = 100, roomTypeId?: string) => {
     const response = await api.get<ApiResponse<PagedResultDto<RoomListDto>>>('/api/services/app/Room/GetAll', {
       params: {
         Filter: filter,
         Sorting: 'RoomNumber asc',
         SkipCount: skipCount,
         MaxResultCount: maxResultCount,
+        RoomTypeId: roomTypeId,
       },
     });
     return response.data.result;

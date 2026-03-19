@@ -19,6 +19,11 @@ const toast = Swal.mixin({
   showConfirmButton: false,
   timer: 3000,
   timerProgressBar: true,
+  customClass: {
+    popup: 'app-swal-toast',
+    title: 'app-swal-title',
+    htmlContainer: 'app-swal-text',
+  },
 });
 
 const notify = (variant: NotifyVariant, message: string, title?: string, options?: NotifyOptions) => {
@@ -62,6 +67,14 @@ export const confirmAction = async (
     showCancelButton: true,
     confirmButtonText,
     cancelButtonText,
+    buttonsStyling: false,
+    customClass: {
+      popup: 'app-swal-modal',
+      title: 'app-swal-title',
+      htmlContainer: 'app-swal-text',
+      confirmButton: 'app-swal-confirm-btn',
+      cancelButton: 'app-swal-cancel-btn',
+    },
     ...rest,
   } as SweetAlertOptions;
 
@@ -79,6 +92,13 @@ export const showMessageDialog = async (
     title,
     text: message,
     confirmButtonText: 'OK',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'app-swal-modal',
+      title: 'app-swal-title',
+      htmlContainer: 'app-swal-text',
+      confirmButton: 'app-swal-confirm-btn',
+    },
     ...options,
   } as SweetAlertOptions;
 

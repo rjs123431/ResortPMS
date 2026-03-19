@@ -12,8 +12,8 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260319015505_RemoveBaseRateFromRoomType")]
-    partial class RemoveBaseRateFromRoomType
+    [Migration("20260319073327_InitDatabase")]
+    partial class InitDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -4338,25 +4338,11 @@ namespace PMS.Migrations
                         .HasColumnType("time")
                         .HasDefaultValue(new TimeSpan(0, 12, 0, 0, 0));
 
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2");
 
                     b.Property<long?>("CreatorUserId")
                         .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("date");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastModificationTime")
                         .HasColumnType("datetime2");
@@ -4364,23 +4350,17 @@ namespace PMS.Migrations
                     b.Property<long?>("LastModifierUserId")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("int");
+                    b.Property<Guid>("RoomRatePlanGroupId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("RoomTypeId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("date");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("RoomTypeId", "Code")
+                    b.HasIndex("RoomRatePlanGroupId");
+
+                    b.HasIndex("RoomTypeId", "RoomRatePlanGroupId")
                         .IsUnique();
 
                     b.ToTable("RoomRatePlan", (string)null);
@@ -4420,6 +4400,57 @@ namespace PMS.Migrations
                         .IsUnique();
 
                     b.ToTable("RoomRatePlanDay", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.RoomRatePlanGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("RoomRatePlanGroup", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.RoomStatusLog", b =>
@@ -6309,11 +6340,19 @@ namespace PMS.Migrations
 
             modelBuilder.Entity("PMS.App.RoomRatePlan", b =>
                 {
+                    b.HasOne("PMS.App.RoomRatePlanGroup", "RoomRatePlanGroup")
+                        .WithMany("RoomRatePlans")
+                        .HasForeignKey("RoomRatePlanGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("PMS.App.RoomType", "RoomType")
                         .WithMany("RatePlans")
                         .HasForeignKey("RoomTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("RoomRatePlanGroup");
 
                     b.Navigation("RoomType");
                 });
@@ -6738,6 +6777,11 @@ namespace PMS.Migrations
                     b.Navigation("DateOverrides");
 
                     b.Navigation("DayRates");
+                });
+
+            modelBuilder.Entity("PMS.App.RoomRatePlanGroup", b =>
+                {
+                    b.Navigation("RoomRatePlans");
                 });
 
             modelBuilder.Entity("PMS.App.RoomType", b =>

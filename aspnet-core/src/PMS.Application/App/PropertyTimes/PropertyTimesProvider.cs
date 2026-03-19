@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.App.PropertyTimes;
 
-/// <summary>Provides property-wide check-in and check-out times from RoomRatePlan (default 2 PM / 12 noon).</summary>
+/// <summary>Provides property-wide check-in and check-out times from active RoomRatePlanGroup plans (default 2 PM / 12 noon).</summary>
 public interface IPropertyTimesProvider : ITransientDependency
 {
     Task<(TimeSpan checkIn, TimeSpan checkOut)> GetDefaultCheckInCheckOutTimesAsync();
@@ -26,9 +26,10 @@ public class PropertyTimesProvider(
     public async Task<(TimeSpan checkIn, TimeSpan checkOut)> GetDefaultCheckInCheckOutTimesAsync()
     {
         var plan = await ratePlanRepository.GetAll()
-            .Where(rp => rp.IsActive)
-            .OrderByDescending(rp => rp.IsDefault)
-            .ThenBy(rp => rp.Priority)
+            .Include(rp => rp.RoomRatePlanGroup)
+            .Where(rp => rp.RoomRatePlanGroup.IsActive)
+            .OrderByDescending(rp => rp.RoomRatePlanGroup.IsDefault)
+            .ThenBy(rp => rp.RoomRatePlanGroup.Priority)
             .FirstOrDefaultAsync();
         if (plan == null)
             return (DefaultCheckIn, DefaultCheckOut);

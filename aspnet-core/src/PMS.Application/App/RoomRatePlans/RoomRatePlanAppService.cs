@@ -29,6 +29,7 @@ public interface IRoomRatePlanAppService : IApplicationService
 
 public class RoomRatePlanAppService(
     IRepository<RoomRatePlan, Guid> ratePlanRepository,
+    IRepository<RoomRatePlanGroup, Guid> ratePlanGroupRepository,
     IRepository<RoomRatePlanDay, Guid> dayRepository,
     IRepository<RatePlanDateOverride, Guid> overrideRepository,
     IRepository<RoomType, Guid> roomTypeRepository
@@ -39,14 +40,14 @@ public class RoomRatePlanAppService(
     {
         var plan = await ratePlanRepository.GetAll()
             .Include(rp => rp.RoomType)
+            .Include(rp => rp.RoomRatePlanGroup)
             .Include(rp => rp.DayRates)
             .Include(rp => rp.DateOverrides)
             .FirstOrDefaultAsync(rp => rp.Id == id);
         if (plan == null)
             throw new UserFriendlyException(L("RecordNotFound"));
 
-        var dto = ObjectMapper.Map<RoomRatePlanDto>(plan);
-        dto.RoomTypeName = plan.RoomType?.Name ?? string.Empty;
+        var dto = MapToDto(plan);
         return dto;
     }
 
@@ -55,17 +56,14 @@ public class RoomRatePlanAppService(
     {
         var query = ratePlanRepository.GetAll()
             .Include(rp => rp.RoomType)
+            .Include(rp => rp.RoomRatePlanGroup)
             .WhereIf(input.RoomTypeId.HasValue, rp => rp.RoomTypeId == input.RoomTypeId.Value)
-            .WhereIf(input.IsActive.HasValue, rp => rp.IsActive == input.IsActive.Value);
+            .WhereIf(input.IsActive.HasValue, rp => rp.RoomRatePlanGroup.IsActive == input.IsActive.Value);
 
         var total = await query.CountAsync();
-        var items = await query.OrderBy(input.Sorting ?? "Priority asc, Name asc").PageBy(input).ToListAsync();
-        var dtos = ObjectMapper.Map<List<RoomRatePlanListDto>>(items);
-        foreach (var d in dtos)
-        {
-            var plan = items.First(p => p.Id == d.Id);
-            d.RoomTypeName = plan.RoomType?.Name ?? string.Empty;
-        }
+        var sorting = NormalizeSorting(input.Sorting);
+        var items = await query.OrderBy(sorting).PageBy(input).ToListAsync();
+        var dtos = items.Select(MapToListDto).ToList();
         return new PagedResultDto<RoomRatePlanListDto>(total, dtos);
     }
 
@@ -76,24 +74,47 @@ public class RoomRatePlanAppService(
         if (roomType == null)
             throw new UserFriendlyException(L("RoomTypeNotFound"));
 
+        var groupCode = input.Code.Trim();
+        var groupName = input.Name.Trim();
+        var group = await ratePlanGroupRepository.GetAll()
+            .FirstOrDefaultAsync(g => g.Code == groupCode);
+
+        if (group == null)
+        {
+            group = new RoomRatePlanGroup
+            {
+                Code = groupCode,
+                Name = groupName,
+                StartDate = input.StartDate.Date,
+                EndDate = input.EndDate?.Date,
+                Priority = input.Priority,
+                IsDefault = input.IsDefault,
+                IsActive = input.IsActive,
+            };
+            await ratePlanGroupRepository.InsertAsync(group);
+            await CurrentUnitOfWork.SaveChangesAsync();
+        }
+
         var exists = await ratePlanRepository.GetAll()
-            .AnyAsync(rp => rp.RoomTypeId == input.RoomTypeId && rp.Code == input.Code.Trim());
+            .AnyAsync(rp => rp.RoomTypeId == input.RoomTypeId && rp.RoomRatePlanGroupId == group.Id);
         if (exists)
             throw new UserFriendlyException(L("RatePlanCodeAlreadyExistsForRoomType"));
 
-        if (input.IsDefault)
-            await ClearDefaultForRoomTypeAsync(input.RoomTypeId);
+        if (input.IsDefault && !group.IsDefault)
+            await ClearDefaultGroupsAsync();
+
+        group.Name = groupName;
+        group.StartDate = input.StartDate.Date;
+        group.EndDate = input.EndDate?.Date;
+        group.Priority = input.Priority;
+        group.IsDefault = input.IsDefault;
+        group.IsActive = input.IsActive;
+        await ratePlanGroupRepository.UpdateAsync(group);
 
         var plan = new RoomRatePlan
         {
             RoomTypeId = input.RoomTypeId,
-            Code = input.Code.Trim(),
-            Name = input.Name.Trim(),
-            StartDate = input.StartDate.Date,
-            EndDate = input.EndDate?.Date,
-            Priority = input.Priority,
-            IsDefault = input.IsDefault,
-            IsActive = input.IsActive,
+            RoomRatePlanGroupId = group.Id,
             CheckInTime = input.CheckInTime,
             CheckOutTime = input.CheckOutTime,
         };
@@ -111,27 +132,59 @@ public class RoomRatePlanAppService(
     public async Task UpdateAsync(UpdateRoomRatePlanDto input)
     {
         var plan = await ratePlanRepository.GetAll()
+            .Include(rp => rp.RoomRatePlanGroup)
             .Include(rp => rp.DayRates)
             .Include(rp => rp.DateOverrides)
             .FirstOrDefaultAsync(rp => rp.Id == input.Id);
         if (plan == null)
             throw new UserFriendlyException(L("RecordNotFound"));
 
+        var groupCode = input.Code.Trim();
+        var groupName = input.Name.Trim();
+
+        var group = plan.RoomRatePlanGroup;
+        if (!string.Equals(group.Code, groupCode, StringComparison.Ordinal))
+        {
+            var matchedGroup = await ratePlanGroupRepository.GetAll().FirstOrDefaultAsync(g => g.Code == groupCode);
+            if (matchedGroup != null)
+            {
+                group = matchedGroup;
+            }
+            else
+            {
+                group = new RoomRatePlanGroup
+                {
+                    Code = groupCode,
+                    Name = groupName,
+                    StartDate = input.StartDate.Date,
+                    EndDate = input.EndDate?.Date,
+                    Priority = input.Priority,
+                    IsDefault = input.IsDefault,
+                    IsActive = input.IsActive,
+                };
+                await ratePlanGroupRepository.InsertAsync(group);
+                await CurrentUnitOfWork.SaveChangesAsync();
+            }
+        }
+
         var exists = await ratePlanRepository.GetAll()
-            .AnyAsync(rp => rp.RoomTypeId == plan.RoomTypeId && rp.Code == input.Code.Trim() && rp.Id != input.Id);
+            .AnyAsync(rp => rp.RoomTypeId == plan.RoomTypeId && rp.RoomRatePlanGroupId == group.Id && rp.Id != input.Id);
         if (exists)
             throw new UserFriendlyException(L("RatePlanCodeAlreadyExistsForRoomType"));
 
-        if (input.IsDefault && !plan.IsDefault)
-            await ClearDefaultForRoomTypeAsync(plan.RoomTypeId);
+        if (input.IsDefault && !group.IsDefault)
+            await ClearDefaultGroupsAsync();
 
-        plan.Code = input.Code.Trim();
-        plan.Name = input.Name.Trim();
-        plan.StartDate = input.StartDate.Date;
-        plan.EndDate = input.EndDate?.Date;
-        plan.Priority = input.Priority;
-        plan.IsDefault = input.IsDefault;
-        plan.IsActive = input.IsActive;
+        group.Code = groupCode;
+        group.Name = groupName;
+        group.StartDate = input.StartDate.Date;
+        group.EndDate = input.EndDate?.Date;
+        group.Priority = input.Priority;
+        group.IsDefault = input.IsDefault;
+        group.IsActive = input.IsActive;
+        await ratePlanGroupRepository.UpdateAsync(group);
+
+        plan.RoomRatePlanGroupId = group.Id;
         plan.CheckInTime = input.CheckInTime;
         plan.CheckOutTime = input.CheckOutTime;
         await ratePlanRepository.UpdateAsync(plan);
@@ -147,7 +200,17 @@ public class RoomRatePlanAppService(
         var plan = await ratePlanRepository.FirstOrDefaultAsync(id);
         if (plan == null)
             throw new UserFriendlyException(L("RecordNotFound"));
+
+        var groupId = plan.RoomRatePlanGroupId;
         await ratePlanRepository.DeleteAsync(plan);
+
+        var hasRemainingPlans = await ratePlanRepository.GetAll().AnyAsync(rp => rp.RoomRatePlanGroupId == groupId && rp.Id != id);
+        if (!hasRemainingPlans)
+        {
+            var orphanGroup = await ratePlanGroupRepository.FirstOrDefaultAsync(groupId);
+            if (orphanGroup != null)
+                await ratePlanGroupRepository.DeleteAsync(orphanGroup);
+        }
     }
 
     /// <inheritdoc />
@@ -159,10 +222,12 @@ public class RoomRatePlanAppService(
             throw new UserFriendlyException("Invalid arrival or departure date");
 
         var plans = await ratePlanRepository.GetAll()
-            .Where(rp => rp.RoomTypeId == roomTypeId && rp.IsActive)
-            .Where(rp => rp.StartDate <= departure && (rp.EndDate == null || rp.EndDate >= arrival))
-            .OrderByDescending(rp => rp.Priority)
-            .ThenByDescending(rp => rp.IsDefault)
+            .Include(rp => rp.RoomRatePlanGroup)
+            .Where(rp => rp.RoomTypeId == roomTypeId)
+            .Where(rp => rp.RoomRatePlanGroup.IsActive)
+            .Where(rp => rp.RoomRatePlanGroup.StartDate <= departure && (rp.RoomRatePlanGroup.EndDate == null || rp.RoomRatePlanGroup.EndDate >= arrival))
+            .OrderBy(rp => rp.RoomRatePlanGroup.Priority)
+            .ThenByDescending(rp => rp.RoomRatePlanGroup.IsDefault)
             .Include(rp => rp.DayRates)
             .Include(rp => rp.DateOverrides)
             .ToListAsync();
@@ -184,7 +249,7 @@ public class RoomRatePlanAppService(
     {
         foreach (var plan in plans)
         {
-            if (plan.StartDate.Date > date || (plan.EndDate.HasValue && plan.EndDate.Value.Date < date))
+            if (plan.RoomRatePlanGroup.StartDate.Date > date || (plan.RoomRatePlanGroup.EndDate.HasValue && plan.RoomRatePlanGroup.EndDate.Value.Date < date))
                 continue;
 
             if (TryGetRateForDate(plan, date, out var rate))
@@ -215,16 +280,110 @@ public class RoomRatePlanAppService(
         return false;
     }
 
-    private async Task ClearDefaultForRoomTypeAsync(Guid roomTypeId)
+    private async Task ClearDefaultGroupsAsync()
     {
-        var defaults = await ratePlanRepository.GetAll()
-            .Where(rp => rp.RoomTypeId == roomTypeId && rp.IsDefault)
+        var defaults = await ratePlanGroupRepository.GetAll()
+            .Where(g => g.IsDefault)
             .ToListAsync();
-        foreach (var rp in defaults)
+        foreach (var group in defaults)
         {
-            rp.IsDefault = false;
-            await ratePlanRepository.UpdateAsync(rp);
+            group.IsDefault = false;
+            await ratePlanGroupRepository.UpdateAsync(group);
         }
+    }
+
+    private static string NormalizeSorting(string sorting)
+    {
+        if (string.IsNullOrWhiteSpace(sorting))
+            return "RoomRatePlanGroup.Priority asc, RoomRatePlanGroup.Name asc";
+
+        var fieldMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Priority"] = "RoomRatePlanGroup.Priority",
+            ["Name"] = "RoomRatePlanGroup.Name",
+            ["Code"] = "RoomRatePlanGroup.Code",
+            ["StartDate"] = "RoomRatePlanGroup.StartDate",
+            ["EndDate"] = "RoomRatePlanGroup.EndDate",
+            ["IsDefault"] = "RoomRatePlanGroup.IsDefault",
+            ["IsActive"] = "RoomRatePlanGroup.IsActive",
+        };
+
+        var mapped = sorting
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(clause =>
+            {
+                var trimmed = clause.Trim();
+                if (trimmed.Length == 0)
+                    return trimmed;
+
+                var parts = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var field = parts[0];
+                var direction = parts.Length > 1 ? $" {parts[1]}" : string.Empty;
+
+                if (field.Contains('.', StringComparison.Ordinal))
+                    return $"{field}{direction}";
+
+                return fieldMap.TryGetValue(field, out var mappedField)
+                    ? $"{mappedField}{direction}"
+                    : $"RoomRatePlanGroup.{field}{direction}";
+            });
+
+        return string.Join(", ", mapped);
+    }
+
+    private static RoomRatePlanDto MapToDto(RoomRatePlan plan)
+    {
+        var group = plan.RoomRatePlanGroup;
+        return new RoomRatePlanDto
+        {
+            Id = plan.Id,
+            RoomTypeId = plan.RoomTypeId,
+            RoomTypeName = plan.RoomType?.Name ?? string.Empty,
+            Code = group?.Code ?? string.Empty,
+            Name = group?.Name ?? string.Empty,
+            StartDate = group?.StartDate ?? DateTime.MinValue,
+            EndDate = group?.EndDate,
+            Priority = group?.Priority ?? 0,
+            IsDefault = group?.IsDefault ?? false,
+            IsActive = group?.IsActive ?? false,
+            CheckInTime = plan.CheckInTime,
+            CheckOutTime = plan.CheckOutTime,
+            DayRates = plan.DayRates?.Select(d => new RoomRatePlanDayDto
+            {
+                Id = d.Id,
+                RoomRatePlanId = d.RoomRatePlanId,
+                DayOfWeek = d.DayOfWeek,
+                BasePrice = d.BasePrice,
+            }).ToList() ?? new List<RoomRatePlanDayDto>(),
+            DateOverrides = plan.DateOverrides?.Select(o => new RatePlanDateOverrideDto
+            {
+                Id = o.Id,
+                RoomRatePlanId = o.RoomRatePlanId,
+                RateDate = o.RateDate,
+                OverridePrice = o.OverridePrice,
+                Description = o.Description,
+            }).ToList() ?? new List<RatePlanDateOverrideDto>(),
+        };
+    }
+
+    private static RoomRatePlanListDto MapToListDto(RoomRatePlan plan)
+    {
+        var group = plan.RoomRatePlanGroup;
+        return new RoomRatePlanListDto
+        {
+            Id = plan.Id,
+            RoomTypeId = plan.RoomTypeId,
+            RoomTypeName = plan.RoomType?.Name ?? string.Empty,
+            Code = group?.Code ?? string.Empty,
+            Name = group?.Name ?? string.Empty,
+            StartDate = group?.StartDate ?? DateTime.MinValue,
+            EndDate = group?.EndDate,
+            Priority = group?.Priority ?? 0,
+            IsDefault = group?.IsDefault ?? false,
+            IsActive = group?.IsActive ?? false,
+            CheckInTime = plan.CheckInTime,
+            CheckOutTime = plan.CheckOutTime,
+        };
     }
 
     private async Task SaveDayRatesAsync(Guid planId, List<RoomRatePlanDayDto> dayRates)

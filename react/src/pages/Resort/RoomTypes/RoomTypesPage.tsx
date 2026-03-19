@@ -4,6 +4,7 @@ import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
 import { RoomTypeDialogForm, type RoomTypeForm } from './RoomTypeDialogForm';
+import { RoomTypeRoomsDialog } from './RoomTypeRoomsDialog';
 
 const ROOM_TYPE_META_PREFIX = '__RTMETA__';
 
@@ -77,7 +78,10 @@ export const RoomTypeListPage = () => {
   const { isGranted } = useAuth();
   const canCreate = isGranted(PermissionNames.Pages_RoomTypes_Create);
   const canEdit = isGranted(PermissionNames.Pages_RoomTypes_Edit);
+  const canCreateRooms = isGranted(PermissionNames.Pages_Rooms_Create);
+  const canEditRooms = isGranted(PermissionNames.Pages_Rooms_Edit);
   const [filter, setFilter] = useState('');
+  const [roomsDialogTarget, setRoomsDialogTarget] = useState<{ id: string; name: string } | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<RoomTypeForm>({
@@ -183,7 +187,7 @@ export const RoomTypeListPage = () => {
               <thead>
                 <tr className="border-b text-left">
                   <th className="p-2">Name</th>
-                  <th className="p-2">Base Rate</th>
+                  <th className="p-2">No. of Rooms</th>
                   <th className="p-2">Max Adults</th>
                   <th className="p-2">Max Children</th>
                   <th className="p-2">Active</th>
@@ -194,16 +198,25 @@ export const RoomTypeListPage = () => {
                 {items.map((item) => (
                   <tr className="border-b" key={item.id}>
                     <td className="p-2">{item.name}</td>
-                    <td className="p-2">{item.maxAdults}</td>
+                    <td className="p-2">{item.numberOfRooms}</td>
                     <td className="p-2">{item.maxAdults}</td>
                     <td className="p-2">{item.maxChildren}</td>
                     <td className="p-2">{item.isActive ? 'Yes' : 'No'}</td>
                     <td className="p-2">
-                      {canEdit ? (
-                        <button type="button" className="rounded bg-slate-700 px-2 py-1 text-white" onClick={() => void loadForEdit(item.id)}>
-                          Edit
+                      <div className="flex gap-1">
+                        {canEdit ? (
+                          <button type="button" className="rounded bg-slate-700 px-2 py-1 text-white" onClick={() => void loadForEdit(item.id)}>
+                            Edit
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="rounded bg-slate-600 px-2 py-1 text-white"
+                          onClick={() => setRoomsDialogTarget({ id: item.id, name: item.name })}
+                        >
+                          Rooms
                         </button>
-                      ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -211,6 +224,15 @@ export const RoomTypeListPage = () => {
             </table>
           </div>
         </section>
+
+        <RoomTypeRoomsDialog
+          isOpen={!!roomsDialogTarget}
+          roomTypeId={roomsDialogTarget?.id ?? ''}
+          roomTypeName={roomsDialogTarget?.name ?? ''}
+          canCreate={canCreateRooms}
+          canEdit={canEditRooms}
+          onClose={() => setRoomsDialogTarget(null)}
+        />
 
         <RoomTypeDialogForm
           isOpen={Boolean(showCreate || editingId)}

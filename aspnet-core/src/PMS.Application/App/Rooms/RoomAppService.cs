@@ -64,8 +64,17 @@ public class RoomTypeAppService(
         var list = await roomTypeRepository.GetAll()
             .Where(r => r.IsActive)
             .OrderBy(r => r.Name)
+            .Select(r => new RoomTypeListDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                MaxAdults = r.MaxAdults,
+                MaxChildren = r.MaxChildren,
+                IsActive = r.IsActive,
+                NumberOfRooms = r.Rooms.Count
+            })
             .ToListAsync();
-        return ObjectMapper.Map<System.Collections.Generic.List<RoomTypeListDto>>(list);
+        return list;
     }
 
     public async Task<PagedResultDto<RoomTypeListDto>> GetAllAsync(GetRoomTypesInput input)
@@ -75,8 +84,20 @@ public class RoomTypeAppService(
             .WhereIf(input.IsActive.HasValue, r => r.IsActive == input.IsActive);
 
         var total = await query.CountAsync();
-        var items = await query.OrderBy(input.Sorting ?? "Name").PageBy(input).ToListAsync();
-        return new PagedResultDto<RoomTypeListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<RoomTypeListDto>>(items));
+        var items = await query
+            .OrderBy(input.Sorting ?? "Name")
+            .PageBy(input)
+            .Select(r => new RoomTypeListDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                MaxAdults = r.MaxAdults,
+                MaxChildren = r.MaxChildren,
+                IsActive = r.IsActive,
+                NumberOfRooms = r.Rooms.Count
+            })
+            .ToListAsync();
+        return new PagedResultDto<RoomTypeListDto>(total, items);
     }
 
     [AbpAuthorize(PermissionNames.Pages_RoomTypes_Edit)]
@@ -95,7 +116,6 @@ public class RoomAppService(
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
-    IRepository<PreCheckInRoom, Guid> preCheckInRoomRepository,
     IRepository<RoomDailyInventory, Guid> roomDailyInventoryRepository,
     IRoomDailyInventoryService roomDailyInventoryService,
     IRoomRatePlanAppService roomRatePlanAppService

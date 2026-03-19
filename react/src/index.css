@@ -258,6 +258,67 @@ select:not([multiple]):not([size]) {
   padding: 0;
 }
 
+/* SweetAlert2 app-themed styles */
+.app-swal-toast,
+.app-swal-modal {
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+html.dark .app-swal-toast,
+html.dark .app-swal-modal {
+  border-color: #374151;
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+.app-swal-title {
+  color: inherit !important;
+  font-weight: 600 !important;
+}
+
+.app-swal-text {
+  color: inherit !important;
+}
+
+.app-swal-confirm-btn,
+.app-swal-cancel-btn {
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-weight: 500;
+  border: none;
+}
+
+.app-swal-confirm-btn {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.app-swal-confirm-btn:hover {
+  background: #1d4ed8;
+}
+
+.app-swal-cancel-btn {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.app-swal-cancel-btn:hover {
+  background: #d1d5db;
+}
+
+html.dark .app-swal-cancel-btn {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+html.dark .app-swal-cancel-btn:hover {
+  background: #4b5563;
+}
+
 .prose p {
   margin-top: 0.75em;
   margin-bottom: 0.75em;

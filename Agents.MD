@@ -135,3 +135,27 @@ Other useful commands (see `./app` for full list):
 - `./app migration list` — list migrations
 - `./app db drop` — drop the database
 - `./app db reset` — drop and recreate the database
+
+---
+
+# Room Rate Plan Grouping (2026-03)
+
+Rate plans are now group-based:
+
+- `RoomRatePlanGroup` holds shared metadata: `Code`, `Name`, `StartDate`, `EndDate`, `Priority`, `IsDefault`, `IsActive`.
+- `RoomRatePlan` is room-type-specific and belongs to one group (`RoomRatePlanGroupId`).
+- One group can have one or more room-type rates.
+
+Seed behavior for initial setup:
+
+- Create one default group: `Code = REGULAR_RATE`, `Name = REGULAR RATE`.
+- Create one plan per room type under this group.
+- Merge day pricing in the same plan:
+  - Mon-Fri use weekday rate.
+  - Sat-Sun use weekend rate.
+
+UI behavior:
+
+- `/admin/room-rate-plans` shows grouped rows (one row per group code).
+- `/admin/room-rate-plans/new` creates a group and room-type rates.
+- `/admin/room-rate-plans/:groupCode/edit` edits group metadata and per-room-type rates.

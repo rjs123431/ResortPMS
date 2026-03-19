@@ -12,6 +12,40 @@ namespace PMS.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "Agency",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Agency", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Channel",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Channel", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ChargeType",
                 columns: table => new
                 {
@@ -218,6 +252,28 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RoomRatePlanGroup",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    StartDate = table.Column<DateTime>(type: "date", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "date", nullable: true),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomRatePlanGroup", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RoomType",
                 columns: table => new
                 {
@@ -226,7 +282,6 @@ namespace PMS.Migrations
                     Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
                     MaxAdults = table.Column<int>(type: "int", nullable: false),
                     MaxChildren = table.Column<int>(type: "int", nullable: false),
-                    BaseRate = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
@@ -834,6 +889,8 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ReservationNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    ChannelId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AgencyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ReservationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ArrivalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -865,6 +922,18 @@ namespace PMS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Reservation", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Reservation_Agency_AgencyId",
+                        column: x => x.AgencyId,
+                        principalTable: "Agency",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Reservation_Channel_ChannelId",
+                        column: x => x.ChannelId,
+                        principalTable: "Channel",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Reservation_Guest_GuestId",
                         column: x => x.GuestId,
@@ -956,13 +1025,7 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RoomTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    StartDate = table.Column<DateTime>(type: "date", nullable: false),
-                    EndDate = table.Column<DateTime>(type: "date", nullable: true),
-                    Priority = table.Column<int>(type: "int", nullable: false),
-                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    RoomRatePlanGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CheckInTime = table.Column<TimeSpan>(type: "time", nullable: false, defaultValue: new TimeSpan(0, 14, 0, 0, 0)),
                     CheckOutTime = table.Column<TimeSpan>(type: "time", nullable: false, defaultValue: new TimeSpan(0, 12, 0, 0, 0)),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -973,6 +1036,12 @@ namespace PMS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RoomRatePlan", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomRatePlan_RoomRatePlanGroup_RoomRatePlanGroupId",
+                        column: x => x.RoomRatePlanGroupId,
+                        principalTable: "RoomRatePlanGroup",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_RoomRatePlan_RoomType_RoomTypeId",
                         column: x => x.RoomTypeId,
@@ -2988,6 +3057,18 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Agency_Name",
+                table: "Agency",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Channel_Name",
+                table: "Channel",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ChargeType_Name",
                 table: "ChargeType",
                 column: "Name",
@@ -3436,6 +3517,16 @@ namespace PMS.Migrations
                 column: "ReceiptId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Reservation_AgencyId",
+                table: "Reservation",
+                column: "AgencyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Reservation_ChannelId",
+                table: "Reservation",
+                column: "ChannelId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Reservation_GuestId_ArrivalDate",
                 table: "Reservation",
                 columns: new[] { "GuestId", "ArrivalDate" });
@@ -3563,15 +3654,26 @@ namespace PMS.Migrations
                 columns: new[] { "RoomId", "InventoryDate" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_RoomRatePlan_RoomTypeId_Code",
+                name: "IX_RoomRatePlan_RoomRatePlanGroupId",
                 table: "RoomRatePlan",
-                columns: new[] { "RoomTypeId", "Code" },
+                column: "RoomRatePlanGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomRatePlan_RoomTypeId_RoomRatePlanGroupId",
+                table: "RoomRatePlan",
+                columns: new[] { "RoomTypeId", "RoomRatePlanGroupId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoomRatePlanDay_RoomRatePlanId_DayOfWeek",
                 table: "RoomRatePlanDay",
                 columns: new[] { "RoomRatePlanId", "DayOfWeek" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomRatePlanGroup_Code",
+                table: "RoomRatePlanGroup",
+                column: "Code",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -4330,6 +4432,9 @@ namespace PMS.Migrations
                 name: "PosOrder");
 
             migrationBuilder.DropTable(
+                name: "RoomRatePlanGroup");
+
+            migrationBuilder.DropTable(
                 name: "ZzzDynamicProperties");
 
             migrationBuilder.DropTable(
@@ -4364,6 +4469,12 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ChargeType");
+
+            migrationBuilder.DropTable(
+                name: "Agency");
+
+            migrationBuilder.DropTable(
+                name: "Channel");
 
             migrationBuilder.DropTable(
                 name: "Guest");

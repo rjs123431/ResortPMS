@@ -31,6 +31,7 @@ const GuestListPage = lazy(() => import('@pages/Resort/Guests/GuestsPage').then(
 const RoomsPage = lazy(() => import('@pages/Resort/Rooms/RoomsPage').then((m) => ({ default: m.RoomListPage })));
 const RoomTypeListPage = lazy(() => import('@pages/Resort/RoomTypes/RoomTypesPage').then((m) => ({ default: m.RoomTypeListPage })));
 const RoomRatePlansPage = lazy(() => import('@pages/Resort/RoomRatePlans/RoomRatePlansPage').then((m) => ({ default: m.RoomRatePlansPage })));
+const RoomRatePlanGroupEditorPage = lazy(() => import('@pages/Resort/RoomRatePlans/RoomRatePlanGroupEditorPage').then((m) => ({ default: m.RoomRatePlanGroupEditorPage })));
 const ChargeTypeListPage = lazy(() => import('@pages/Resort/ChargeTypes/ChargeTypesPage').then((m) => ({ default: m.ChargeTypeListPage })));
 const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/PaymentMethodsPage').then((m) => ({ default: m.PaymentMethodListPage })));
 const ChannelListPage = lazy(() => import('@pages/Resort/Channels/ChannelsPage').then((m) => ({ default: m.ChannelListPage })));
@@ -61,8 +62,6 @@ const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) 
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 const AuditTrailPage = lazy(() => import('@pages/Administration/AuditTrailPage').then((m) => ({ default: m.AuditTrailPage })));
 const RoomRackSettingsPage = lazy(() => import('@pages/Administration/RoomRackSettingsPage').then((m) => ({ default: m.RoomRackSettingsPage })));
-const ReportsPage = lazy(() => import('@pages/Reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -443,6 +442,26 @@ const App: React.FC = () => {
                           <PageTitle title="Room Rate Plans">
                             <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomRatePlans]}>
                               <RoomRatePlansPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="room-rate-plans/new"
+                        element={
+                          <PageTitle title="New Room Rate Plan">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomRatePlans_Create]}>
+                              <RoomRatePlanGroupEditorPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="room-rate-plans/:groupCode/edit"
+                        element={
+                          <PageTitle title="Edit Room Rate Plan">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomRatePlans_Edit]}>
+                              <RoomRatePlanGroupEditorPage />
                             </ProtectedRoute>
                           </PageTitle>
                         }

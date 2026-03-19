@@ -27,6 +27,7 @@ public class RoomTypeListDto : EntityDto<Guid>
     public int MaxAdults { get; set; }
     public int MaxChildren { get; set; }
     public bool IsActive { get; set; }
+    public int NumberOfRooms { get; set; }
 }
 
 [AutoMapTo(typeof(RoomType))]
@@ -87,6 +88,7 @@ public class CreateRoomDto
     public Guid RoomTypeId { get; set; }
     [StringLength(32)] public string Floor { get; set; }
     public HousekeepingStatus HousekeepingStatus { get; set; } = HousekeepingStatus.Clean;
+    public bool IsActive { get; set; } = true;
 }
 
 public class GetRoomsInput : PagedResultFilterRequestDto, IShouldNormalize

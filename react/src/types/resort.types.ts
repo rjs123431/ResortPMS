@@ -107,6 +107,7 @@ export interface RoomTypeListDto {
   maxAdults: number;
   maxChildren: number;
   isActive: boolean;
+  numberOfRooms: number;
 }
 
 export interface RoomListDto {
@@ -193,6 +194,7 @@ export interface CreateRoomDto {
   roomTypeId: string;
   floor?: string;
   housekeepingStatus?: HousekeepingStatus;
+  isActive?: boolean;
 }
 
 export interface RoomDto extends CreateRoomDto {

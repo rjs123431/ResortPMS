@@ -1,6 +1,9 @@
 using AutoMapper;
 using PMS.Authorization.Users;
 using PMS.Authorization.Users.Importing.Dto;
+using PMS.App.Rooms;
+using PMS.App.Rooms.Dto;
+using PMS.App;
 
 namespace PMS
 {
@@ -10,8 +13,9 @@ namespace PMS
         {
             configuration.CreateMap<ImportUserDto, User>();
 
-            // App
-
+            // App - Room Type mapping
+            configuration.CreateMap<RoomType, RoomTypeListDto>()
+                .ForMember(dest => dest.NumberOfRooms, opt => opt.MapFrom(src => src.Rooms.Count));
         }
     }
 }
