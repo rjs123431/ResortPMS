@@ -6,6 +6,8 @@ import type { StaffListDto } from '@/types/resort.types';
 import { HousekeepingTaskStatus, HousekeepingTaskType } from '@/types/resort.types';
 import { resortService } from '@services/resort.service';
 import { SearchStaffDialog } from '../Shared/SearchStaffDialog';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const TASK_STATUS_BADGE: Record<HousekeepingTaskStatus, string> = {
     [HousekeepingTaskStatus.Pending]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
@@ -19,6 +21,11 @@ const TASK_TYPE_LABELS: Record<HousekeepingTaskType, string> = {
     [HousekeepingTaskType.StayoverCleaning]: 'Stayover Cleaning',
     [HousekeepingTaskType.PickupCleaning]: 'Pickup Cleaning',
     [HousekeepingTaskType.Inspection]: 'Inspection',
+};
+
+const parseDateOnly = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
 };
 
 const toDateInputValue = (value: Date) => {
@@ -92,11 +99,11 @@ export const HousekeepingTasksPage = () => {
                     <div className="mb-4 flex flex-wrap items-end gap-4">
                         <div>
                             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                            <input
-                                type="date"
+                            <DatePicker
+                                selected={taskDate ? parseDateOnly(taskDate) : null}
+                                onChange={(date: Date | null) => setTaskDate(date ? toDateInputValue(date) : '')}
+                                dateFormat="MMM d, yyyy"
                                 className="rounded border p-2 text-sm dark:bg-gray-700"
-                                value={taskDate}
-                                onChange={(e) => setTaskDate(e.target.value)}
                             />
                         </div>
                         <div>

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { resortService } from '@services/resort.service';
 import { ReservationStatus } from '@/types/resort.types';
 import { confirmAction, notifySuccess } from '@/utils/alerts';
@@ -18,6 +20,11 @@ import {
 const formatDateLocal = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+};
+
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
 };
 
 const toDateOnly = (value?: string | null) => {
@@ -969,11 +976,11 @@ export const ReservationDetailPage = () => {
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Paid Date</label>
-                    <input
-                      type="date"
+                    <DatePicker
+                      selected={depositPaidDate ? parseDateOnly(depositPaidDate) : null}
+                      onChange={(date: Date | null) => setDepositPaidDate(date ? formatDateLocal(date) : '')}
+                      dateFormat="MMM d, yyyy"
                       className="w-full rounded border p-2 dark:bg-gray-700"
-                      value={depositPaidDate}
-                      onChange={(e) => setDepositPaidDate(e.target.value)}
                     />
                   </div>
                   <div>

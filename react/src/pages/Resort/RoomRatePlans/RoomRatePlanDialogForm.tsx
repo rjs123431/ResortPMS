@@ -1,8 +1,20 @@
 import React, { useEffect } from 'react';
 import { Dialog, DialogPanel } from '@headlessui/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import type { CreateRoomRatePlanDto, RoomTypeListDto, RatePlanDateOverrideDto } from '@/types/resort.types';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const formatDateLocal = (d: Date) => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 type FormState = CreateRoomRatePlanDto & { id?: string };
 
@@ -120,20 +132,22 @@ export const RoomRatePlanDialogForm: React.FC<RoomRatePlanDialogFormProps> = ({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date *</label>
-                <input
-                  type="date"
+                <DatePicker
+                  selected={form.startDate ? parseDateOnly(form.startDate.slice(0, 10)) : null}
+                  onChange={(date: Date | null) => onFormChange((p) => ({ ...p, startDate: date ? formatDateLocal(date) : '' }))}
+                  dateFormat="MMM d, yyyy"
                   className="w-full rounded border p-2 dark:bg-gray-700"
-                  value={form.startDate.slice(0, 10)}
-                  onChange={(e) => onFormChange((p) => ({ ...p, startDate: e.target.value }))}
                 />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
-                <input
-                  type="date"
+                <DatePicker
+                  selected={form.endDate ? parseDateOnly(form.endDate.slice(0, 10)) : null}
+                  onChange={(date: Date | null) => onFormChange((p) => ({ ...p, endDate: date ? formatDateLocal(date) : undefined }))}
+                  dateFormat="MMM d, yyyy"
+                  isClearable
+                  placeholderText="No end date"
                   className="w-full rounded border p-2 dark:bg-gray-700"
-                  value={form.endDate?.slice(0, 10) ?? ''}
-                  onChange={(e) => onFormChange((p) => ({ ...p, endDate: e.target.value || undefined }))}
                 />
               </div>
             </div>
@@ -191,11 +205,11 @@ export const RoomRatePlanDialogForm: React.FC<RoomRatePlanDialogFormProps> = ({
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {form.dateOverrides.map((ov, idx) => (
                   <div key={idx} className="flex flex-wrap items-center gap-2 rounded border p-2 dark:border-gray-600">
-                    <input
-                      type="date"
+                    <DatePicker
+                      selected={ov.rateDate ? parseDateOnly(ov.rateDate.slice(0, 10)) : null}
+                      onChange={(date: Date | null) => updateDateOverride(idx, 'rateDate', date ? formatDateLocal(date) : '')}
+                      dateFormat="MMM d, yyyy"
                       className="rounded border p-1.5 text-sm dark:bg-gray-700 w-36"
-                      value={ov.rateDate.slice(0, 10)}
-                      onChange={(e) => updateDateOverride(idx, 'rateDate', e.target.value)}
                     />
                     <input
                       type="number"

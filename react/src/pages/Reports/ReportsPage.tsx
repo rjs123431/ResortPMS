@@ -22,6 +22,18 @@ import type {
 } from '@services/reporting.service';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import { downloadCsv } from '@utils/csvExport';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const toDateStr = (d: Date) => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'short' });
@@ -115,20 +127,20 @@ function OccupancyTab() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">From</label>
-          <input
-            type="date"
+          <DatePicker
+            selected={from ? parseDateOnly(from) : null}
+            onChange={(date: Date | null) => setFrom(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
             className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
           />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">To</label>
-          <input
-            type="date"
+          <DatePicker
+            selected={to ? parseDateOnly(to) : null}
+            onChange={(date: Date | null) => setTo(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
             className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
           />
         </div>
         <button
@@ -220,11 +232,21 @@ function RevenueTab() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">From</label>
-          <input type="date" className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DatePicker
+            selected={from ? parseDateOnly(from) : null}
+            onChange={(date: Date | null) => setFrom(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
+            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">To</label>
-          <input type="date" className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DatePicker
+            selected={to ? parseDateOnly(to) : null}
+            onChange={(date: Date | null) => setTo(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
+            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
         </div>
         <button
           type="button"
@@ -340,7 +362,12 @@ function NightAuditTab() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Audit date</label>
-          <input type="date" className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DatePicker
+            selected={date ? parseDateOnly(date) : null}
+            onChange={(d: Date | null) => setDate(d ? toDateStr(d) : '')}
+            dateFormat="MMM d, yyyy"
+            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
         </div>
         <button
           type="button"
@@ -427,11 +454,21 @@ function PosSalesTab() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">From</label>
-          <input type="date" className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DatePicker
+            selected={from ? parseDateOnly(from) : null}
+            onChange={(date: Date | null) => setFrom(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
+            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">To</label>
-          <input type="date" className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DatePicker
+            selected={to ? parseDateOnly(to) : null}
+            onChange={(date: Date | null) => setTo(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
+            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
         </div>
         <button
           type="button"

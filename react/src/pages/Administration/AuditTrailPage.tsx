@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import {
   auditService,
   type MutationAuditLogDto,
@@ -18,6 +20,16 @@ const eventTypes = [
   'PaymentVoided',
   'AdjustmentCreated',
 ];
+
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const toDateStr = (d: Date) => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 function formatDate(iso: string) {
   try {
@@ -90,26 +102,24 @@ function MutationLogTab() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">From date</label>
-          <input
-            type="date"
+          <DatePicker
+            selected={fromDate ? parseDateOnly(fromDate) : null}
+            onChange={(date: Date | null) => { setFromDate(date ? toDateStr(date) : ''); setPage(0); }}
+            dateFormat="MMM d, yyyy"
+            isClearable
+            placeholderText="Any"
             className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            value={fromDate}
-            onChange={(e) => {
-              setFromDate(e.target.value);
-              setPage(0);
-            }}
           />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">To date</label>
-          <input
-            type="date"
+          <DatePicker
+            selected={toDate ? parseDateOnly(toDate) : null}
+            onChange={(date: Date | null) => { setToDate(date ? toDateStr(date) : ''); setPage(0); }}
+            dateFormat="MMM d, yyyy"
+            isClearable
+            placeholderText="Any"
             className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            value={toDate}
-            onChange={(e) => {
-              setToDate(e.target.value);
-              setPage(0);
-            }}
           />
         </div>
       </div>
@@ -263,26 +273,24 @@ function FinancialLogTab() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">From date</label>
-          <input
-            type="date"
+          <DatePicker
+            selected={fromDate ? parseDateOnly(fromDate) : null}
+            onChange={(date: Date | null) => { setFromDate(date ? toDateStr(date) : ''); setPage(0); }}
+            dateFormat="MMM d, yyyy"
+            isClearable
+            placeholderText="Any"
             className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            value={fromDate}
-            onChange={(e) => {
-              setFromDate(e.target.value);
-              setPage(0);
-            }}
           />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">To date</label>
-          <input
-            type="date"
+          <DatePicker
+            selected={toDate ? parseDateOnly(toDate) : null}
+            onChange={(date: Date | null) => { setToDate(date ? toDateStr(date) : ''); setPage(0); }}
+            dateFormat="MMM d, yyyy"
+            isClearable
+            placeholderText="Any"
             className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            value={toDate}
-            onChange={(e) => {
-              setToDate(e.target.value);
-              setPage(0);
-            }}
           />
         </div>
       </div>

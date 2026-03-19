@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 type PaymentMethodOption = {
   id: string;
@@ -24,6 +26,11 @@ type AddPaymentDialogProps = {
 const formatDateLocal = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+};
+
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
 };
 
 const createDefaultForm = (amount: number = 0): PaymentFormValues => ({
@@ -63,10 +70,10 @@ export const AddPaymentDialog = ({ open, paymentMethods, defaultAmount, onClose,
           <div className="mt-3 space-y-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Paid Date</label>
-              <input
-                type="date"
-                value={form.paidDate}
-                onChange={(e) => setForm((s) => ({ ...s, paidDate: e.target.value }))}
+              <DatePicker
+                selected={form.paidDate ? parseDateOnly(form.paidDate) : null}
+                onChange={(date: Date | null) => setForm((s) => ({ ...s, paidDate: date ? formatDateLocal(date) : '' }))}
+                dateFormat="MMM d, yyyy"
                 className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
