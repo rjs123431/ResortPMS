@@ -39,6 +39,7 @@ type RoomTypeAvailabilitySearchProps = {
   errorMessage?: string;
   onErrorMessageChange: (message: string) => void;
   onAvailabilityChange?: (result: RoomTypeAvailabilityChange) => void;
+  excludedRoomTypeCounts?: Record<string, number>;
   excludeReservedWithoutAssignedRoom?: boolean;
   checkInReadyOnly?: boolean;
   resultTitle?: string;
@@ -59,6 +60,7 @@ export const RoomTypeAvailabilitySearch = ({
   errorMessage,
   onErrorMessageChange,
   onAvailabilityChange,
+  excludedRoomTypeCounts,
   excludeReservedWithoutAssignedRoom = true,
   checkInReadyOnly = false,
   resultTitle = 'Available Room Types',
@@ -130,14 +132,50 @@ export const RoomTypeAvailabilitySearch = ({
     return Array.from(map.values()).sort((left, right) => left.baseRate - right.baseRate);
   }, [availableRoomsQuery.data]);
 
+  const effectiveAvailabilityRows = useMemo<RoomTypeAvailabilityRow[]>(() => {
+    return availabilityRows
+      .map((row) => {
+        const excludedCount = excludedRoomTypeCounts?.[row.roomTypeId] ?? 0;
+        return {
+          ...row,
+          availableCount: Math.max(0, row.availableCount - excludedCount),
+        };
+      })
+      .filter((row) => row.availableCount > 0);
+  }, [availabilityRows, excludedRoomTypeCounts]);
+
   useEffect(() => {
     if (!onAvailabilityChange) return;
 
     onAvailabilityChange({
       availableRooms: availableRoomsQuery.data ?? [],
-      availabilityRows,
+      availabilityRows: effectiveAvailabilityRows,
     });
-  }, [availableRoomsQuery.data, availabilityRows, onAvailabilityChange]);
+  }, [availableRoomsQuery.data, effectiveAvailabilityRows, onAvailabilityChange]);
+
+  useEffect(() => {
+    const maxSelectableByType = new Map(effectiveAvailabilityRows.map((row) => [row.roomTypeId, row.availableCount]));
+    let changed = false;
+    const nextAmounts: Record<string, number> = {};
+
+    for (const [roomTypeId, selected] of Object.entries(selectedAmounts)) {
+      const maxSelectable = maxSelectableByType.get(roomTypeId);
+      if (maxSelectable === undefined) {
+        if (selected > 0) changed = true;
+        continue;
+      }
+
+      const nextValue = Math.min(Math.max(0, Math.floor(selected)), maxSelectable);
+      if (nextValue !== selected) changed = true;
+      if (nextValue > 0) {
+        nextAmounts[roomTypeId] = nextValue;
+      }
+    }
+
+    if (changed) {
+      onSelectedAmountsChange(nextAmounts);
+    }
+  }, [effectiveAvailabilityRows, onSelectedAmountsChange, selectedAmounts]);
 
   const toggleRoomType = (roomTypeId: string) => {
     onSelectedRoomTypeIdsChange(
@@ -251,7 +289,7 @@ export const RoomTypeAvailabilitySearch = ({
                   </tr>
                 ) : null}
                 {!availableRoomsQuery.isFetching
-                  ? availabilityRows.map((row) => {
+                  ? effectiveAvailabilityRows.map((row) => {
                       const selected = selectedAmounts[row.roomTypeId] ?? 0;
                       const maxSelectable = row.availableCount;
 
@@ -303,7 +341,7 @@ export const RoomTypeAvailabilitySearch = ({
                       );
                     })
                   : null}
-                {!availableRoomsQuery.isFetching && availabilityRows.length === 0 ? (
+                {!availableRoomsQuery.isFetching && effectiveAvailabilityRows.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="border border-gray-200 p-3 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400">
                       No rooms available for the selected criteria.

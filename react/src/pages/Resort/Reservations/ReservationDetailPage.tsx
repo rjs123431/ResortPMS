@@ -122,6 +122,7 @@ export const ReservationDetailPage = () => {
   const [pendingAddedExtraBeds, setPendingAddedExtraBeds] = useState<Array<{ tempId: string; extraBedTypeId: string; quantity: number }>>([]);
   const [pendingRemovedExtraBedIds, setPendingRemovedExtraBedIds] = useState<string[]>([]);
   const [pendingAddedDeposits, setPendingAddedDeposits] = useState<Array<Omit<ReservationDepositDto, 'id'> & { tempId: string }>>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const closeGuestDialog = () => {
     setIsGuestDialogOpen(false);
@@ -238,6 +239,10 @@ export const ReservationDetailPage = () => {
     });
   }, [reservationDetail, hasUnsavedChanges]);
 
+  useEffect(() => {
+    setIsEditMode(false);
+  }, [id, reservationDetail?.id]);
+
   const saveChangesMutation = useMutation({
     mutationFn: async () => {
       if (!id) return;
@@ -290,6 +295,7 @@ export const ReservationDetailPage = () => {
       setPendingAddedExtraBeds([]);
       setPendingRemovedExtraBedIds([]);
       setPendingAddedDeposits([]);
+      setIsEditMode(false);
 
       void queryClient.invalidateQueries({ queryKey: ['resort-reservations'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-reservation-detail', id] });
@@ -321,9 +327,13 @@ export const ReservationDetailPage = () => {
     setIsDepositDialogOpen(false);
     setIsAddExtraBedDialogOpen(false);
     closeAddRoomTypeDialog();
+    setIsEditMode(false);
   };
 
   const effectiveReservation = draftReservation ?? reservationDetail;
+  const isEditableReservation =
+    effectiveReservation?.status === ReservationStatus.Draft ||
+    effectiveReservation?.status === ReservationStatus.Pending;
 
   const rooms = effectiveReservation?.rooms ?? [];
   const extraBeds = effectiveReservation?.extraBeds ?? [];
@@ -344,11 +354,11 @@ export const ReservationDetailPage = () => {
     [extraBeds],
   );
 
-  /** Draft: no assign room, add guest, add deposit. Pending/Confirmed: allow all. */
+  /** Only allow row-level editing while page is in Edit mode. */
   const canShowBookingActions = useMemo(() => {
     if (!effectiveReservation) return false;
-    return effectiveReservation.status === ReservationStatus.Pending;
-  }, [effectiveReservation]);
+    return effectiveReservation.status === ReservationStatus.Pending && isEditMode;
+  }, [effectiveReservation, isEditMode]);
 
   const roomNumberById = useMemo(() => {
     const map = new Map<string, string>();
@@ -370,24 +380,26 @@ export const ReservationDetailPage = () => {
   }, [assignDialogReservationRoomId, effectiveReservation?.rooms]);
 
   const canAssignRooms = canShowBookingActions;
-  const canAddExtraBeds =
-    effectiveReservation?.status === ReservationStatus.Draft ||
-    effectiveReservation?.status === ReservationStatus.Pending;
-  const canAddRoomTypes =
-    effectiveReservation?.status === ReservationStatus.Draft ||
-    effectiveReservation?.status === ReservationStatus.Pending;
+  const canAddExtraBeds = isEditableReservation && isEditMode;
+  const canAddRoomTypes = isEditableReservation && isEditMode;
   const canRemoveRoomTypes = canAddRoomTypes;
   const canRemoveExtraBeds = canAddExtraBeds;
-  const canAddPayments =
-    effectiveReservation?.status === ReservationStatus.Draft ||
-    effectiveReservation?.status === ReservationStatus.Pending;
+  const canAddPayments = isEditableReservation && isEditMode;
   const addRoomTypeArrivalDate = toDateOnly(effectiveReservation?.arrivalDate);
   const addRoomTypeDepartureDate = toDateOnly(effectiveReservation?.departureDate);
   const isLinkGuestMode = !effectiveReservation?.guestId;
   const canLinkGuest =
     !effectiveReservation?.guestId &&
-    (effectiveReservation?.status === ReservationStatus.Draft || effectiveReservation?.status === ReservationStatus.Pending);
+    (effectiveReservation?.status === ReservationStatus.Draft || effectiveReservation?.status === ReservationStatus.Pending) &&
+    isEditMode;
   const allRoomTypeIds = useMemo(() => (roomTypes ?? []).map((roomType) => roomType.id), [roomTypes]);
+  const unsavedRoomTypeCountsForAdd = useMemo(() => {
+    return rooms.reduce<Record<string, number>>((acc, room) => {
+      if (!room.id.startsWith(TEMP_ROOM_PREFIX)) return acc;
+      acc[room.roomTypeId] = (acc[room.roomTypeId] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [rooms]);
   const selectedRoomTypeIdsForAdd = useMemo(
     () => Object.entries(selectedRoomTypeAmounts).filter(([, amount]) => amount > 0).map(([roomTypeId]) => roomTypeId),
     [selectedRoomTypeAmounts],
@@ -750,6 +762,7 @@ export const ReservationDetailPage = () => {
                       onSearch={setAddRoomTypeSearchCriteria}
                       errorMessage={addRoomTypeSearchError}
                       onErrorMessageChange={setAddRoomTypeSearchError}
+                      excludedRoomTypeCounts={unsavedRoomTypeCountsForAdd}
                       onAvailabilityChange={({ availabilityRows }) => setAddRoomTypeAvailabilityRows(availabilityRows)}
                     />
                   </div>
@@ -804,6 +817,39 @@ export const ReservationDetailPage = () => {
                               {setPendingMutation.isPending ? 'Updating…' : 'Make Pending'}
                             </button>
                           </>
+                        ) : null}
+                        {isEditableReservation ? (
+                          !isEditMode ? (
+                            <>
+                              <button
+                                type="button"
+                                className="w-full rounded bg-primary-600 px-3 py-2 text-sm text-white sm:w-auto"
+                                onClick={() => setIsEditMode(true)}
+                              >
+                                Edit
+                              </button>
+                              {effectiveReservation?.status === ReservationStatus.Pending ? (
+                                <button
+                                  type="button"
+                                  className="w-full rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
+                                  disabled={confirmMutation.isPending || cancelMutation.isPending}
+                                  onClick={handleConfirmReservation}
+                                >
+                                  {confirmMutation.isPending ? 'Confirming…' : 'Confirm'}
+                                </button>
+                              ) : null}
+                              {effectiveReservation?.status === ReservationStatus.Pending ? (
+                                <button
+                                  type="button"
+                                  className="w-full rounded bg-rose-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
+                                  disabled={cancelMutation.isPending || confirmMutation.isPending}
+                                  onClick={handleCancelReservation}
+                                >
+                                  {cancelMutation.isPending ? 'Cancelling…' : 'Cancel'}
+                                </button>
+                              ) : null}
+                            </>
+                          ) : null
                         ) : null}
                       </div>
                     </div>
@@ -1086,50 +1132,6 @@ export const ReservationDetailPage = () => {
                 </div>
               </div>
 
-              {(effectiveReservation?.status === ReservationStatus.Pending || effectiveReservation?.status === ReservationStatus.Draft) ? (
-                <div className="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:text-gray-200"
-                      disabled={!hasUnsavedChanges || saveChangesMutation.isPending}
-                      onClick={discardChanges}
-                    >
-                      Discard Changes
-                    </button>
-                    <button
-                      type="button"
-                      className="w-full rounded bg-primary-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
-                      disabled={!hasUnsavedChanges || saveChangesMutation.isPending}
-                      onClick={() => saveChangesMutation.mutate()}
-                    >
-                      {saveChangesMutation.isPending ? 'Saving…' : 'Save Changes'}
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                  {effectiveReservation?.status === ReservationStatus.Pending ? (
-                    <button
-                      type="button"
-                      className="w-full rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
-                      disabled={confirmMutation.isPending || cancelMutation.isPending}
-                      onClick={handleConfirmReservation}
-                    >
-                      {confirmMutation.isPending ? 'Confirming…' : 'Confirm'}
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="w-full rounded bg-rose-600 px-3 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
-                    disabled={cancelMutation.isPending || confirmMutation.isPending}
-                    onClick={handleCancelReservation}
-                  >
-                    {cancelMutation.isPending ? 'Cancelling…' : 'Cancel'}
-                  </button>
-                  </div>
-                </div>
-              ) : null}
-
               <AddExtraBedDialog
                 open={isAddExtraBedDialogOpen}
                 extraBedTypes={extraBedTypes ?? []}
@@ -1139,6 +1141,27 @@ export const ReservationDetailPage = () => {
             </div>
           ) : null}
         </section>
+
+        {isEditMode ? (
+          <div className="flex flex-wrap items-center justify-end gap-2 rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+            <button
+              type="button"
+              className="w-full rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:text-gray-200"
+              disabled={!hasUnsavedChanges || saveChangesMutation.isPending}
+              onClick={discardChanges}
+            >
+              Discard Changes
+            </button>
+            <button
+              type="button"
+              className="w-full rounded bg-primary-600 px-4 py-2 text-sm text-white disabled:opacity-50 sm:w-auto"
+              disabled={!hasUnsavedChanges || saveChangesMutation.isPending}
+              onClick={() => saveChangesMutation.mutate()}
+            >
+              {saveChangesMutation.isPending ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        ) : null}
 
         {canAddPayments ? (
           <Dialog open={isDepositDialogOpen} onClose={() => {}} className="relative z-50">
