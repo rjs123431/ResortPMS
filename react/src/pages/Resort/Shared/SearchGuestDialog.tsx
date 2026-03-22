@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
+import { AbpFieldValidationMessage } from '@components/common/AbpFieldValidationMessage';
+import { getAbpErrorMessage } from '@utils/abpValidation';
 
 export type SelectedGuest = {
     id: string;
@@ -22,6 +24,7 @@ export const SearchGuestDialog = ({ open, onClose, onSelectGuest }: SearchGuestD
     const queryClient = useQueryClient();
     const [guestFilter, setGuestFilter] = useState('');
     const [showCreateGuest, setShowCreateGuest] = useState(false);
+    const [createGuestError, setCreateGuestError] = useState('');
     const [newGuest, setNewGuest] = useState({
         firstName: '',
         lastName: '',
@@ -40,6 +43,9 @@ export const SearchGuestDialog = ({ open, onClose, onSelectGuest }: SearchGuestD
 
     const createGuestMutation = useMutation({
         mutationFn: resortService.createGuest,
+        onMutate: () => {
+            setCreateGuestError('');
+        },
         onSuccess: (newGuestId, payload) => {
             onSelectGuest({
                 id: newGuestId,
@@ -50,6 +56,7 @@ export const SearchGuestDialog = ({ open, onClose, onSelectGuest }: SearchGuestD
                 nationality: newGuest.nationality || undefined,
             });
             setShowCreateGuest(false);
+            setCreateGuestError('');
             setGuestFilter('');
             setNewGuest({
                 firstName: '',
@@ -63,6 +70,9 @@ export const SearchGuestDialog = ({ open, onClose, onSelectGuest }: SearchGuestD
             void queryClient.invalidateQueries({ queryKey: ['reservation-guest-search'] });
             void queryClient.invalidateQueries({ queryKey: ['resort-guests'] });
             onClose();
+        },
+        onError: (error) => {
+            setCreateGuestError(getAbpErrorMessage(error));
         },
     });
 
@@ -98,7 +108,10 @@ export const SearchGuestDialog = ({ open, onClose, onSelectGuest }: SearchGuestD
                             <button
                                 type="button"
                                 className="rounded bg-primary-600 px-2.5 py-1.5 text-sm text-white hover:bg-primary-700"
-                                onClick={() => setShowCreateGuest((prev) => !prev)}
+                                    onClick={() => {
+                                        setCreateGuestError('');
+                                        setShowCreateGuest((prev) => !prev);
+                                    }}
                             >
                                 {showCreateGuest ? 'Cancel New Guest' : 'New Guest'}
                             </button>
@@ -112,26 +125,32 @@ export const SearchGuestDialog = ({ open, onClose, onSelectGuest }: SearchGuestD
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name *</label>
                                     <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.lastName} onChange={(e) => setNewGuest((s) => ({ ...s, lastName: e.target.value }))} />
+                                    <AbpFieldValidationMessage error={createGuestMutation.error} member="lastName" />
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">First Name *</label>
                                     <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.firstName} onChange={(e) => setNewGuest((s) => ({ ...s, firstName: e.target.value }))} />
+                                    <AbpFieldValidationMessage error={createGuestMutation.error} member="firstName" />
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Middle Name</label>
                                     <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.middleName} onChange={(e) => setNewGuest((s) => ({ ...s, middleName: e.target.value }))} />
+                                    <AbpFieldValidationMessage error={createGuestMutation.error} member="middleName" />
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Contact Number *</label>
                                     <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.phone} onChange={(e) => setNewGuest((s) => ({ ...s, phone: e.target.value }))} />
+                                    <AbpFieldValidationMessage error={createGuestMutation.error} member="phone" />
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                                     <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.email} onChange={(e) => setNewGuest((s) => ({ ...s, email: e.target.value }))} />
+                                    <AbpFieldValidationMessage error={createGuestMutation.error} member="email" />
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nationality</label>
                                     <input className="w-full rounded border p-2 dark:bg-gray-700" value={newGuest.nationality} onChange={(e) => setNewGuest((s) => ({ ...s, nationality: e.target.value }))} />
+                                    <AbpFieldValidationMessage error={createGuestMutation.error} member="nationality" />
                                 </div>
                                 <div className="md:col-span-3">
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Remarks</label>
@@ -141,8 +160,12 @@ export const SearchGuestDialog = ({ open, onClose, onSelectGuest }: SearchGuestD
                                         value={newGuest.notes}
                                         onChange={(e) => setNewGuest((s) => ({ ...s, notes: e.target.value }))}
                                     />
+                                    <AbpFieldValidationMessage error={createGuestMutation.error} member="notes" />
                                 </div>
                             </div>
+                            {createGuestError ? (
+                                <p className="mt-2 text-sm text-rose-600">{createGuestError}</p>
+                            ) : null}
                             <button
                                 type="button"
                                 className="mt-3 rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"

@@ -2,13 +2,15 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { API_CONFIG, AUTH_STORAGE_KEY, AUTH_EXPIRY_KEY } from '@config/api.config';
 import { getDeviceFingerprint } from '@utils/deviceFingerprint';
 import { showErrorDialog } from '@utils/alerts';
+import { getAbpErrorMessage, getAbpValidationMap } from '@utils/abpValidation';
 
 type AbpErrorPayload = {
   error?: {
     message?: string;
     details?: string;
-    validationErrors?: Array<{ message?: string }>;
+    validationErrors?: Array<{ message?: string; members?: string[] }>;
   };
+  __abp?: boolean;
 };
 
 class ApiService {
@@ -80,20 +82,25 @@ class ApiService {
           return Promise.reject(error);
         }
 
+        if (error.response?.status === 400) {
+          const responseData = error?.response?.data as AbpErrorPayload | undefined;
+          if (responseData?.__abp || responseData?.error) {
+            const normalizedMessage = getAbpErrorMessage(error);
+            const validationMap = getAbpValidationMap(error);
+
+            (error as Error & { validationMap?: Record<string, string[]> }).message = normalizedMessage;
+            (error as Error & { validationMap?: Record<string, string[]> }).validationMap = validationMap;
+          }
+
+          return Promise.reject(error);
+        }
+
         // Show global error dialog only for server errors.
         if (error.response?.status !== 500) {
           return Promise.reject(error);
         }
 
-        const responseData = error?.response?.data as AbpErrorPayload | undefined;
-        const abpMessage = responseData?.error?.message;
-        const detailMessage = responseData?.error?.details;
-        const validationMessage = responseData?.error?.validationErrors?.find((v) => v.message)?.message;
-        const fallbackMessage = error?.message && error.message !== 'Network Error'
-          ? error.message
-          : 'Something went wrong. Please try again.';
-
-        const messageToShow = abpMessage || validationMessage || detailMessage || fallbackMessage;
+        const messageToShow = getAbpErrorMessage(error);
 
         if (!this.isShowingErrorDialog && messageToShow) {
           this.isShowingErrorDialog = true;

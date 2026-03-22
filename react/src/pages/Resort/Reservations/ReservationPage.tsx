@@ -13,6 +13,8 @@ import {
   type RoomTypeAvailabilitySearchCriteria,
 } from '../Shared/RoomTypeAvailabilitySearch';
 import { formatMoney } from '@utils/helpers';
+import { getAbpErrorMessage } from '@utils/abpValidation';
+import { AbpFieldValidationMessage } from '@components/common/AbpFieldValidationMessage';
 
 const formatDateLocal = (value: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -515,7 +517,7 @@ export const ReservationPage = () => {
       navigate(`/front-desk/reservations/${reservationId}`);
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Unable to save reservation.';
+      const message = getAbpErrorMessage(error);
       setConfirmError(message);
     },
   });
@@ -960,6 +962,11 @@ export const ReservationPage = () => {
                       value={guestInfoForm.firstName}
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, firstName: e.target.value }))}
                     />
+                    <AbpFieldValidationMessage
+                      error={createMutation.error}
+                      member="firstName"
+                      className="mt-1 text-xs text-rose-600"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Middle Name</label>
@@ -967,6 +974,11 @@ export const ReservationPage = () => {
                       className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                       value={guestInfoForm.middleName}
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, middleName: e.target.value }))}
+                    />
+                    <AbpFieldValidationMessage
+                      error={createMutation.error}
+                      member="middleName"
+                      className="mt-1 text-xs text-rose-600"
                     />
                   </div>
                   <div>
@@ -976,6 +988,11 @@ export const ReservationPage = () => {
                       value={guestInfoForm.lastName}
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, lastName: e.target.value }))}
                     />
+                    <AbpFieldValidationMessage
+                      error={createMutation.error}
+                      member="lastName"
+                      className="mt-1 text-xs text-rose-600"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
@@ -983,6 +1000,11 @@ export const ReservationPage = () => {
                       className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                       value={guestInfoForm.phone}
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, phone: e.target.value }))}
+                    />
+                    <AbpFieldValidationMessage
+                      error={createMutation.error}
+                      member="phone"
+                      className="mt-1 text-xs text-rose-600"
                     />
                   </div>
                   <div>
@@ -992,6 +1014,11 @@ export const ReservationPage = () => {
                       value={guestInfoForm.email}
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, email: e.target.value }))}
                     />
+                    <AbpFieldValidationMessage
+                      error={createMutation.error}
+                      member="email"
+                      className="mt-1 text-xs text-rose-600"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nationality</label>
@@ -999,6 +1026,11 @@ export const ReservationPage = () => {
                       className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                       value={guestInfoForm.nationality}
                       onChange={(e) => setGuestInfoForm((s) => ({ ...s, nationality: e.target.value }))}
+                    />
+                    <AbpFieldValidationMessage
+                      error={createMutation.error}
+                      member="nationality"
+                      className="mt-1 text-xs text-rose-600"
                     />
                   </div>
                   <div>
