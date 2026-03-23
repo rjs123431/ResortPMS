@@ -7,6 +7,7 @@ export type RoomTypeAvailabilitySearchCriteria = {
   roomTypeIds: string[];
   arrivalDate: string;
   departureDate: string;
+  channelId: string;
 };
 
 export type RoomTypeAvailabilityRow = {
@@ -30,6 +31,8 @@ type RoomTypeAvailabilitySearchProps = {
   departureDate?: string;
   reservationId?: string;
   channelId?: string;
+  channelOptions?: Array<{ id: string; name: string }>;
+  onChannelIdChange?: (channelId: string) => void;
   selectedRoomTypeIds: string[];
   onSelectedRoomTypeIdsChange: (roomTypeIds: string[]) => void;
   selectedAmounts: Record<string, number>;
@@ -51,6 +54,8 @@ export const RoomTypeAvailabilitySearch = ({
   departureDate,
   reservationId,
   channelId,
+  channelOptions,
+  onChannelIdChange,
   selectedRoomTypeIds,
   onSelectedRoomTypeIdsChange,
   selectedAmounts,
@@ -76,10 +81,10 @@ export const RoomTypeAvailabilitySearch = ({
       searchCriteria?.roomTypeIds.join(','),
       searchCriteria?.arrivalDate,
       searchCriteria?.departureDate,
+      searchCriteria?.channelId,
       reservationId,
       excludeReservedWithoutAssignedRoom,
       checkInReadyOnly,
-      channelId,
     ],
     queryFn: async () => {
       if (!searchCriteria) return [] as RoomListDto[];
@@ -93,7 +98,7 @@ export const RoomTypeAvailabilitySearch = ({
             reservationId,
             excludeReservedWithoutAssignedRoom,
             checkInReadyOnly,
-            channelId,
+            searchCriteria.channelId,
           )
         )
       );
@@ -104,7 +109,8 @@ export const RoomTypeAvailabilitySearch = ({
       searchCriteria &&
         searchCriteria.roomTypeIds.length > 0 &&
         searchCriteria.arrivalDate &&
-        searchCriteria.departureDate,
+          searchCriteria.departureDate &&
+          searchCriteria.channelId,
     ),
     staleTime: 5 * 1000,
   });
@@ -195,9 +201,19 @@ export const RoomTypeAvailabilitySearch = ({
       return;
     }
 
+    const effectiveChannelId = channelId || channelOptions?.[0]?.id;
+    if (!effectiveChannelId) {
+      onErrorMessageChange('No reservation channel available. Please add a channel.');
+      return;
+    }
+
     if (arrivalDate >= departureDate) {
       onErrorMessageChange('Check-Out date must be after Check-In date.');
       return;
+    }
+
+    if (effectiveChannelId !== channelId && onChannelIdChange) {
+      onChannelIdChange(effectiveChannelId);
     }
 
     onErrorMessageChange('');
@@ -206,6 +222,7 @@ export const RoomTypeAvailabilitySearch = ({
       roomTypeIds: selectedRoomTypeIds,
       arrivalDate,
       departureDate,
+      channelId: effectiveChannelId,
     });
   };
 
@@ -249,7 +266,23 @@ export const RoomTypeAvailabilitySearch = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-end gap-2">
+        {channelOptions && channelOptions.length > 0 && onChannelIdChange ? (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reservation Channel</label>
+            <select
+              className="rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              value={channelId ?? ''}
+              onChange={(e) => onChannelIdChange(e.target.value)}
+            >
+              {channelOptions.map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  {channel.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={handleSearch}
@@ -258,11 +291,6 @@ export const RoomTypeAvailabilitySearch = ({
         >
           {availableRoomsQuery.isFetching ? 'Searching...' : searchCriteria ? 'Change Search' : 'Search'}
         </button>
-        {searchCriteria ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Check-In {searchCriteria.arrivalDate} to Check-Out {searchCriteria.departureDate}
-          </p>
-        ) : null}
       </div>
 
       {errorMessage ? <p className="text-sm text-rose-600">{errorMessage}</p> : null}

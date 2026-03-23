@@ -164,6 +164,20 @@ export const CheckInWalkInPage = () => {
     enabled: showReservationDetails && showGuestInfoStep,
   });
 
+  const { data: channels } = useQuery({
+    queryKey: ['resort-channels'],
+    queryFn: () => resortService.getChannels(),
+  });
+
+  const [selectedChannelId, setSelectedChannelId] = useState('');
+
+  useEffect(() => {
+    if (selectedChannelId) return;
+    const firstChannelId = channels?.[0]?.id;
+    if (firstChannelId) {
+      setSelectedChannelId(firstChannelId);
+    }
+  }, [channels, selectedChannelId]);
 
   useEffect(() => {
     if (!selectedGuest) return;
@@ -593,7 +607,7 @@ export const CheckInWalkInPage = () => {
     },
     onSuccess: (preCheckInId) => {
       if (!loadedPreCheckInId) {
-        navigate(`/front-desk/check-in/walk-in/${preCheckInId}`, { replace: true });
+        navigate(`/front-desk/walk-in/${preCheckInId}`, { replace: true });
       }
       setLoadedPreCheckInId(preCheckInId);
       setPreCheckInSaveMessage('Pre-check-in saved successfully!');
@@ -619,19 +633,31 @@ export const CheckInWalkInPage = () => {
       setAdults(preCheckIn.adults);
       setChildren(preCheckIn.children);
 
+      const effectiveChannelId = selectedChannelId || channels?.[0]?.id || '';
+
       const criteria: SearchCriteria = {
         roomTypeIds: roomTypeIdsFromPreCheckIn,
         arrivalDate: preCheckIn.arrivalDate.split('T')[0],
         departureDate: preCheckIn.departureDate.split('T')[0],
+        channelId: effectiveChannelId,
         adults: preCheckIn.adults,
         children: preCheckIn.children,
         rooms: preCheckIn.rooms.length,
       };
+      setSelectedChannelId(effectiveChannelId);
       setSearchCriteria(criteria);
 
       const searchResults = await Promise.all(
         roomTypeIdsFromPreCheckIn.map((roomTypeId) =>
-          resortService.getAvailableRooms(roomTypeId, criteria.arrivalDate, criteria.departureDate, undefined, false, true)
+          resortService.getAvailableRooms(
+            roomTypeId,
+            criteria.arrivalDate,
+            criteria.departureDate,
+            undefined,
+            false,
+            true,
+            criteria.channelId,
+          )
         )
       );
       const allRooms = searchResults.flat();
@@ -694,7 +720,7 @@ export const CheckInWalkInPage = () => {
       setShowReservationDetails(true);
       setShowPreCheckInListDialog(false);
 
-      navigate(`/front-desk/check-in/walk-in/${preCheckIn.id}`, { replace: true });
+      navigate(`/front-desk/walk-in/${preCheckIn.id}`, { replace: true });
     } catch (error) {
       setConfirmError(getErrorMessage(error));
     }
@@ -908,36 +934,102 @@ export const CheckInWalkInPage = () => {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Adults</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={adults}
-                  onChange={(e) => setAdults(Number(e.target.value || 1))}
-                  className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                />
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    disabled={adults <= 1}
+                    onClick={() => setAdults((prev) => Math.max(1, prev - 1))}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={adults}
+                    onChange={(e) => {
+                      const parsed = Number(e.target.value);
+                      const next = Number.isNaN(parsed) ? 1 : Math.max(1, Math.min(10, Math.floor(parsed)));
+                      setAdults(next);
+                    }}
+                    className="w-full rounded border border-gray-300 p-2 text-center text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    disabled={adults >= 10}
+                    onClick={() => setAdults((prev) => Math.min(10, prev + 1))}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Children</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={children}
-                  onChange={(e) => setChildren(Number(e.target.value || 0))}
-                  className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                />
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    disabled={children <= 0}
+                    onClick={() => setChildren((prev) => Math.max(0, prev - 1))}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={children}
+                    onChange={(e) => {
+                      const parsed = Number(e.target.value);
+                      const next = Number.isNaN(parsed) ? 0 : Math.max(0, Math.min(10, Math.floor(parsed)));
+                      setChildren(next);
+                    }}
+                    className="w-full rounded border border-gray-300 p-2 text-center text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    disabled={children >= 10}
+                    onClick={() => setChildren((prev) => Math.min(10, prev + 1))}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Number of Rooms</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={roomCount}
-                  onChange={(e) => setRoomCount(Number(e.target.value || 1))}
-                  className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                />
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    disabled={roomCount <= 1}
+                    onClick={() => setRoomCount((prev) => Math.max(1, prev - 1))}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={roomCount}
+                    onChange={(e) => {
+                      const parsed = Number(e.target.value);
+                      const next = Number.isNaN(parsed) ? 1 : Math.max(1, Math.min(5, Math.floor(parsed)));
+                      setRoomCount(next);
+                    }}
+                    className="w-full rounded border border-gray-300 p-2 text-center text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    disabled={roomCount >= 5}
+                    onClick={() => setRoomCount((prev) => Math.min(5, prev + 1))}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -946,6 +1038,9 @@ export const CheckInWalkInPage = () => {
                 roomTypes={roomTypes}
                 arrivalDate={startDate ? formatDateLocal(startDate) : undefined}
                 departureDate={endDate ? formatDateLocal(endDate) : undefined}
+                channelId={selectedChannelId}
+                channelOptions={(channels ?? []).map((channel) => ({ id: channel.id, name: channel.name }))}
+                onChannelIdChange={setSelectedChannelId}
                 selectedRoomTypeIds={selectedRoomTypeIds}
                 onSelectedRoomTypeIdsChange={setSelectedRoomTypeIds}
                 selectedAmounts={selectedAmounts}
@@ -967,6 +1062,11 @@ export const CheckInWalkInPage = () => {
             <div className="mt-4 flex items-center justify-between rounded border bg-slate-100 p-3 dark:border-gray-700 dark:bg-gray-700/40">
               <div>
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Selection Package:</p>
+                {selectedChannelId && (
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Channel: <span className="font-medium text-gray-800 dark:text-gray-300">{channels?.find((c) => c.id === selectedChannelId)?.name || selectedChannelId}</span>
+                  </p>
+                )}
                 {selectedPackage.lines.length > 0 ? (
                   <div className="mt-1 space-y-1">
                     {selectedPackage.lines.map((line) => (

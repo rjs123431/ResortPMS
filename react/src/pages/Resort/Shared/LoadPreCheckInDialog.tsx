@@ -3,10 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { resortService } from '@services/resort.service';
 import { PreCheckInStatus } from '@/types/resort.types';
-
-const formatMoney = (value: number) =>
-  Math.round(value * 100) / 100
-    .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { formatMoney } from '@utils/helpers';
 
 type LoadPreCheckInDialogProps = {
   open: boolean;

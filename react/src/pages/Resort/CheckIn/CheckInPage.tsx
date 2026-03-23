@@ -58,7 +58,7 @@ export const CheckInPage = () => {
               Pre-Check-In
             </button>
             <Link
-              to="/front-desk/check-in/walk-in"
+              to="/front-desk/walk-in"
               className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
             >
               Walk-In
@@ -139,7 +139,7 @@ export const CheckInPage = () => {
           open={showPreCheckInDialog}
           onSelect={(preCheckInId) => {
             setShowPreCheckInDialog(false);
-            navigate(`/front-desk/check-in/walk-in/${preCheckInId}`);
+            navigate(`/front-desk/walk-in/${preCheckInId}`);
           }}
           onClose={() => setShowPreCheckInDialog(false)}
         />

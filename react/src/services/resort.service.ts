@@ -96,7 +96,18 @@ export const resortService = {
   },
 
   createGuest: async (input: CreateGuestDto) => {
-    const response = await api.post<ApiResponse<string>>('/api/services/app/Guest/Create', input);
+    const normalizedInput: CreateGuestDto = {
+      ...input,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      phone: input.phone.trim(),
+      middleName: input.middleName?.trim() || undefined,
+      email: input.email?.trim() || undefined,
+      nationality: input.nationality?.trim() || undefined,
+      notes: input.notes?.trim() || undefined,
+    };
+
+    const response = await api.post<ApiResponse<string>>('/api/services/app/Guest/Create', normalizedInput);
     return response.data.result;
   },
 

@@ -110,7 +110,6 @@ export const ReservationPage = () => {
   const [reservationConditions, setReservationConditions] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [selectedChannelId, setSelectedChannelId] = useState('');
-  const [selectedAgencyId, setSelectedAgencyId] = useState('');
   const [confirmError, setConfirmError] = useState('');
   const [initialDeposits, setInitialDeposits] = useState<InitialDepositRow[]>([]);
   const [showDepositDialog, setShowDepositDialog] = useState(false);
@@ -136,14 +135,15 @@ export const ReservationPage = () => {
   const { data: channels } = useQuery({
     queryKey: ['resort-channels'],
     queryFn: () => resortService.getChannels(),
-    enabled: showReservationDetails && showGuestInfoStep,
   });
 
-  const { data: agencies } = useQuery({
-    queryKey: ['resort-agencies'],
-    queryFn: () => resortService.getAgencies(),
-    enabled: showReservationDetails && showGuestInfoStep,
-  });
+  useEffect(() => {
+    if (selectedChannelId) return;
+    const firstChannelId = channels?.[0]?.id;
+    if (firstChannelId) {
+      setSelectedChannelId(firstChannelId);
+    }
+  }, [channels, selectedChannelId]);
 
   useEffect(() => {
     if (!selectedGuest) return;
@@ -311,8 +311,6 @@ export const ReservationPage = () => {
     setTransactionNotes('');
     setReservationConditions('');
     setSpecialRequests('');
-    setSelectedChannelId('');
-    setSelectedAgencyId('');
     setInitialDeposits([]);
     setShowDepositDialog(false);
     setAvailabilityRows([]);
@@ -478,7 +476,6 @@ export const ReservationPage = () => {
       const reservationId = await resortService.createReservation({
         guestId: selectedGuest.id,
         channelId: selectedChannelId,
-        agencyId: selectedAgencyId || undefined,
         arrivalDate: searchCriteria.arrivalDate,
         departureDate: searchCriteria.departureDate,
         adults,
@@ -564,36 +561,102 @@ export const ReservationPage = () => {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Adults</label>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={adults}
-                onChange={(e) => setAdults(Number(e.target.value || 1))}
-                className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                  disabled={adults <= 1}
+                  onClick={() => setAdults((prev) => Math.max(1, prev - 1))}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={adults}
+                  onChange={(e) => {
+                    const parsed = Number(e.target.value);
+                    const next = Number.isNaN(parsed) ? 1 : Math.max(1, Math.min(10, Math.floor(parsed)));
+                    setAdults(next);
+                  }}
+                  className="w-full rounded border border-gray-300 p-2 text-center text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                />
+                <button
+                  type="button"
+                  className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                  disabled={adults >= 10}
+                  onClick={() => setAdults((prev) => Math.min(10, prev + 1))}
+                >
+                  +
+                </button>
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Children</label>
-              <input
-                type="number"
-                min={0}
-                max={10}
-                value={children}
-                onChange={(e) => setChildren(Number(e.target.value || 0))}
-                className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                  disabled={children <= 0}
+                  onClick={() => setChildren((prev) => Math.max(0, prev - 1))}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={children}
+                  onChange={(e) => {
+                    const parsed = Number(e.target.value);
+                    const next = Number.isNaN(parsed) ? 0 : Math.max(0, Math.min(10, Math.floor(parsed)));
+                    setChildren(next);
+                  }}
+                  className="w-full rounded border border-gray-300 p-2 text-center text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                />
+                <button
+                  type="button"
+                  className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                  disabled={children >= 10}
+                  onClick={() => setChildren((prev) => Math.min(10, prev + 1))}
+                >
+                  +
+                </button>
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Number of Rooms</label>
-              <input
-                type="number"
-                min={1}
-                max={5}
-                value={roomCount}
-                onChange={(e) => setRoomCount(Number(e.target.value || 1))}
-                className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                  disabled={roomCount <= 1}
+                  onClick={() => setRoomCount((prev) => Math.max(1, prev - 1))}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={roomCount}
+                  onChange={(e) => {
+                    const parsed = Number(e.target.value);
+                    const next = Number.isNaN(parsed) ? 1 : Math.max(1, Math.min(5, Math.floor(parsed)));
+                    setRoomCount(next);
+                  }}
+                  className="w-full rounded border border-gray-300 p-2 text-center text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                />
+                <button
+                  type="button"
+                  className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                  disabled={roomCount >= 5}
+                  onClick={() => setRoomCount((prev) => Math.min(5, prev + 1))}
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
 
@@ -602,7 +665,9 @@ export const ReservationPage = () => {
               roomTypes={roomTypes}
               arrivalDate={startDate ? formatDateLocal(startDate) : undefined}
               departureDate={endDate ? formatDateLocal(endDate) : undefined}
-              channelId={selectedChannelId || undefined}
+              channelId={selectedChannelId}
+              channelOptions={(channels ?? []).map((channel) => ({ id: channel.id, name: channel.name }))}
+              onChannelIdChange={setSelectedChannelId}
               selectedRoomTypeIds={selectedRoomTypeIds}
               onSelectedRoomTypeIdsChange={setSelectedRoomTypeIds}
               selectedAmounts={selectedAmounts}
@@ -1032,32 +1097,6 @@ export const ReservationPage = () => {
                       member="nationality"
                       className="mt-1 text-xs text-rose-600"
                     />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reservation Channel</label>
-                    <select
-                      className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                      value={selectedChannelId}
-                      onChange={(e) => setSelectedChannelId(e.target.value)}
-                    >
-                      <option value="">Select channel</option>
-                      {(channels ?? []).map((channel) => (
-                        <option key={channel.id} value={channel.id}>{channel.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Agency</label>
-                    <select
-                      className="w-full rounded border border-gray-300 p-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                      value={selectedAgencyId}
-                      onChange={(e) => setSelectedAgencyId(e.target.value)}
-                    >
-                      <option value="">Select agency (optional)</option>
-                      {(agencies ?? []).map((agency) => (
-                        <option key={agency.id} value={agency.id}>{agency.name}</option>
-                      ))}
-                    </select>
                   </div>
                   <div className="md:col-span-3 grid grid-cols-1 gap-2 md:grid-cols-1">
                     <div>
