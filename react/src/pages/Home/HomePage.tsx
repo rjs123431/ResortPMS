@@ -37,6 +37,7 @@ export const HomePage: React.FC = () => {
 
   const showFrontDesk = true;
   const showHousekeeping = isGranted(PermissionNames.Pages_Rooms);
+  const showMaintenance = isGranted(PermissionNames.Pages_Maintenance);
   const showReports = isGranted(PermissionNames.Pages_Reports);
   const showAdmin =
     isGranted(PermissionNames.Pages_Guests) ||
@@ -76,6 +77,18 @@ export const HomePage: React.FC = () => {
             icon={
               <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            }
+          />
+          <HomeCard
+            to="/maintenance"
+            label="Maintenance"
+            description="Work orders, preventive maintenance, and repair history."
+            allowed={showMaintenance}
+            icon={
+              <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2M12 3v4m6.364 1.636l-1.414 1.414M20 12h-4m2.364 6.364l-1.414-1.414M12 21v-4m-6.364 1.364l1.414-1.414M4 12h4M5.636 5.636l1.414 1.414" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121a3 3 0 11-4.242-4.242 3 3 0 014.242 4.242z" />
               </svg>
             }
           />

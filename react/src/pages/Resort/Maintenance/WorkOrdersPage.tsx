@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { MaintenanceLayout } from '@components/layout/MaintenanceLayout';
 import { SearchStaffDialog } from '@/pages/Resort/Shared/SearchStaffDialog';
 import { PermissionNames } from '@/config/permissionNames';
@@ -387,21 +389,22 @@ export const WorkOrdersPage = () => {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
+                <DatePicker
+                  selected={form.startDate ? new Date(form.startDate) : null}
+                  onChange={(date: Date | null) => setForm((s) => ({ ...s, startDate: date ? date.toISOString().split('T')[0] : '' }))}
+                  dateFormat="MM-dd-yyyy"
                   className="w-full rounded border p-2 text-sm dark:bg-gray-700"
-                  value={form.startDate}
-                  onChange={(e) => setForm((s) => ({ ...s, startDate: e.target.value }))}
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
+                <DatePicker
+                  selected={form.endDate ? new Date(form.endDate) : null}
+                  onChange={(date: Date | null) => setForm((s) => ({ ...s, endDate: date ? date.toISOString().split('T')[0] : '' }))}
+                  dateFormat="MM-dd-yyyy"
+                  minDate={form.startDate ? new Date(form.startDate) : undefined}
                   className="w-full rounded border p-2 text-sm dark:bg-gray-700"
-                  value={form.endDate}
-                  onChange={(e) => setForm((s) => ({ ...s, endDate: e.target.value }))}
                 />
               </div>
 

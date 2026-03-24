@@ -605,9 +605,9 @@ const App: React.FC = () => {
                         }
                       />
                       <Route
-                        path="room-rack-settings"
+                        path="settings"
                         element={
-                          <PageTitle title="Room Rack Settings">
+                          <PageTitle title="Settings">
                             <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin_Settings]}>
                               <RoomRackSettingsPage />
                             </ProtectedRoute>

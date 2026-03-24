@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import { PermissionNames } from '@/config/permissionNames';
 import { useAuth } from '@/contexts/AuthContext';
@@ -172,27 +174,31 @@ export const RoomMaintenancePage = () => {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
-              <input
-                type="date"
-                className="w-full rounded border p-2 text-sm dark:bg-gray-700"
-                value={startDate}
-                onChange={(e) => {
-                  const nextStartDate = e.target.value;
+              <DatePicker
+                selected={startDate ? new Date(startDate) : null}
+                onChange={(date: Date | null) => {
+                  if (!date) {
+                    setStartDate('');
+                    return;
+                  }
+                  const nextStartDate = date.toISOString().split('T')[0];
                   setStartDate(nextStartDate);
                   if (endDate && endDate < nextStartDate) {
                     setEndDate(nextStartDate);
                   }
                 }}
+                dateFormat="MM-dd-yyyy"
+                className="w-full rounded border p-2 text-sm dark:bg-gray-700"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
-              <input
-                type="date"
-                min={startDate}
+              <DatePicker
+                selected={endDate ? new Date(endDate) : null}
+                onChange={(date: Date | null) => setEndDate(date ? date.toISOString().split('T')[0] : '')}
+                dateFormat="MM-dd-yyyy"
+                minDate={startDate ? new Date(startDate) : undefined}
                 className="w-full rounded border p-2 text-sm dark:bg-gray-700"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
             <div className="md:col-span-2">

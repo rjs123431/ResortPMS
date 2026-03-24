@@ -34,6 +34,10 @@ public class RoomRackDayCellDto
     public bool IsDepartureDate { get; set; }
     /// <summary>When true, this cell is included in the "No. of bookings" count (reservations with a room that are draft, pending, or confirmed).</summary>
     public bool CountInBookings { get; set; }
+    /// <summary>Maintenance request title when this cell is OutOfOrder (Status=4).</summary>
+    public string MaintenanceTitle { get; set; } = string.Empty;
+    /// <summary>Maintenance request description when this cell is OutOfOrder (Status=4).</summary>
+    public string MaintenanceReason { get; set; } = string.Empty;
 }
 
 /// <summary>One unassigned reservation booking (no room assigned) for the bookings count/dialog per room type and date.</summary>

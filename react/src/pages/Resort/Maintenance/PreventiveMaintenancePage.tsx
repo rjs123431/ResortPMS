@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { MaintenanceLayout } from '@components/layout/MaintenanceLayout';
 import { SearchStaffDialog } from '@/pages/Resort/Shared/SearchStaffDialog';
 import { PermissionNames } from '@/config/permissionNames';
@@ -377,29 +379,30 @@ export const PreventiveMaintenancePage = () => {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
-                  className="w-full rounded border p-2 text-sm dark:bg-gray-700"
-                  value={form.startDate}
-                  onChange={(e) => {
-                    const nextStartDate = e.target.value;
+                <DatePicker
+                  selected={form.startDate ? new Date(form.startDate) : null}
+                  onChange={(date: Date | null) => {
+                    if (!date) return;
+                    const nextStartDate = date.toISOString().split('T')[0];
                     setForm((s) => ({
                       ...s,
                       startDate: nextStartDate,
                       endDate: s.endDate && s.endDate < nextStartDate ? nextStartDate : s.endDate,
                     }));
                   }}
+                  dateFormat="MM-dd-yyyy"
+                  className="w-full rounded border p-2 text-sm dark:bg-gray-700"
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
-                  min={form.startDate}
+                <DatePicker
+                  selected={form.endDate ? new Date(form.endDate) : null}
+                  onChange={(date: Date | null) => setForm((s) => ({ ...s, endDate: date ? date.toISOString().split('T')[0] : '' }))}
+                  dateFormat="MM-dd-yyyy"
+                  minDate={form.startDate ? new Date(form.startDate) : undefined}
                   className="w-full rounded border p-2 text-sm dark:bg-gray-700"
-                  value={form.endDate}
-                  onChange={(e) => setForm((s) => ({ ...s, endDate: e.target.value }))}
                 />
               </div>
 

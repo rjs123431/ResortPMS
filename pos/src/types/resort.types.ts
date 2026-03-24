@@ -155,6 +155,10 @@ export interface RoomRackDayCellDto {
   isArrivalDate?: boolean;
   /** True when this date is the departure date (bar ends at noon, half-day). */
   isDepartureDate?: boolean;
+  /** Maintenance request title when status is OutOfOrder. */
+  maintenanceTitle?: string;
+  /** Maintenance request description when status is OutOfOrder. */
+  maintenanceReason?: string;
 }
 
 export interface GetRoomRackResultDto {

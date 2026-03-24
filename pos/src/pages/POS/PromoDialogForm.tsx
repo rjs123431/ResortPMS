@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import type { MenuItemListDto } from '@/types/pos.types';
 
 export type PromoFormState = {
@@ -100,11 +102,10 @@ export const PromoDialogForm = ({
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Date From
                 </label>
-                <input
-                  type="date"
-                  required
-                  value={form.dateFrom}
-                  onChange={(e) => onFormChange((s) => ({ ...s, dateFrom: e.target.value }))}
+                <DatePicker
+                  selected={form.dateFrom ? new Date(form.dateFrom) : null}
+                  onChange={(date: Date | null) => onFormChange((s) => ({ ...s, dateFrom: date ? date.toISOString().split('T')[0] : '' }))}
+                  dateFormat="MM-dd-yyyy"
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
@@ -112,11 +113,11 @@ export const PromoDialogForm = ({
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Date To
                 </label>
-                <input
-                  type="date"
-                  required
-                  value={form.dateTo}
-                  onChange={(e) => onFormChange((s) => ({ ...s, dateTo: e.target.value }))}
+                <DatePicker
+                  selected={form.dateTo ? new Date(form.dateTo) : null}
+                  onChange={(date: Date | null) => onFormChange((s) => ({ ...s, dateTo: date ? date.toISOString().split('T')[0] : '' }))}
+                  dateFormat="MM-dd-yyyy"
+                  minDate={form.dateFrom ? new Date(form.dateFrom) : undefined}
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>

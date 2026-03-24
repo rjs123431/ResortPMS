@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import type { MenuItemListDto } from '@/types/pos.types';
 
 export type PriceAdjustmentFormState = {
@@ -104,11 +106,10 @@ export const PriceAdjustmentDialogForm = ({
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Effective Date
               </label>
-              <input
-                type="date"
-                required
-                value={form.effectiveDate}
-                onChange={(e) => onFormChange((s) => ({ ...s, effectiveDate: e.target.value }))}
+              <DatePicker
+                selected={form.effectiveDate ? new Date(form.effectiveDate) : null}
+                onChange={(date: Date | null) => onFormChange((s) => ({ ...s, effectiveDate: date ? date.toISOString().split('T')[0] : '' }))}
+                dateFormat="MM-dd-yyyy"
                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

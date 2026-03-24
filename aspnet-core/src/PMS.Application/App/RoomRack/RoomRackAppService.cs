@@ -311,6 +311,15 @@ public class RoomRackAppService(
             var countInBookings = status == (int)RoomDailyInventoryStatus.Reserved && reservationId.HasValue
                 && resStatus == (int)PMS.App.ReservationStatus.Draft;
 
+            // Maintenance info for OutOfOrder status
+            var maintenanceTitle = string.Empty;
+            var maintenanceReason = string.Empty;
+            if (status == (int)RoomDailyInventoryStatus.OutOfOrder && activeMaintenanceByRoom.TryGetValue(i.RoomId, out var maintenance))
+            {
+                maintenanceTitle = maintenance.Title;
+                maintenanceReason = maintenance.Reason;
+            }
+
             return new RoomRackDayCellDto
             {
                 RoomId = i.RoomId,
@@ -329,6 +338,8 @@ public class RoomRackAppService(
                 IsArrivalDate = isArrival,
                 IsDepartureDate = isDeparture,
                 CountInBookings = countInBookings,
+                MaintenanceTitle = maintenanceTitle,
+                MaintenanceReason = maintenanceReason,
             };
         }).ToList();
 

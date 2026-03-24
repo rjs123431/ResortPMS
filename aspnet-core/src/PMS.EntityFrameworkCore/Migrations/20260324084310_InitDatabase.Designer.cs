@@ -12,8 +12,8 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260324070504_AddStayChannelId")]
-    partial class AddStayChannelId
+    [Migration("20260324084310_InitDatabase")]
+    partial class InitDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

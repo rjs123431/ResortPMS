@@ -73,7 +73,7 @@ function getSelectableDateIndexFromPosition(
 type CellInfo =
   | { type: 'stay'; stayNo: string; guestName: string; stayId: string; channelId?: string; channelName?: string; channelIcon?: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
   | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string; reservationStatus?: number; channelId?: string; channelName?: string; channelIcon?: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
-  | { type: 'blocked'; label: string }
+  | { type: 'blocked'; label: string; hoverLabel?: string }
   | null;
 type CellInfoNonNull = Exclude<CellInfo, null>;
 
@@ -246,7 +246,12 @@ export const RoomRackPage = () => {
             isDepartureDate: cell.isDepartureDate,
           },
         ];
-      return [{ type: 'blocked', label: 'Out of order' }];
+      // Out of Order or other blocked status
+      const maintenanceLabel =
+        cell.status === 4 && (cell.maintenanceTitle || cell.maintenanceReason)
+          ? `${cell.maintenanceTitle}${cell.maintenanceReason ? `\n${cell.maintenanceReason}` : ''}`
+          : 'Out of order';
+      return [{ type: 'blocked', label: 'Out of order', hoverLabel: maintenanceLabel }];
     },
     [cellsByKey]
   );
@@ -675,7 +680,7 @@ export const RoomRackPage = () => {
                             const statusLabel = cell.reservationStatus != null ? reservationStatusLabel[cell.reservationStatus] ?? 'Unknown' : 'Unknown';
                             tooltip = `Reservation ${cell.reservationNo}\nGuest: ${cell.guestName || '—'}\nChannel: ${cell.channelName || '—'}\nStatus: ${statusLabel}\nDates: ${dateRangeStr}`;
                           } else {
-                            tooltip = cell.label;
+                            tooltip = cell.hoverLabel ?? cell.label;
                           }
                           let panelItem: RoomRackPanelItem | null = null;
                           if (cell.type === 'stay') {

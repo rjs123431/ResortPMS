@@ -2022,6 +2022,7 @@ namespace PMS.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     StayNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
                     ReservationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ChannelId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CheckInDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ExpectedCheckOutDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -2044,6 +2045,12 @@ namespace PMS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Stay", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Stay_Channel_ChannelId",
+                        column: x => x.ChannelId,
+                        principalTable: "Channel",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Stay_Guest_GuestId",
                         column: x => x.GuestId,
@@ -3886,6 +3893,11 @@ namespace PMS.Migrations
                 name: "IX_Stay_AssignedRoomId",
                 table: "Stay",
                 column: "AssignedRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Stay_ChannelId",
+                table: "Stay",
+                column: "ChannelId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Stay_GuestId",

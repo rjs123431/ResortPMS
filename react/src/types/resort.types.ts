@@ -197,6 +197,10 @@ export interface RoomRackDayCellDto {
   isDepartureDate?: boolean;
   /** When true, cell is included in "No. of bookings" count (stays, drafts, or reservations with at least one unassigned room). */
   countInBookings?: boolean;
+  /** Maintenance request title when status is OutOfOrder. */
+  maintenanceTitle?: string;
+  /** Maintenance request description when status is OutOfOrder. */
+  maintenanceReason?: string;
 }
 
 /** Unassigned reservation (no room) for bookings count/dialog per room type and date. */
