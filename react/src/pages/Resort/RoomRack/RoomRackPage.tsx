@@ -7,7 +7,7 @@ import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/reac
 import { useTheme } from '@contexts/ThemeContext';
 import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
-import { ReservationStatus } from '@/types/resort.types';
+import { PreCheckInStatus, ReservationStatus } from '@/types/resort.types';
 import { ChannelAvatar } from '@/lib/channelIcons';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 import { RoomRackDetailPanel, type RoomRackPanelItem } from './RoomRackDetailPanel';
@@ -191,6 +191,30 @@ export const RoomRackPage = () => {
     staleTime: 30 * 1000,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+  });
+
+  const { data: roomRackPreCheckInList } = useQuery({
+    queryKey: ['resort-precheckins-pending'],
+    queryFn: () =>
+      resortService.getPreCheckIns({
+        includeExpired: false,
+        maxResultCount: 200,
+      }),
+    staleTime: 30 * 1000,
+  });
+
+  const roomRackPreCheckInIds = useMemo(() => {
+    const items = roomRackPreCheckInList?.items ?? [];
+    return items
+      .filter((item) => item.status === PreCheckInStatus.Pending || item.status === PreCheckInStatus.ReadyForCheckIn)
+      .map((item) => item.id);
+  }, [roomRackPreCheckInList?.items]);
+
+  const { data: roomRackPreCheckIns } = useQuery({
+    queryKey: ['room-rack-precheckins', roomRackPreCheckInIds],
+    enabled: roomRackPreCheckInIds.length > 0,
+    queryFn: async () => Promise.all(roomRackPreCheckInIds.map((id) => resortService.getPreCheckIn(id))),
+    staleTime: 30 * 1000,
   });
 
   const roomsByType = useMemo(() => {
@@ -410,6 +434,53 @@ export const RoomRackPage = () => {
   const [bookingsDialogOpen, setBookingsDialogOpen] = useState(false);
   const [bookingsDialogPayload, setBookingsDialogPayload] = useState<{ roomTypeName: string; dateKey: string } | null>(null);
 
+  type PreCheckInSegment = {
+    id: string;
+    preCheckInNo: string;
+    guestName: string;
+    startDateKey: string;
+    endDateKey: string;
+    status: PreCheckInStatus;
+  };
+
+  const preCheckInSegmentsByRoom = useMemo(() => {
+    const byRoom = new Map<string, PreCheckInSegment[]>();
+    const preCheckIns = roomRackPreCheckIns ?? [];
+
+    preCheckIns.forEach((preCheckIn) => {
+      if (!(preCheckIn.status === PreCheckInStatus.Pending || preCheckIn.status === PreCheckInStatus.ReadyForCheckIn)) return;
+      const startDateKey = toDateKey(preCheckIn.arrivalDate);
+      const endDateKey = toDateKey(preCheckIn.departureDate);
+      if (!startDateKey || !endDateKey) return;
+      if (endDateKey < startKey || startDateKey > endKey) return;
+
+      preCheckIn.rooms.forEach((preCheckInRoom) => {
+        const roomNumber = (preCheckInRoom.roomNumber ?? '').trim();
+        if (!roomNumber) return;
+
+        const list = byRoom.get(roomNumber) ?? [];
+        list.push({
+          id: preCheckIn.id,
+          preCheckInNo: preCheckIn.preCheckInNo,
+          guestName: preCheckIn.guestName ?? (`${preCheckIn.firstName ?? ''} ${preCheckIn.lastName ?? ''}`.trim() || '—'),
+          startDateKey,
+          endDateKey,
+          status: preCheckIn.status,
+        });
+        byRoom.set(roomNumber, list);
+      });
+    });
+
+    byRoom.forEach((segments) =>
+      segments.sort((a, b) => {
+        if (a.startDateKey !== b.startDateKey) return a.startDateKey.localeCompare(b.startDateKey);
+        return a.preCheckInNo.localeCompare(b.preCheckInNo, undefined, { numeric: true, sensitivity: 'base' });
+      })
+    );
+
+    return byRoom;
+  }, [roomRackPreCheckIns, startKey, endKey]);
+
   const topScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
@@ -612,6 +683,7 @@ export const RoomRackPage = () => {
                       {rooms.map((room) => {
                         const roomNum = room.roomNumber;
                         const n = dateColumns.length;
+                        const roomPreCheckInSegments = preCheckInSegmentsByRoom.get((roomNum ?? '').trim()) ?? [];
                         type SegmentItem = { id: string; guestName: string; showChannelAvatar?: boolean; channelName?: string; channelIcon?: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; bgStyle?: { backgroundColor: string; color: string }; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
                         const segments: SegmentItem[] = [];
                         let i = 0;
@@ -842,6 +914,37 @@ export const RoomRackPage = () => {
                                       >
                                         {seg.showChannelAvatar ? <ChannelAvatar icon={seg.channelIcon} name={seg.channelName} className="h-3.5 w-3.5 shrink-0" /> : null}
                                         <span className="truncate">{seg.guestName}</span>
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                                {roomPreCheckInSegments.map((pre) => {
+                                  const startsBeforeRange = pre.startDateKey <= startKey;
+                                  const endsAfterRange = pre.endDateKey > endKey;
+                                  const startIndex = startsBeforeRange ? -1 : dateColumns.indexOf(pre.startDateKey);
+                                  const endIndex = endsAfterRange ? n : dateColumns.indexOf(pre.endDateKey);
+                                  const leftPct = startsBeforeRange ? 0 : ((startIndex + CHECK_IN_HOUR_FRAC) / n) * 100;
+                                  const rightPct = endsAfterRange ? 100 : ((endIndex + CHECK_OUT_HOUR_FRAC) / n) * 100;
+                                  const widthPct = Math.max(0.4, rightPct - leftPct);
+                                  const statusLabel = pre.status === PreCheckInStatus.ReadyForCheckIn ? 'Ready' : 'Pending';
+                                  const tooltip = `Pre-Check-In ${pre.preCheckInNo}\nGuest: ${pre.guestName || '—'}\nStatus: ${statusLabel}\nDates: ${formatDateRange(pre.startDateKey, pre.endDateKey)}`;
+
+                                  return (
+                                    <div
+                                      key={`pre-${pre.id}`}
+                                      className="absolute top-0 bottom-0 z-[9] min-w-0 flex items-center overflow-hidden border border-dashed border-violet-500 bg-violet-100/70 dark:border-violet-400 dark:bg-violet-900/45"
+                                      style={{
+                                        left: `${leftPct}%`,
+                                        width: `${widthPct}%`,
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        className="flex min-w-0 flex-1 items-center gap-1 px-1.5 py-0.5 text-left text-xs text-violet-900 hover:underline dark:text-violet-100"
+                                        onClick={() => navigate(`/front-desk/walk-in/${pre.id}`)}
+                                        title={tooltip}
+                                      >
+                                        <span className="truncate">{pre.preCheckInNo} · {pre.guestName || '—'}</span>
                                       </button>
                                     </div>
                                   );

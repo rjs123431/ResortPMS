@@ -318,7 +318,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     },
   });
 
-  const handleWalkInCheckIn = () => {
+  const handlePreCheckIn = () => {
     walkInMutation.mutate();
   };
 
@@ -569,12 +569,12 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
           <div className="mt-6 flex flex-wrap justify-between gap-2">
             <button
               type="button"
-              onClick={handleWalkInCheckIn}
+              onClick={handlePreCheckIn}
               disabled={!canSubmit || createMutation.isPending || walkInMutation.isPending}
               className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
-              title="Create a walk-in/check-in draft"
+              title="Create a pre-check-in for this room"
             >
-              {walkInMutation.isPending ? 'Loading Walk-In...' : 'Walk In/Check In'}
+              {walkInMutation.isPending ? 'Creating Pre-Check In...' : 'Pre-Check In'}
             </button>
             <div className="flex flex-wrap justify-end gap-2">
               <button
