@@ -87,13 +87,19 @@ public class ReportingAppService(
             ? (decimal)roomNightsToday / roomNightsAvailableToday * 100
             : 0;
 
-        var roomNightsLast30 = await GetRoomNightsSoldAsync(date.AddDays(-30), date);
+        // Rolling 30-day window including today.
+        var rolling30From = date.AddDays(-29);
+        var rolling30To = endOfDay;
+
+        var roomNightsLast30 = await GetRoomNightsSoldAsync(rolling30From, rolling30To);
         var totalAvailable30 = totalRooms * 30;
+        var roomRevenueLast30 = await GetRoomRevenueInRangeAsync(rolling30From, rolling30To);
+
         var adr = roomNightsLast30 > 0
-            ? await GetRoomRevenueInRangeAsync(date.AddDays(-30), date) / roomNightsLast30
+            ? roomRevenueLast30 / roomNightsLast30
             : 0;
-        var revPar = totalRooms > 0
-            ? await GetRoomRevenueInRangeAsync(date.AddDays(-30), date) / (totalRooms * 30)
+        var revPar = totalAvailable30 > 0
+            ? roomRevenueLast30 / totalAvailable30
             : 0;
 
         return new DashboardKpisDto
