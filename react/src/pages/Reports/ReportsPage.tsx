@@ -18,7 +18,6 @@ import type {
   OccupancyReportDto,
   RevenueReportDto,
   NightAuditSummaryDto,
-  PosSalesSummaryDto,
 } from '@services/reporting.service';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import { downloadCsv } from '@utils/csvExport';
@@ -415,141 +414,11 @@ function NightAuditTab() {
   );
 }
 
-function PosSalesTab() {
-  const [from, setFrom] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const { data, isLoading } = useQuery({
-    queryKey: ['reporting-pos-sales', from, to],
-    queryFn: () => reportingService.getPosSalesSummary(from, to),
-    enabled: from <= to,
-  });
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <LogoSpinner sizeClassName="h-10 w-10" logoSizeClassName="h-6 w-6" />
-      </div>
-    );
-  }
-  const report = data as PosSalesSummaryDto;
-  const exportCsv = () => {
-    const rows = report.byDay.map((row) => ({
-      date: formatDate(row.date),
-      ordersCount: row.ordersCount,
-      salesTotal: row.salesTotal,
-    }));
-    downloadCsv(rows, `pos-sales-${from}-${to}.csv`, [
-      { key: 'date', header: 'Date' },
-      { key: 'ordersCount', header: 'Orders' },
-      { key: 'salesTotal', header: 'Sales' },
-    ]);
-  };
-  const chartData = report.byDay.map((row) => ({
-    date: formatDate(row.date),
-    sales: row.salesTotal,
-    orders: row.ordersCount,
-  }));
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">From</label>
-          <DatePicker
-            selected={from ? parseDateOnly(from) : null}
-            onChange={(date: Date | null) => setFrom(date ? toDateStr(date) : '')}
-            dateFormat="MMM d, yyyy"
-            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">To</label>
-          <DatePicker
-            selected={to ? parseDateOnly(to) : null}
-            onChange={(date: Date | null) => setTo(date ? toDateStr(date) : '')}
-            dateFormat="MMM d, yyyy"
-            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-        <button
-          type="button"
-          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"
-          onClick={exportCsv}
-        >
-          Export CSV
-        </button>
-      </div>
-      <div className="rounded border border-gray-200 dark:border-gray-600 p-4">
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Orders: <strong>{report.ordersCount}</strong> · Sales total: <strong>{formatCurrency(report.salesTotal)}</strong> · Payments total: <strong>{formatCurrency(report.paymentsTotal)}</strong>
-        </p>
-      </div>
-      {chartData.length > 0 && (
-        <div className="h-64 w-full rounded border border-gray-200 dark:border-gray-600 p-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-              <Tooltip formatter={(v, name) => [name === 'sales' ? formatCurrency(Number(v ?? 0)) : Number(v ?? 0), name === 'sales' ? 'Sales' : 'Orders'] as [string | number, string]} labelFormatter={(l) => `Date: ${l}`} />
-              <Bar dataKey="sales" name="Sales" fill="#6366f1" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-      {report.byOutlet.length > 0 && (
-        <>
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">By outlet</h3>
-          <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-600">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Outlet</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Orders</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Sales</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                {report.byOutlet.map((row) => (
-                  <tr key={row.outletId}>
-                    <td className="px-3 py-2">{row.outletName}</td>
-                    <td className="px-3 py-2 text-right">{row.ordersCount}</td>
-                    <td className="px-3 py-2 text-right">{formatCurrency(row.salesTotal)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">By day</h3>
-      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-600">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Date</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Orders</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Sales</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-            {report.byDay.map((row) => (
-              <tr key={row.date}>
-                <td className="px-3 py-2">{formatDate(row.date)}</td>
-                <td className="px-3 py-2 text-right">{row.ordersCount}</td>
-                <td className="px-3 py-2 text-right">{formatCurrency(row.salesTotal)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'occupancy', label: 'Occupancy' },
   { id: 'revenue', label: 'Revenue' },
   { id: 'night-audit', label: 'Night Audit' },
-  { id: 'pos-sales', label: 'POS Sales' },
 ] as const;
 
 export const ReportsPage = () => {
@@ -589,7 +458,6 @@ export const ReportsPage = () => {
             {activeTab === 'occupancy' && <OccupancyTab />}
             {activeTab === 'revenue' && <RevenueTab />}
             {activeTab === 'night-audit' && <NightAuditTab />}
-            {activeTab === 'pos-sales' && <PosSalesTab />}
           </div>
         </section>
       </div>

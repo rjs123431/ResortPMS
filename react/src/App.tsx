@@ -57,6 +57,7 @@ const MaintenanceHubPage = lazy(() => import('@pages/Resort/Maintenance/Maintena
 const WorkOrdersPage = lazy(() => import('@pages/Resort/Maintenance/WorkOrdersPage').then((m) => ({ default: m.WorkOrdersPage })));
 const PreventiveMaintenancePage = lazy(() => import('@pages/Resort/Maintenance/PreventiveMaintenancePage').then((m) => ({ default: m.PreventiveMaintenancePage })));
 const RepairHistoryPage = lazy(() => import('@pages/Resort/Maintenance/RepairHistoryPage').then((m) => ({ default: m.RepairHistoryPage })));
+const ReportsPage = lazy(() => import('@pages/Reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 const HomePage = lazy(() => import('@pages/Home/HomePage').then((m) => ({ default: m.HomePage })));
 const FrontDeskDashboardPage = lazy(() =>
   import('@pages/Resort/FrontDesk/FrontDeskDashboardPage').then((m) => ({ default: m.FrontDeskDashboardPage })),
@@ -314,6 +315,16 @@ const App: React.FC = () => {
                     <Route
                       path="/dashboard"
                       element={<Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/reports"
+                      element={
+                        <PageTitle title="Reports">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Reports]}>
+                            <ReportsPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
                     />
                     <Route
                       path="/profile"
