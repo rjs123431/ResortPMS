@@ -119,7 +119,7 @@ public class ReportingAppService(
     public async Task<OccupancyReportDto> GetOccupancyReportAsync(DateTime fromDate, DateTime toDate)
     {
         var from = fromDate.Date;
-        var to = toDate.Date;
+        var to = toDate.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
         if (from >= to) to = from.AddDays(1);
 
         var totalRooms = await roomRepository.GetAll().Where(r => r.IsActive).CountAsync();
