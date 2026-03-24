@@ -35,9 +35,21 @@ export const CheckInPage = () => {
   const todaysArrivals = useMemo(() => {
     return (reservationsData?.items ?? [])
       .filter((reservation) => reservation.status === ReservationStatus.Confirmed)
-      .filter((reservation) => toDateOnly(reservation.arrivalDate) === todayDateOnly)
-      .sort((a, b) => a.reservationNo.localeCompare(b.reservationNo));
+      .filter((reservation) => toDateOnly(reservation.arrivalDate) <= todayDateOnly)
+      .map((reservation) => ({
+        ...reservation,
+        isPastDue: toDateOnly(reservation.arrivalDate) < todayDateOnly,
+      }))
+      .sort((a, b) => {
+        if (a.isPastDue !== b.isPastDue) return a.isPastDue ? -1 : 1;
+        return a.reservationNo.localeCompare(b.reservationNo);
+      });
   }, [reservationsData?.items, todayDateOnly]);
+
+  const pastDueCount = useMemo(
+    () => todaysArrivals.filter((reservation) => reservation.isPastDue).length,
+    [todaysArrivals],
+  );
 
   return (
     <>
@@ -46,7 +58,7 @@ export const CheckInPage = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Check-In</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Confirmed reservations arriving today.
+              Confirmed reservations arriving today and past due.
             </p>
           </div>
           <div className="flex gap-2">
@@ -69,8 +81,13 @@ export const CheckInPage = () => {
         <section className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Today's Arrival</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Date: {todayDateOnly}</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Today's & Past-Due Arrivals</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Date: {todayDateOnly}
+                {pastDueCount > 0 ? (
+                  <span className="ml-2 font-medium text-rose-600 dark:text-rose-400">(+{pastDueCount} past due)</span>
+                ) : null}
+              </p>
             </div>
             <div className="w-full sm:w-80 sm:justify-self-end">
               <input
@@ -106,15 +123,22 @@ export const CheckInPage = () => {
                 ) : todaysArrivals.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="border border-gray-200 p-3 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      No confirmed arrivals for today.
+                      No confirmed arrivals for today or past due.
                     </td>
                   </tr>
                 ) : (
                   todaysArrivals.map((reservation) => (
-                    <tr key={reservation.id}>
+                    <tr key={reservation.id} className={reservation.isPastDue ? 'bg-rose-50/80 dark:bg-rose-900/20' : undefined}>
                       <td className="border border-gray-200 p-2 dark:border-gray-700">{reservation.reservationNo}</td>
                       <td className="border border-gray-200 p-2 dark:border-gray-700">{reservation.guestName}</td>
-                      <td className="border border-gray-200 p-2 dark:border-gray-700">{toDateOnly(reservation.arrivalDate)}</td>
+                      <td className="border border-gray-200 p-2 dark:border-gray-700">
+                        {toDateOnly(reservation.arrivalDate)}
+                        {reservation.isPastDue ? (
+                          <span className="ml-2 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                            Past Due
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="border border-gray-200 p-2 dark:border-gray-700">{toDateOnly(reservation.departureDate)}</td>
                       <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{reservation.nights}</td>
                       <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{formatMoney(reservation.totalAmount)}</td>

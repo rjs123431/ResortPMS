@@ -11,11 +11,12 @@ export interface FrontDeskDashboardDto {
 }
 
 export interface FrontDeskArrivalRowDto {
-  stayId: string;
-  stayNo: string;
+  reservationId: string;
+  reservationNo: string;
   guestName: string;
   roomNumber: string;
   estimatedArrivalTime?: string | null;
+  isPastDue: boolean;
 }
 
 export interface FrontDeskDepartureRowDto {

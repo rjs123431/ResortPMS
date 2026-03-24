@@ -27,10 +27,10 @@ public interface IFrontDeskDashboardAppService : IApplicationService
 )]
 public class FrontDeskDashboardAppService(
     IReportingAppService reportingAppService,
+    IRepository<Reservation, Guid> reservationRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomDailyInventory, Guid> roomDailyInventoryRepository,
     IRepository<Stay, Guid> stayRepository,
-    IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<Folio, Guid> folioRepository
 ) : ApplicationService, IFrontDeskDashboardAppService
 {
@@ -60,7 +60,7 @@ public class FrontDeskDashboardAppService(
         return new FrontDeskDashboardDto
         {
             AsOfDate = today,
-            ArrivalsToday = kpis.ArrivalsToday,
+            ArrivalsToday = kpis.ReservationsToday,
             DeparturesToday = kpis.DeparturesToday,
             OccupiedRooms = occupiedRooms,
             VacantRooms = vacantRooms,
@@ -75,32 +75,36 @@ public class FrontDeskDashboardAppService(
         var startOfDay = today;
         var endOfDay = today.AddDays(1);
 
-        var stays = await stayRepository.GetAll()
-            .Include(s => s.Rooms).ThenInclude(sr => sr.Room)
-            .Where(s => s.CheckInDateTime >= startOfDay && s.CheckInDateTime < endOfDay)
+        var reservations = await reservationRepository.GetAll()
+            .Include(r => r.Rooms).ThenInclude(rr => rr.Room)
+            .Where(r => r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Pending)
+            .Where(r => r.ArrivalDate < endOfDay)
             .ToListAsync();
 
-        var rows = stays
-            .Select(stay =>
+        var rows = reservations
+            .Select(reservation =>
             {
-                var activeRooms = stay.Rooms?
-                    .Where(sr => sr.Room != null &&
-                                 sr.ArrivalDate < endOfDay &&
-                                 sr.DepartureDate > startOfDay)
-                    .Select(sr => sr.Room!.RoomNumber)
+                var activeRooms = reservation.Rooms?
+                    .Where(rr => rr.ArrivalDate < endOfDay && rr.DepartureDate > startOfDay)
+                    .Select(rr => rr.Room?.RoomNumber ?? rr.RoomNumber)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct()
                     .ToList() ?? [];
+
+                var estimatedArrivalTime = reservation.ArrivalDate;
 
                 return new FrontDeskArrivalRowDto
                 {
-                    StayId = stay.Id,
-                    StayNo = stay.StayNo,
-                    GuestName = stay.GuestName,
+                    ReservationId = reservation.Id,
+                    ReservationNo = reservation.ReservationNo,
+                    GuestName = reservation.GuestName,
                     RoomNumber = string.Join(", ", activeRooms),
-                    EstimatedArrivalTime = stay.CheckInDateTime,
+                    EstimatedArrivalTime = estimatedArrivalTime,
+                    IsPastDue = estimatedArrivalTime.Date < today,
                 };
             })
-            .OrderBy(r => r.EstimatedArrivalTime ?? today)
+            .OrderByDescending(r => r.IsPastDue)
+            .ThenBy(r => r.EstimatedArrivalTime ?? today)
             .ThenBy(r => r.GuestName)
             .ToArray();
 

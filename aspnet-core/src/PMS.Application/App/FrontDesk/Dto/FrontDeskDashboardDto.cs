@@ -18,14 +18,16 @@ public class FrontDeskDashboardDto
 
 public class FrontDeskArrivalRowDto
 {
-    public Guid StayId { get; set; }
+    public Guid ReservationId { get; set; }
 
-    public string StayNo { get; set; } = string.Empty;
+    public string ReservationNo { get; set; } = string.Empty;
     public string GuestName { get; set; } = string.Empty;
 
     public string RoomNumber { get; set; } = string.Empty;
 
     public DateTime? EstimatedArrivalTime { get; set; }
+
+    public bool IsPastDue { get; set; }
 }
 
 public class FrontDeskDepartureRowDto

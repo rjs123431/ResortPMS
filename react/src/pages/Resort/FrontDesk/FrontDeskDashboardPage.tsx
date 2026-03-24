@@ -35,6 +35,11 @@ export const FrontDeskDashboardPage: React.FC = () => {
 
   const canCreateReservation = isGranted(PermissionNames.Pages_Reservations);
   const canCheckIn = isGranted(PermissionNames.Pages_CheckIn);
+  const arrivalsWithPastDue = arrivals ?? [];
+  const pastDueArrivalsCount = arrivalsWithPastDue.filter((row) => row.isPastDue).length;
+  const arrivalsTodayCount = data?.arrivalsToday ?? Math.max(0, arrivalsWithPastDue.length - pastDueArrivalsCount);
+  const arrivalsTableRows = arrivalsWithPastDue.slice(0, 14);
+
   return (
     <>
       <div className="space-y-6">
@@ -73,7 +78,12 @@ export const FrontDeskDashboardPage: React.FC = () => {
           >
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Arrivals Today</p>
             <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
-              {data?.arrivalsToday ?? 0}
+              {arrivalsTodayCount}
+              {pastDueArrivalsCount > 0 ? (
+                <span className="ml-1 text-sm font-medium text-rose-600 dark:text-rose-400">
+                  (+{pastDueArrivalsCount} past due)
+                </span>
+              ) : null}
             </p>
           </button>
 
@@ -145,9 +155,12 @@ export const FrontDeskDashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {arrivals && arrivals.length > 0 ? (
-                    arrivals.map((row) => (
-                      <tr key={row.stayId}>
+                  {arrivalsTableRows.length > 0 ? (
+                    arrivalsTableRows.map((row) => (
+                      <tr
+                        key={row.reservationId}
+                        className={row.isPastDue ? 'bg-rose-50/80 dark:bg-rose-900/20' : undefined}
+                      >
                         <td className="py-1.5 pr-3 text-gray-900 dark:text-white">{row.guestName}</td>
                         <td className="py-1.5 pr-3 text-gray-700 dark:text-gray-300">
                           {row.roomNumber || '—'}
@@ -159,26 +172,24 @@ export const FrontDeskDashboardPage: React.FC = () => {
                                 minute: '2-digit',
                               })
                             : '—'}
+                          {row.isPastDue ? (
+                            <span className="ml-2 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                              Past Due
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-1.5 pr-0 text-right">
                           <div className="inline-flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => navigate('/front-desk/check-in')}
+                              onClick={() => navigate(`/front-desk/check-in/reservations/${row.reservationId}`)}
                               className="rounded border border-emerald-600 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
                             >
                               Check-In
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate('/front-desk/room-rack')}
-                              className="rounded border border-sky-600 px-2 py-1 text-[11px] font-medium text-sky-700 hover:bg-sky-50 dark:border-sky-400 dark:text-sky-200 dark:hover:bg-sky-900/30"
-                            >
-                              Assign Room
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => navigate('/front-desk/reservations')}
+                              onClick={() => navigate(`/front-desk/reservations/${row.reservationId}`)}
                               className="rounded border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-500 dark:text-gray-200 dark:hover:bg-gray-700"
                             >
                               View
@@ -193,7 +204,7 @@ export const FrontDeskDashboardPage: React.FC = () => {
                         colSpan={4}
                         className="py-4 pr-3 text-center text-xs text-gray-500 dark:text-gray-400"
                       >
-                        No arrivals scheduled for today.
+                        No arrivals scheduled for today or past due.
                       </td>
                     </tr>
                   )}
