@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogPanel } from '@headlessui/react';
-import { useNavigate } from 'react-router-dom';
 import { resortService } from '@services/resort.service';
 import { formatMoney } from '@utils/helpers';
 
@@ -46,7 +45,6 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservationDialogProps) => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -307,19 +305,11 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
 
       return checkInResult;
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       onClose();
       void queryClient.invalidateQueries({ queryKey: ['resort-stays'] });
       void queryClient.invalidateQueries({ queryKey: ['room-rack-info'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
-      navigate('/front-desk/check-in/confirmation', {
-        state: {
-          stayId: result.stayId,
-          stayNo: result.stayNo,
-          folioId: result.folioId,
-          folioNo: result.folioNo,
-        },
-      });
     },
   });
 
@@ -351,6 +341,11 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
 
   const checkIn = new Date(payload.checkInDate + 'T12:00:00');
   const checkOut = new Date(payload.checkOutDate + 'T12:00:00');
+  const today = new Date();
+  const isStartDateToday =
+    checkIn.getFullYear() === today.getFullYear() &&
+    checkIn.getMonth() === today.getMonth() &&
+    checkIn.getDate() === today.getDate();
   const sameYear = checkIn.getFullYear() === checkOut.getFullYear();
   const sameMonth = sameYear && checkIn.getMonth() === checkOut.getMonth();
   const monthDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -572,15 +567,19 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
           )}
 
           <div className="mt-6 flex flex-wrap justify-between gap-2">
-            <button
-              type="button"
-              onClick={handleCheckIn}
-              disabled={!canSubmit || createMutation.isPending || checkInMutation.isPending}
-              className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
-              title="Check in this room now"
-            >
-              {checkInMutation.isPending ? 'Checking In...' : 'Check In'}
-            </button>
+            {isStartDateToday ? (
+              <button
+                type="button"
+                onClick={handleCheckIn}
+                disabled={!canSubmit || createMutation.isPending || checkInMutation.isPending}
+                className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
+                title="Check in this room now"
+              >
+                {checkInMutation.isPending ? 'Checking In...' : 'Check In'}
+              </button>
+            ) : (
+              <span />
+            )}
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"

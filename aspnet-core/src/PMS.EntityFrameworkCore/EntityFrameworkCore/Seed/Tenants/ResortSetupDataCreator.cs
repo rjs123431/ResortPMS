@@ -163,19 +163,28 @@ public class ResortSetupDataCreator
 
     private void EnsureChannels()
     {
-        var names = new[] { "FB", "Instagram", "Email", "Booking.com", "Agoda", "Agency" };
-
-        foreach (var name in names)
+        var definitions = new[]
         {
-            var exists = _context.Channels.Any(x => x.Name == name);
-            if (exists)
+            new { Name = "Walk In", Sort = 0 },
+            new { Name = "Social Media", Sort = 1 },
+            new { Name = "OTA", Sort = 2 },
+            new { Name = "Agency", Sort = 3 },
+        };
+
+        foreach (var definition in definitions)
+        {
+            var existing = _context.Channels.FirstOrDefault(x => x.Name == definition.Name);
+            if (existing != null)
             {
+                existing.Sort = definition.Sort;
+                existing.IsActive = true;
                 continue;
             }
 
             _context.Channels.Add(new Channel
             {
-                Name = name,
+                Name = definition.Name,
+                Sort = definition.Sort,
                 IsActive = true,
             });
         }
