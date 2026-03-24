@@ -37,9 +37,16 @@ public class FrontDeskDashboardAppService(
     public async Task<FrontDeskDashboardDto> GetSummaryAsync()
     {
         var today = Clock.Now.Date;
+        var startOfDay = today;
+        var endOfDay = today.AddDays(1);
 
         // Re-use existing dashboard KPIs for arrivals/departures and occupancy counts.
         var kpis = await reportingAppService.GetDashboardKpisAsync(today);
+
+        // Keep departures KPI aligned with GetDeparturesTodayAsync list semantics.
+        var departuresToday = await stayRepository.GetAll()
+            .Where(s => s.ExpectedCheckOutDateTime >= startOfDay && s.ExpectedCheckOutDateTime < endOfDay)
+            .CountAsync();
 
         var totalRooms = kpis.TotalRooms;
         var occupiedRooms = kpis.InHouseRooms;
@@ -61,7 +68,7 @@ public class FrontDeskDashboardAppService(
         {
             AsOfDate = today,
             ArrivalsToday = kpis.ReservationsToday,
-            DeparturesToday = kpis.DeparturesToday,
+            DeparturesToday = departuresToday,
             OccupiedRooms = occupiedRooms,
             VacantRooms = vacantRooms,
             RoomsDirty = roomsDirty,

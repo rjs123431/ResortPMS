@@ -128,7 +128,7 @@ export const reportingService = {
   getDashboardKpis: async (asOfDate?: string): Promise<DashboardKpisDto> => {
     const params = asOfDate ? { AsOfDate: asOfDate } : {};
     const res = await api.get<{ result: DashboardKpisDto }>(
-      '/api/services/app/Reporting/GetDashboardKpis',
+      '/api/services/app/ReportsDashboard/GetSummary',
       { params }
     );
     return res.data.result;
