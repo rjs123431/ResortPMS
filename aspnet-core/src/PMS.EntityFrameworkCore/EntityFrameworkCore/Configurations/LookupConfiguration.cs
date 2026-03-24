@@ -62,8 +62,26 @@ internal class ExtraBedTypeConfiguration : IEntityTypeConfiguration<ExtraBedType
         entity.ToTable("ExtraBedType");
 
         entity.Property(e => e.Name).HasMaxLength(128).IsRequired();
-        entity.Property(e => e.BasePrice).HasPrecision(18, 2);
 
         entity.HasIndex(e => e.Name).IsUnique();
+    }
+}
+
+internal class ExtraBedPriceConfiguration : IEntityTypeConfiguration<ExtraBedPrice>
+{
+    public void Configure(EntityTypeBuilder<ExtraBedPrice> entity)
+    {
+        entity.ToTable("ExtraBedPrice");
+
+        entity.Property(e => e.RatePerNight).HasPrecision(18, 2).IsRequired();
+        entity.Property(e => e.EffectiveFrom).IsRequired();
+        entity.Property(e => e.EffectiveTo).IsRequired(false);
+
+        entity.HasOne(e => e.ExtraBedType)
+              .WithMany()
+              .HasForeignKey(e => e.ExtraBedTypeId)
+              .OnDelete(DeleteBehavior.Cascade);
+
+        entity.HasIndex(e => new { e.ExtraBedTypeId, e.EffectiveFrom });
     }
 }

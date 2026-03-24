@@ -95,7 +95,6 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    BasePrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
@@ -838,6 +837,32 @@ namespace PMS.Migrations
                         principalTable: "ChargeType",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ExtraBedPrice",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExtraBedTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RatePerNight = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    EffectiveFrom = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EffectiveTo = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ExtraBedPrice", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ExtraBedPrice_ExtraBedType_ExtraBedTypeId",
+                        column: x => x.ExtraBedTypeId,
+                        principalTable: "ExtraBedType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -3216,6 +3241,11 @@ namespace PMS.Migrations
                 filter: "[TenantId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ExtraBedPrice_ExtraBedTypeId_EffectiveFrom",
+                table: "ExtraBedPrice",
+                columns: new[] { "ExtraBedTypeId", "EffectiveFrom" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ExtraBedType_Name",
                 table: "ExtraBedType",
                 column: "Name",
@@ -4353,6 +4383,9 @@ namespace PMS.Migrations
         {
             migrationBuilder.DropTable(
                 name: "DocumentSequence");
+
+            migrationBuilder.DropTable(
+                name: "ExtraBedPrice");
 
             migrationBuilder.DropTable(
                 name: "FinancialAuditLog");

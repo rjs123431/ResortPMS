@@ -37,6 +37,7 @@ const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/Pa
 const ChannelListPage = lazy(() => import('@pages/Resort/Channels/ChannelsPage').then((m) => ({ default: m.ChannelListPage })));
 const AgencyListPage = lazy(() => import('@pages/Resort/Agencies/AgenciesPage').then((m) => ({ default: m.AgencyListPage })));
 const ExtraBedTypeListPage = lazy(() => import('./pages/Resort/ExtraBedTypes/ExtraBedTypesPage').then((m) => ({ default: m.ExtraBedTypeListPage })));
+const ExtraBedPricingPage = lazy(() => import('./pages/Resort/ExtraBedPricing/ExtraBedPricingPage').then((m) => ({ default: m.ExtraBedPricingPage })));
 const StaffListPage = lazy(() => import('@pages/Resort/Staff/StaffPage').then((m) => ({ default: m.StaffListPage })));
 const ReservationListPage = lazy(() => import('@pages/Resort/Reservations/ReservationsPage').then((m) => ({ default: m.ReservationListPage })));
 const ReservationDetailPage = lazy(() => import('@pages/Resort/Reservations/ReservationDetailPage').then((m) => ({ default: m.ReservationDetailPage })));
@@ -576,6 +577,16 @@ const App: React.FC = () => {
                         }
                       />
                       <Route
+                        path="extra-bed-pricing"
+                        element={
+                          <PageTitle title="Extra Bed Pricing">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ExtraBedPricings]}>
+                              <ExtraBedPricingPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
                         path="staff"
                         element={
                           <PageTitle title="Staff">
@@ -634,6 +645,7 @@ const App: React.FC = () => {
                     <Route path="/channels" element={<Navigate to="/admin/channels" replace />} />
                     <Route path="/agencies" element={<Navigate to="/admin/agencies" replace />} />
                     <Route path="/extra-bed-types" element={<Navigate to="/admin/extra-bed-types" replace />} />
+                    <Route path="/extra-bed-pricing" element={<Navigate to="/admin/extra-bed-pricing" replace />} />
                     <Route path="/staff" element={<Navigate to="/admin/staff" replace />} />
                     <Route path="/administration/users" element={<Navigate to="/admin/users" replace />} />
                     <Route path="/administration/roles" element={<Navigate to="/admin/roles" replace />} />

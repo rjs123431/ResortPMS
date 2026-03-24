@@ -119,6 +119,17 @@ export const CheckInReservationPage = () => {
   const arrivalDate = toDateInputValue(reservationDetail?.arrivalDate);
   const departureDate = toDateInputValue(reservationDetail?.departureDate);
 
+  const { data: extraBedCurrentPrices } = useQuery({
+    queryKey: ['extra-bed-current-prices', arrivalDate],
+    queryFn: () => resortService.getCurrentPrices(arrivalDate || undefined),
+    enabled: Boolean(arrivalDate),
+  });
+
+  const rateByTypeId = useMemo(
+    () => Object.fromEntries((extraBedCurrentPrices ?? []).map((p) => [p.extraBedTypeId, p.ratePerNight])),
+    [extraBedCurrentPrices],
+  );
+
   const { data: availableRooms } = useQuery({
     queryKey: ['resort-checkin-available-rooms', reservationId, arrivalDate, departureDate],
     queryFn: () => resortService.getAvailableRooms(undefined, arrivalDate, departureDate, reservationId, false, true),
@@ -219,7 +230,7 @@ export const CheckInReservationPage = () => {
 
   const refundableDeposit = Number(refundableDepositAmount || 0);
 
-  const addExtraBed = (extraBedTypeId: string, quantity: number) => {
+  const addExtraBed = (extraBedTypeId: string, quantity: number, ratePerNight: number) => {
     const type = (extraBedTypes ?? []).find((row) => row.id === extraBedTypeId);
     if (!type) return;
     setExtraBeds((prev) => [
@@ -232,7 +243,7 @@ export const CheckInReservationPage = () => {
         departureDate: toDateInputValue(reservationDetail?.departureDate),
         quantity: Math.max(1, Math.floor(quantity)),
         nights: reservationDetail?.nights ?? 1,
-        ratePerNight: type.basePrice,
+        ratePerNight,
       },
     ]);
   };
@@ -580,9 +591,10 @@ export const CheckInReservationPage = () => {
       <AddExtraBedDialog
         open={showAddExtraBedDialog}
         extraBedTypes={extraBedTypes ?? []}
+        rateByTypeId={rateByTypeId}
         onClose={() => setShowAddExtraBedDialog(false)}
-        onAdd={(extraBedTypeId, quantity) => {
-          addExtraBed(extraBedTypeId, quantity);
+        onAdd={(extraBedTypeId, quantity, ratePerNight) => {
+          addExtraBed(extraBedTypeId, quantity, ratePerNight);
           setShowAddExtraBedDialog(false);
         }}
       />

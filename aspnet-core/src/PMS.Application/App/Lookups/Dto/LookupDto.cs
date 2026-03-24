@@ -192,9 +192,6 @@ public class ExtraBedTypeDto : EntityDto<Guid>
     [StringLength(128)]
     public string Name { get; set; }
 
-    [Range(0, double.MaxValue)]
-    public decimal BasePrice { get; set; }
-
     public bool IsActive { get; set; }
 }
 
@@ -202,7 +199,6 @@ public class ExtraBedTypeDto : EntityDto<Guid>
 public class ExtraBedTypeListDto : EntityDto<Guid>
 {
     public string Name { get; set; }
-    public decimal BasePrice { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -212,9 +208,6 @@ public class CreateExtraBedTypeDto
     [Required]
     [StringLength(128)]
     public string Name { get; set; }
-
-    [Range(0, double.MaxValue)]
-    public decimal BasePrice { get; set; }
 }
 
 public class GetExtraBedTypesInput : PagedResultFilterRequestDto, IShouldNormalize

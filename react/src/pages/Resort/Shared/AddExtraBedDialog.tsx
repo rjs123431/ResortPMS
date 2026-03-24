@@ -4,21 +4,22 @@ import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 type ExtraBedTypeOption = {
   id: string;
   name: string;
-  basePrice: number;
 };
 
 type AddExtraBedDialogProps = {
   open: boolean;
   extraBedTypes: ExtraBedTypeOption[];
+  /** Rate per night keyed by extraBedTypeId. Missing key = no pricing available. */
+  rateByTypeId: Record<string, number>;
   onClose: () => void;
-  onAdd: (extraBedTypeId: string, quantity: number) => void;
+  onAdd: (extraBedTypeId: string, quantity: number, ratePerNight: number) => void;
 };
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 const formatMoney = (value: number) =>
   round2(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export const AddExtraBedDialog = ({ open, extraBedTypes, onClose, onAdd }: AddExtraBedDialogProps) => {
+export const AddExtraBedDialog = ({ open, extraBedTypes, rateByTypeId, onClose, onAdd }: AddExtraBedDialogProps) => {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export const AddExtraBedDialog = ({ open, extraBedTypes, onClose, onAdd }: AddEx
               <thead className="bg-gray-50 dark:bg-gray-700/40">
                 <tr>
                   <th className="border border-gray-200 p-2 text-left dark:border-gray-700">Extra Bed Type</th>
-                  <th className="border border-gray-200 p-2 text-right dark:border-gray-700">Base Price/Night</th>
+                  <th className="border border-gray-200 p-2 text-right dark:border-gray-700">Rate/Night</th>
                   <th className="border border-gray-200 p-2 text-right dark:border-gray-700">Quantity</th>
                   <th className="border border-gray-200 p-2 text-right dark:border-gray-700">Action</th>
                 </tr>
@@ -58,10 +59,13 @@ export const AddExtraBedDialog = ({ open, extraBedTypes, onClose, onAdd }: AddEx
               <tbody>
                 {extraBedTypes.map((item) => {
                   const quantity = Math.max(1, Math.floor(quantities[item.id] ?? 1));
+                  const rate = rateByTypeId[item.id];
                   return (
                     <tr key={item.id}>
                       <td className="border border-gray-200 p-2 dark:border-gray-700">{item.name}</td>
-                      <td className="border border-gray-200 p-2 text-right dark:border-gray-700">{formatMoney(item.basePrice)}</td>
+                      <td className="border border-gray-200 p-2 text-right dark:border-gray-700">
+                        {rate != null ? formatMoney(rate) : <span className="text-amber-600 text-xs">No pricing</span>}
+                      </td>
                       <td className="border border-gray-200 p-2 text-right dark:border-gray-700">
                         <div className="flex items-center justify-end gap-1">
                           <button
@@ -106,8 +110,9 @@ export const AddExtraBedDialog = ({ open, extraBedTypes, onClose, onAdd }: AddEx
                       <td className="border border-gray-200 p-2 text-right dark:border-gray-700">
                         <button
                           type="button"
-                          onClick={() => onAdd(item.id, quantity)}
-                          className="rounded bg-primary-600 px-3 py-1 text-xs text-white hover:bg-primary-700"
+                          disabled={rate == null}
+                          onClick={() => onAdd(item.id, quantity, rate!)}
+                          className="rounded bg-primary-600 px-3 py-1 text-xs text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Add
                         </button>

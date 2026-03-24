@@ -48,6 +48,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<Channel> Channels { get; set; }
     public DbSet<Agency> Agencies { get; set; }
     public DbSet<ExtraBedType> ExtraBedTypes { get; set; }
+    public DbSet<ExtraBedPrice> ExtraBedPrices { get; set; }
 
     // Reservation
     public DbSet<Reservation> Reservations { get; set; }
@@ -150,6 +151,7 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new ChannelConfiguration());
         modelBuilder.ApplyConfiguration(new AgencyConfiguration());
         modelBuilder.ApplyConfiguration(new ExtraBedTypeConfiguration());
+        modelBuilder.ApplyConfiguration(new ExtraBedPriceConfiguration());
 
         // Reservation
         modelBuilder.ApplyConfiguration(new ReservationConfiguration());

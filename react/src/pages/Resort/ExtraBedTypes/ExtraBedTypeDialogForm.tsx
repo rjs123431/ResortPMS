@@ -55,16 +55,6 @@ export const ExtraBedTypeDialogForm = ({
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Type Name</label>
             <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.name} onChange={(e) => onFormChange((s) => ({ ...s, name: e.target.value }))} />
           </div>
-          <div className="mt-3">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Base Price</label>
-            <input
-              type="number"
-              min={0}
-              className="w-full rounded border p-2 dark:bg-gray-700"
-              value={form.basePrice}
-              onChange={(e) => onFormChange((s) => ({ ...s, basePrice: Number(e.target.value || 0) }))}
-            />
-          </div>
           {editingId ? (
             <label className="mt-3 flex items-center gap-2 text-sm">
               <input type="checkbox" checked={form.isActive} onChange={(e) => onFormChange((s) => ({ ...s, isActive: e.target.checked }))} />

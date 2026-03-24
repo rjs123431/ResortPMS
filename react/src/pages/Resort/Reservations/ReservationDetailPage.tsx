@@ -379,6 +379,17 @@ export const ReservationDetailPage = () => {
   const canAddPayments = isEditableReservation && isEditMode;
   const addRoomTypeArrivalDate = toDateOnly(effectiveReservation?.arrivalDate);
   const addRoomTypeDepartureDate = toDateOnly(effectiveReservation?.departureDate);
+
+  const { data: extraBedCurrentPrices } = useQuery({
+    queryKey: ['extra-bed-current-prices', addRoomTypeArrivalDate],
+    queryFn: () => resortService.getCurrentPrices(addRoomTypeArrivalDate || undefined),
+    enabled: Boolean(addRoomTypeArrivalDate),
+  });
+
+  const rateByTypeId = useMemo(
+    () => Object.fromEntries((extraBedCurrentPrices ?? []).map((p) => [p.extraBedTypeId, p.ratePerNight])),
+    [extraBedCurrentPrices],
+  );
   const isLinkGuestMode = !effectiveReservation?.guestId;
   const canLinkGuest =
     !effectiveReservation?.guestId &&
@@ -519,13 +530,12 @@ export const ReservationDetailPage = () => {
     closeAssignRoomDialog();
   };
 
-  const handleAddExtraBedDraft = (extraBedTypeId: string, quantity: number) => {
+  const handleAddExtraBedDraft = (extraBedTypeId: string, quantity: number, ratePerNight: number) => {
     const selectedType = (extraBedTypes ?? []).find((item) => item.id === extraBedTypeId);
     if (!effectiveReservation || !selectedType) return;
 
     const safeQuantity = Math.max(1, Math.floor(quantity));
     const nights = effectiveReservation.nights > 0 ? effectiveReservation.nights : 1;
-    const ratePerNight = selectedType.basePrice;
     const netAmount = safeQuantity * ratePerNight * nights;
     const tempId = createTempId(TEMP_EXTRA_BED_PREFIX);
 
@@ -1127,6 +1137,7 @@ export const ReservationDetailPage = () => {
               <AddExtraBedDialog
                 open={isAddExtraBedDialogOpen}
                 extraBedTypes={extraBedTypes ?? []}
+                rateByTypeId={rateByTypeId}
                 onClose={() => setIsAddExtraBedDialogOpen(false)}
                 onAdd={handleAddExtraBedDraft}
               />

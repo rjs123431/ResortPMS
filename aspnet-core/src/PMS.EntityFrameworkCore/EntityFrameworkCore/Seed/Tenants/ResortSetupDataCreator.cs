@@ -36,6 +36,9 @@ public class ResortSetupDataCreator
         EnsureChannels();
         EnsureAgencies();
 
+        // Always ensure default extra-bed price rows for existing tenants
+        EnsureExtraBedPrices();
+
         // Always ensure POS data and POS_ORDER sequence for existing tenants (e.g. after migration)
         EnsurePosData();
         EnsurePosDocumentSequence();
@@ -216,12 +219,47 @@ public class ResortSetupDataCreator
 
     private void EnsureExtraBedTypes()
     {
-        var definitions = new[]
+        var names = new[] { "Kid", "Adult" };
+        foreach (var name in names)
         {
-            new ExtraBedType { Name = "Kid", BasePrice = 650m, IsActive = true },
-            new ExtraBedType { Name = "Adult", BasePrice = 965m, IsActive = true },
+            if (!_context.ExtraBedTypes.Any(x => x.Name == name))
+            {
+                _context.ExtraBedTypes.Add(new ExtraBedType { Name = name, IsActive = true });
+            }
+        }
+        _context.SaveChanges();
+    }
+
+    private void EnsureExtraBedPrices()
+    {
+        var epoch = new DateTime(2020, 1, 1);
+
+        var seedRates = new Dictionary<string, decimal>
+        {
+            { "Kid",   650m  },
+            { "Adult", 965m  },
         };
-        _context.ExtraBedTypes.AddRange(definitions);
+
+        foreach (var (typeName, rate) in seedRates)
+        {
+            var type = _context.ExtraBedTypes.FirstOrDefault(x => x.Name == typeName);
+            if (type == null) continue;
+
+            // Only seed when no price rows exist for this type at all
+            var hasAny = _context.ExtraBedPrices.Any(x => x.ExtraBedTypeId == type.Id);
+            if (!hasAny)
+            {
+                _context.ExtraBedPrices.Add(new ExtraBedPrice
+                {
+                    ExtraBedTypeId = type.Id,
+                    RatePerNight   = rate,
+                    EffectiveFrom  = epoch,
+                    EffectiveTo    = null,
+                    IsActive       = true,
+                });
+            }
+        }
+
         _context.SaveChanges();
     }
 

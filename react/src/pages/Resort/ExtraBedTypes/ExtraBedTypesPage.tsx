@@ -6,9 +6,6 @@ import { resortService } from '@services/resort.service';
 import type { ExtraBedTypeDto } from '@/types/resort.types';
 import { ExtraBedTypeDialogForm } from './ExtraBedTypeDialogForm';
 
-const formatMoney = (value: number) =>
-  Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 export const ExtraBedTypeListPage = () => {
   const queryClient = useQueryClient();
   const { isGranted } = useAuth();
@@ -17,7 +14,7 @@ export const ExtraBedTypeListPage = () => {
   const [filter, setFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ExtraBedTypeDto>({ id: '', name: '', basePrice: 0, isActive: true });
+  const [form, setForm] = useState<ExtraBedTypeDto>({ id: '', name: '', isActive: true });
 
   const { data, isLoading } = useQuery({
     queryKey: ['resort-extra-bed-types-paged', filter],
@@ -63,7 +60,7 @@ export const ExtraBedTypeListPage = () => {
               type="button"
               className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
               onClick={() => {
-                setForm({ id: '', name: '', basePrice: 0, isActive: true });
+                setForm({ id: '', name: '', isActive: true });
                 setShowCreate(true);
               }}
             >
@@ -90,7 +87,6 @@ export const ExtraBedTypeListPage = () => {
               <thead>
                 <tr className="border-b text-left">
                   <th className="p-2">Name</th>
-                  <th className="p-2 text-right">Base Price</th>
                   <th className="p-2">Active</th>
                   <th className="p-2">Actions</th>
                 </tr>
@@ -99,7 +95,6 @@ export const ExtraBedTypeListPage = () => {
                 {items.map((item) => (
                   <tr className="border-b" key={item.id}>
                     <td className="p-2">{item.name}</td>
-                    <td className="p-2 text-right tabular-nums">{formatMoney(item.basePrice)}</td>
                     <td className="p-2">{item.isActive ? 'Yes' : 'No'}</td>
                     <td className="p-2">
                       {canEdit ? (
@@ -131,7 +126,7 @@ export const ExtraBedTypeListPage = () => {
             if (editingId) {
               updateMutation.mutate(form);
             } else {
-              createMutation.mutate({ name: form.name, basePrice: form.basePrice });
+              createMutation.mutate({ name: form.name });
             }
           }}
         />

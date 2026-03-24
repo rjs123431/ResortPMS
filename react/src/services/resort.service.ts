@@ -5,6 +5,7 @@ import { channelService } from './channel.service';
 import { chargeTypeService } from './charge-type.service';
 import { checkInService } from './check-in.service';
 import { checkOutService } from './check-out.service';
+import { extraBedPricingService } from './extra-bed-pricing.service';
 import { extraBedTypeService } from './extra-bed-type.service';
 import { guestService } from './guest.service';
 import { housekeepingService } from './housekeeping.service';
@@ -29,6 +30,7 @@ export const resortService = {
   ...chargeTypeService,
   ...checkInService,
   ...checkOutService,
+  ...extraBedPricingService,
   ...extraBedTypeService,
   ...guestService,
   ...housekeepingService,

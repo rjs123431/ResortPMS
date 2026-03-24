@@ -6,6 +6,8 @@ type SelectExtraBedTypeDialogProps = {
   open: boolean;
   types: ExtraBedTypeListDto[];
   isLoading: boolean;
+  /** Rate per night keyed by extraBedTypeId. */
+  rateByTypeId?: Record<string, number>;
   onClose: () => void;
   onSelect: (type: ExtraBedTypeListDto) => void;
 };
@@ -17,6 +19,7 @@ export const SelectExtraBedTypeDialog = ({
   open,
   types,
   isLoading,
+  rateByTypeId = {},
   onClose,
   onSelect,
 }: SelectExtraBedTypeDialogProps) => {
@@ -51,7 +54,7 @@ export const SelectExtraBedTypeDialog = ({
               <thead>
                 <tr className="border-b text-left">
                   <th className="p-2">Type</th>
-                  <th className="p-2 text-right">Base Price</th>
+                  <th className="p-2 text-right">Rate/Night</th>
                   <th className="p-2">Action</th>
                 </tr>
               </thead>
@@ -68,7 +71,12 @@ export const SelectExtraBedTypeDialog = ({
                   types.map((type) => (
                     <tr key={type.id} className="border-b">
                       <td className="p-2">{type.name}</td>
-                      <td className="p-2 text-right tabular-nums">{formatMoney(type.basePrice)}</td>
+                      <td className="p-2 text-right tabular-nums">
+                        {rateByTypeId[type.id] != null
+                          ? formatMoney(rateByTypeId[type.id]!)
+                          : <span className="text-amber-600 text-xs">No pricing</span>
+                        }
+                      </td>
                       <td className="p-2">
                         <button
                           type="button"

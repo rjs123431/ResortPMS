@@ -59,6 +59,7 @@ public class ReservationAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
     IRepository<ExtraBedType, Guid> extraBedTypeRepository,
+    IRepository<ExtraBedPrice, Guid> extraBedPriceRepository,
     IRoomPricingManager roomPricingManager,
     IDocumentNumberService documentNumberService,
     IPropertyTimesProvider propertyTimesProvider,
@@ -866,15 +867,36 @@ public class ReservationAppService(
 
         var arrivalDate = reservation.ArrivalDate;
         var departureDate = reservation.DepartureDate;
+        var asOfDate = arrivalDate.Date;
         var numberOfNights = reservation.Nights > 0
             ? reservation.Nights
             : Math.Max(1, (int)(departureDate.Date - arrivalDate.Date).TotalDays);
+
+        // Resolve effective pricing for each type by the arrival date
+        var effectivePrices = await extraBedPriceRepository.GetAll()
+            .Where(x => extraBedTypeIds.Contains(x.ExtraBedTypeId)
+                     && x.IsActive
+                     && x.EffectiveFrom <= asOfDate
+                     && (x.EffectiveTo == null || x.EffectiveTo.Value > asOfDate))
+            .ToListAsync();
+
+        var priceByType = effectivePrices
+            .GroupBy(x => x.ExtraBedTypeId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.EffectiveFrom).First().RatePerNight);
+
+        foreach (var typeId in extraBedTypeIds)
+        {
+            if (!priceByType.ContainsKey(typeId))
+                throw new UserFriendlyException(
+                    $"No effective pricing found for extra bed type '{extraBedTypes[typeId].Name}' " +
+                    $"on {asOfDate:yyyy-MM-dd}. Please set up pricing before adding extra beds.");
+        }
 
         decimal addedNetAmount = 0;
         foreach (var extraBedRow in extraBedRows)
         {
             var extraBedType = extraBedTypes[extraBedRow.ExtraBedTypeId];
-            var ratePerNight = extraBedType.BasePrice;
+            var ratePerNight = priceByType[extraBedRow.ExtraBedTypeId];
             var amount = ratePerNight * numberOfNights * extraBedRow.Quantity;
 
             reservation.ExtraBeds.Add(new ReservationExtraBed

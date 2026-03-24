@@ -78,6 +78,11 @@ namespace PMS.Authorization
         public const string Pages_ExtraBedTypes_Create = "Pages.ExtraBedTypes.Create";
         public const string Pages_ExtraBedTypes_Edit = "Pages.ExtraBedTypes.Edit";
 
+        // SETUP — Extra Bed Pricing
+        public const string Pages_ExtraBedPricings = "Pages.ExtraBedPricings";
+        public const string Pages_ExtraBedPricings_Create = "Pages.ExtraBedPricings.Create";
+        public const string Pages_ExtraBedPricings_Edit = "Pages.ExtraBedPricings.Edit";
+
         // SETUP — Staff
         public const string Pages_Staff = "Pages.Staff";
         public const string Pages_Staff_Create = "Pages.Staff.Create";

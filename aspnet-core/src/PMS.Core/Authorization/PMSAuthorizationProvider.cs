@@ -84,6 +84,11 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         extraBedTypes.CreateChildPermission(PermissionNames.Pages_ExtraBedTypes_Create, L("Create"));
         extraBedTypes.CreateChildPermission(PermissionNames.Pages_ExtraBedTypes_Edit, L("Edit"));
 
+        // SETUP — Extra Bed Pricing
+        var extraBedPricings = setup.CreateChildPermission(PermissionNames.Pages_ExtraBedPricings, L("ExtraBedPricings"), multiTenancySides: MultiTenancySides.Tenant);
+        extraBedPricings.CreateChildPermission(PermissionNames.Pages_ExtraBedPricings_Create, L("Create"));
+        extraBedPricings.CreateChildPermission(PermissionNames.Pages_ExtraBedPricings_Edit, L("Edit"));
+
         // SETUP — Staff
         var staff = setup.CreateChildPermission(PermissionNames.Pages_Staff, L("Staff"), multiTenancySides: MultiTenancySides.Tenant);
         staff.CreateChildPermission(PermissionNames.Pages_Staff_Create, L("Create"));

@@ -126,6 +126,17 @@ export const ReservationPage = () => {
     queryFn: () => resortService.getExtraBedTypes(),
   });
 
+  const { data: extraBedCurrentPrices } = useQuery({
+    queryKey: ['extra-bed-current-prices', searchCriteria?.arrivalDate],
+    queryFn: () => resortService.getCurrentPrices(searchCriteria?.arrivalDate ?? undefined),
+    enabled: Boolean(searchCriteria?.arrivalDate),
+  });
+
+  const rateByTypeId = useMemo(
+    () => Object.fromEntries((extraBedCurrentPrices ?? []).map((p) => [p.extraBedTypeId, p.ratePerNight])),
+    [extraBedCurrentPrices],
+  );
+
   const { data: paymentMethods } = useQuery({
     queryKey: ['resort-payment-methods'],
     queryFn: () => resortService.getPaymentMethods(),
@@ -360,7 +371,7 @@ export const ReservationPage = () => {
     setShowAddExtraBedDialog(true);
   };
 
-  const addExtraBedRow = (extraBedTypeId: string, quantity: number) => {
+  const addExtraBedRow = (extraBedTypeId: string, quantity: number, ratePerNight: number) => {
     const safeQuantity = Math.max(1, Math.floor(quantity));
     const selectedType = (extraBedTypes ?? []).find((item) => item.id === extraBedTypeId);
     if (!selectedType) return;
@@ -374,7 +385,7 @@ export const ReservationPage = () => {
         extraBedTypeName: selectedType.name,
         quantity: safeQuantity,
         nights: stayNights,
-        ratePerNight: selectedType.basePrice,
+        ratePerNight,
       },
     ]);
   };
@@ -994,6 +1005,7 @@ export const ReservationPage = () => {
             <AddExtraBedDialog
               open={showAddExtraBedDialog}
               extraBedTypes={extraBedTypes ?? []}
+              rateByTypeId={rateByTypeId}
               onClose={() => setShowAddExtraBedDialog(false)}
               onAdd={addExtraBedRow}
             />

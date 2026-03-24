@@ -1617,15 +1617,52 @@ namespace PMS.Migrations
                     b.ToTable("DocumentSequence", (string)null);
                 });
 
-            modelBuilder.Entity("PMS.App.ExtraBedType", b =>
+            modelBuilder.Entity("PMS.App.ExtraBedPrice", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("BasePrice")
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ExtraBedTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("RatePerNight")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExtraBedTypeId", "EffectiveFrom");
+
+                    b.ToTable("ExtraBedPrice", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.ExtraBedType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2");
@@ -5785,6 +5822,17 @@ namespace PMS.Migrations
                         .IsRequired();
 
                     b.Navigation("Stay");
+                });
+
+            modelBuilder.Entity("PMS.App.ExtraBedPrice", b =>
+                {
+                    b.HasOne("PMS.App.ExtraBedType", "ExtraBedType")
+                        .WithMany()
+                        .HasForeignKey("ExtraBedTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ExtraBedType");
                 });
 
             modelBuilder.Entity("PMS.App.Folio", b =>
