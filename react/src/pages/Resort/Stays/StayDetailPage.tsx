@@ -12,6 +12,7 @@ import {
   RoomChangeSource,
   RoomChangeReason,
   RoomChangeRequestStatus,
+  RoomChargeType,
   type StayRoomRecordDto,
 } from '@/types/resort.types';
 import { formatMoney } from '@utils/helpers';
@@ -32,6 +33,28 @@ const toDateTime = (value?: string) => {
 const toDateOnly = (value?: string) => {
   if (!value) return '-';
   return new Date(value).toLocaleDateString();
+};
+
+const toDateOnlyKey = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getRemainingNightsUntilCheckout = (expectedCheckOutDateTime?: string) => {
+  if (!expectedCheckOutDateTime) return 0;
+
+  const checkout = new Date(expectedCheckOutDateTime);
+  if (Number.isNaN(checkout.getTime())) return 0;
+
+  const today = new Date();
+  const todayDateOnly = new Date(toDateOnlyKey(today));
+  const checkoutDateOnly = new Date(toDateOnlyKey(checkout));
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const nights = Math.round((checkoutDateOnly.getTime() - todayDateOnly.getTime()) / msPerDay);
+
+  return Math.max(0, nights);
 };
 
 const getTransactionTypeLabel = (value: number) => {
@@ -78,7 +101,7 @@ export const StayDetailPage = () => {
   const [showCompleteGuestRequestDialog, setShowCompleteGuestRequestDialog] = useState(false);
   const [showRoomChangeDialog, setShowRoomChangeDialog] = useState(false);
   const [selectedGuestRequestId, setSelectedGuestRequestId] = useState('');
-  const [selectedRoomForTransfer, setSelectedRoomForTransfer] = useState<{ stayRoomId: string; roomNumber: string } | null>(null);
+  const [selectedRoomForTransfer, setSelectedRoomForTransfer] = useState<{ stayRoomId: string; roomId: string; roomNumber: string } | null>(null);
 
   const { data: stayLookup, isFetching: isFetchingStayLookup } = useQuery({
     queryKey: ['resort-stays-all-for-detail'],
@@ -108,6 +131,13 @@ export const StayDetailPage = () => {
     queryKey: ['resort-charge-types'],
     queryFn: () => resortService.getChargeTypes(),
   });
+
+  const roomChargeTypeId = useMemo(
+    () =>
+      (chargeTypes ?? []).find((chargeType) => chargeType.roomChargeType === RoomChargeType.Room)?.id
+      ?? (chargeTypes ?? []).find((chargeType) => chargeType.name.toLowerCase() === 'room charge')?.id,
+    [chargeTypes],
+  );
 
   const { data: guestRequests, isFetching: isFetchingGuestRequests } = useQuery({
     queryKey: ['resort-guest-requests', stayId],
@@ -198,17 +228,41 @@ export const StayDetailPage = () => {
   });
 
   const transferRoomMutation = useMutation({
-    mutationFn: (input: { source: RoomChangeSource; reason: RoomChangeReason; reasonDetails: string; toRoomId: string }) =>
-      resortService.transferRoom({
+    mutationFn: (input: {
+      source: RoomChangeSource;
+      reason: RoomChangeReason;
+      reasonDetails: string;
+      toRoomId: string;
+      toRoomNumber?: string;
+      rateDifferencePerNight?: number | null;
+      chargeMode: 'post_charge' | 'no_charge';
+    }) => {
+      const shouldEmbedCharge = input.chargeMode === 'post_charge' && (input.rateDifferencePerNight ?? 0) > 0 && !!roomChargeTypeId;
+      const remainingNights = getRemainingNightsUntilCheckout(
+        stay?.expectedCheckOutDateTime ?? statement?.expectedCheckOutDateTime,
+      );
+      const perNightDifference = Number(((input.rateDifferencePerNight ?? 0) as number).toFixed(2));
+      const totalDifference = Number((perNightDifference * remainingNights).toFixed(2));
+      const fromRoom = selectedRoomForTransfer?.roomNumber || 'Previous Room';
+      const toRoom = input.toRoomNumber || 'New Room';
+
+      return resortService.transferRoom({
         stayId,
         toRoomId: input.toRoomId,
         reason: `[${ROOM_CHANGE_SOURCE_OPTIONS.find((o) => o.value === input.source)?.label ?? 'Internal'}] ${
           ROOM_CHANGE_REASON_OPTIONS.find((o) => o.value === input.reason)?.label ?? 'Other'
         }${input.reasonDetails ? `: ${input.reasonDetails}` : ''}`,
-      }),
+        chargeTypeId: shouldEmbedCharge ? roomChargeTypeId : undefined,
+        chargeAmount: shouldEmbedCharge && totalDifference > 0 ? totalDifference : undefined,
+        chargeDescription: shouldEmbedCharge && totalDifference > 0
+          ? `Room transfer rate difference (${fromRoom} → ${toRoom}) | ${formatMoney(perNightDifference)} x ${remainingNights} night(s)`
+          : undefined,
+      });
+    },
     onSuccess: () => {
       setShowRoomChangeDialog(false);
       void queryClient.invalidateQueries({ queryKey: ['resort-statement', stayId] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-folio-detail', stayId] });
       void queryClient.invalidateQueries({ queryKey: ['resort-stays-all-for-detail'] });
       void queryClient.invalidateQueries({ queryKey: ['resort-room-change-requests', stayId] });
     },
@@ -331,7 +385,7 @@ export const StayDetailPage = () => {
                             type="button"
                             className="rounded bg-indigo-600 px-2 py-1 text-xs text-white hover:bg-indigo-700"
                             onClick={() => {
-                              setSelectedRoomForTransfer({ stayRoomId: room.stayRoomId, roomNumber: room.roomNumber });
+                              setSelectedRoomForTransfer({ stayRoomId: room.stayRoomId, roomId: room.roomId, roomNumber: room.roomNumber });
                               setShowRoomChangeDialog(true);
                             }}
                           >
@@ -594,7 +648,9 @@ export const StayDetailPage = () => {
         open={showRoomChangeDialog}
         stayId={stayId}
         stayRoomId={selectedRoomForTransfer?.stayRoomId}
+        currentRoomId={selectedRoomForTransfer?.roomId}
         currentRoomNumber={selectedRoomForTransfer?.roomNumber}
+        expectedCheckOutDateTime={stay?.expectedCheckOutDateTime ?? statement?.expectedCheckOutDateTime}
         isSaving={transferRoomMutation.isPending}
         onClose={() => {
           setShowRoomChangeDialog(false);

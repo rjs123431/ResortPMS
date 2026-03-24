@@ -1297,4 +1297,7 @@ export interface TransferRoomDto {
   stayId: string;
   toRoomId: string;
   reason?: string;
+  chargeTypeId?: string;
+  chargeAmount?: number;
+  chargeDescription?: string;
 }

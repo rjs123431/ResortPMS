@@ -15,6 +15,7 @@ type PostChargeValues = {
 type PostChargeDialogProps = {
   open: boolean;
   chargeTypes: ChargeTypeOption[];
+  initialValues?: Partial<PostChargeValues>;
   isSaving?: boolean;
   onClose: () => void;
   onSave: (values: PostChargeValues) => void;
@@ -26,14 +27,25 @@ const defaultForm = (): PostChargeValues => ({
   description: '',
 });
 
-export const PostChargeDialog = ({ open, chargeTypes, isSaving = false, onClose, onSave }: PostChargeDialogProps) => {
+export const PostChargeDialog = ({
+  open,
+  chargeTypes,
+  initialValues,
+  isSaving = false,
+  onClose,
+  onSave,
+}: PostChargeDialogProps) => {
   const [form, setForm] = useState<PostChargeValues>(defaultForm());
 
   useEffect(() => {
     if (open) {
-      setForm(defaultForm());
+      setForm({
+        ...defaultForm(),
+        ...initialValues,
+        amount: initialValues?.amount ?? 0,
+      });
     }
-  }, [open]);
+  }, [open, initialValues]);
 
   useEffect(() => {
     if (!open) return;

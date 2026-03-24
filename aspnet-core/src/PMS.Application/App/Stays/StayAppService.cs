@@ -298,6 +298,20 @@ public class StayAppService(
             CompletedBy = userId
         });
 
+        if (input.ChargeTypeId.HasValue && input.ChargeAmount.HasValue && input.ChargeAmount.Value > 0)
+        {
+            await PostChargeInternalAsync(new PostChargeDto
+            {
+                StayId = input.StayId,
+                ChargeTypeId = input.ChargeTypeId.Value,
+                Amount = input.ChargeAmount.Value,
+                Description = input.ChargeDescription,
+                Quantity = 1,
+                TaxAmount = 0,
+                DiscountAmount = 0,
+            });
+        }
+
         Logger.Info($"Room transfer: Stay {stay.StayNo} from Room {fromRoom.RoomNumber} to {toRoom.RoomNumber}.");
     }
 
@@ -346,6 +360,11 @@ public class StayAppService(
     [AbpAuthorize(PermissionNames.Pages_Stays_PostCharge)]
     [UnitOfWork]
     public async Task<Guid> PostChargeAsync(PostChargeDto input)
+    {
+        return await PostChargeInternalAsync(input);
+    }
+
+    private async Task<Guid> PostChargeInternalAsync(PostChargeDto input)
     {
         var folio = await GetOpenFolioOrThrowAsync(input.StayId);
 

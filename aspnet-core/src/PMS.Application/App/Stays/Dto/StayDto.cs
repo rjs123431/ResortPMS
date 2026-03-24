@@ -87,6 +87,9 @@ public class TransferRoomDto
     [Required] public Guid StayId { get; set; }
     [Required] public Guid ToRoomId { get; set; }
     [StringLength(512)] public string Reason { get; set; }
+    public Guid? ChargeTypeId { get; set; }
+    [Range(0.01, double.MaxValue)] public decimal? ChargeAmount { get; set; }
+    [StringLength(512)] public string ChargeDescription { get; set; }
 }
 
 // ── Room Change Request DTOs ───────────────────────────────────────────────────
