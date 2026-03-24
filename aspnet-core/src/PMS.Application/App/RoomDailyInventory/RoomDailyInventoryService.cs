@@ -63,6 +63,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
                     Status = RoomDailyInventoryStatus.Vacant,
                     ReservationId = null,
                     StayId = null,
+                    MaintenanceRequestId = null,
                     IsSellable = true,
                     IsBlocked = false,
                     IsOutOfOrder = false,
@@ -93,6 +94,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             row.Status = RoomDailyInventoryStatus.Reserved;
             row.ReservationId = reservationId;
             row.StayId = null;
+            row.MaintenanceRequestId = null;
         }
     }
 
@@ -111,7 +113,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         var reserved = (int)RoomDailyInventoryStatus.Reserved;
 
         var rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
-            @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = {1}, StayId = NULL
+                        @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = {1}, StayId = NULL, MaintenanceRequestId = NULL
               WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4} AND Status = {5}",
             reserved, reservationId, roomId, start, end, vacant);
 
@@ -136,6 +138,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             row.Status = RoomDailyInventoryStatus.InHouse;
             row.ReservationId = null;
             row.StayId = stayId;
+            row.MaintenanceRequestId = null;
         }
     }
 
@@ -158,7 +161,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             {
                 // Check-in from reservation: accept nights that are Vacant OR Reserved under this reservation.
                 rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
-                    @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}
+                                        @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}, MaintenanceRequestId = NULL
                       WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
                         AND (Status = {5} OR (Status = {6} AND ReservationId = {7}))",
                     inHouse, stayId, roomId, start, end, vacant, reserved, reservationId.Value);
@@ -167,7 +170,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             {
                 // Walk-in: only Vacant nights are eligible.
                 rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
-                    @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}
+                                        @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}, MaintenanceRequestId = NULL
                       WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
                         AND Status = {5}",
                     inHouse, stayId, roomId, start, end, vacant);
@@ -185,6 +188,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         var ctx = await _dbContextProvider.GetDbContextAsync();
         var rows = await ctx.RoomDailyInventories
             .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end)
+            .Where(i => !i.IsOutOfOrder && !i.IsBlocked && i.MaintenanceRequestId == null)
             .ToListAsync();
 
         foreach (var row in rows)
@@ -193,6 +197,45 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             row.ReservationId = null;
             row.StayId = null;
         }
+    }
+
+    public async Task<bool> TryBlockForMaintenanceAsync(Guid roomId, DateTime startDate, DateTime endDate, Guid maintenanceRequestId)
+    {
+        var start = startDate.Date;
+        var end = endDate.Date;
+        if (start >= end) return false;
+
+        var expectedNights = (int)(end - start).TotalDays;
+        await EnsureInventoryForDateRangeAsync([roomId], start, end);
+
+        var ctx = await _dbContextProvider.GetDbContextAsync();
+        var outOfOrder = (int)RoomDailyInventoryStatus.OutOfOrder;
+        var vacant = (int)RoomDailyInventoryStatus.Vacant;
+
+        var rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
+            @"UPDATE RoomDailyInventory
+              SET Status = {0}, ReservationId = NULL, StayId = NULL, MaintenanceRequestId = {1}, IsOutOfOrder = 1, IsSellable = 0
+              WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
+                AND Status = {5} AND IsBlocked = 0 AND IsOutOfOrder = 0",
+            outOfOrder, maintenanceRequestId, roomId, start, end, vacant);
+
+        return rowsAffected == expectedNights;
+    }
+
+    public async Task ReleaseMaintenanceBlockAsync(Guid roomId, DateTime startDate, DateTime endDate, Guid maintenanceRequestId)
+    {
+        var start = startDate.Date;
+        var end = endDate.Date;
+        if (start >= end) return;
+
+        var ctx = await _dbContextProvider.GetDbContextAsync();
+        var vacant = (int)RoomDailyInventoryStatus.Vacant;
+
+        await ctx.Database.ExecuteSqlRawAsync(
+            @"UPDATE RoomDailyInventory
+              SET Status = {0}, ReservationId = NULL, StayId = NULL, MaintenanceRequestId = NULL, IsOutOfOrder = 0, IsSellable = 1
+              WHERE RoomId = {1} AND InventoryDate >= {2} AND InventoryDate < {3} AND MaintenanceRequestId = {4}",
+            vacant, roomId, start, end, maintenanceRequestId);
     }
 
     public async Task<bool> IsRoomAvailableForDatesAsync(

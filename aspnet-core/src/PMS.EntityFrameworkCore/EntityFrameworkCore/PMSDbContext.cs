@@ -32,6 +32,9 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<Room> Rooms { get; set; }
     public DbSet<RoomStatusLog> RoomStatusLogs { get; set; }
     public DbSet<HousekeepingTask> HousekeepingTasks { get; set; }
+    public DbSet<RoomMaintenanceRequest> RoomMaintenanceRequests { get; set; }
+    public DbSet<RoomMaintenanceType> RoomMaintenanceTypes { get; set; }
+    public DbSet<RoomMaintenanceRequestType> RoomMaintenanceRequestTypes { get; set; }
     public DbSet<RoomDailyInventory> RoomDailyInventories { get; set; }
     public DbSet<RoomRatePlanGroup> RoomRatePlanGroups { get; set; }
     public DbSet<RoomRatePlanGroupChannel> RoomRatePlanGroupChannels { get; set; }
@@ -131,6 +134,9 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new RoomConfiguration());
         modelBuilder.ApplyConfiguration(new RoomStatusLogConfiguration());
         modelBuilder.ApplyConfiguration(new HousekeepingTaskConfiguration());
+        modelBuilder.ApplyConfiguration(new RoomMaintenanceTypeConfiguration());
+        modelBuilder.ApplyConfiguration(new RoomMaintenanceRequestTypeConfiguration());
+        modelBuilder.ApplyConfiguration(new RoomMaintenanceRequestConfiguration());
         modelBuilder.ApplyConfiguration(new RoomDailyInventoryConfiguration());
         modelBuilder.ApplyConfiguration(new RoomRatePlanGroupConfiguration());
         modelBuilder.ApplyConfiguration(new RoomRatePlanGroupChannelConfiguration());

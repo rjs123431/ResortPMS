@@ -109,6 +109,12 @@ namespace PMS.Authorization
         public const string Pages_CheckOut_WriteOff = "Pages.CheckOut.WriteOff";
         public const string Pages_CheckOut_Print = "Pages.CheckOut.Print";
 
+        // MAINTENANCE
+        public const string Pages_Maintenance = "Pages.Maintenance";
+        public const string Pages_Maintenance_Create = "Pages.Maintenance.Create";
+        public const string Pages_Maintenance_Assign = "Pages.Maintenance.Assign";
+        public const string Pages_Maintenance_Edit = "Pages.Maintenance.Edit";
+
         // POS (F&B)
         public const string Pages_POS = "Pages.POS";
         public const string Pages_POS_Orders = "Pages.POS.Orders";

@@ -23,6 +23,7 @@ public class RoomDailyInventory : Entity<Guid>
     public RoomDailyInventoryStatus Status { get; set; } = RoomDailyInventoryStatus.Vacant;
     public Guid? ReservationId { get; set; }
     public Guid? StayId { get; set; }
+    public Guid? MaintenanceRequestId { get; set; }
     public bool IsSellable { get; set; } = true;
     public bool IsBlocked { get; set; } = false;
     public bool IsOutOfOrder { get; set; } = false;

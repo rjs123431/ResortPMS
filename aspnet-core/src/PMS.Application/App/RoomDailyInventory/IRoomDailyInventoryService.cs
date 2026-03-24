@@ -43,6 +43,17 @@ public interface IRoomDailyInventoryService
         /// </summary>
         Task<bool> TrySetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId, Guid? reservationId);
 
+        /// <summary>
+        /// Atomically blocks the room for maintenance across the given date range. Only Vacant nights are eligible.
+        /// Returns true when all nights were blocked; false indicates a booking/occupancy conflict.
+        /// </summary>
+        Task<bool> TryBlockForMaintenanceAsync(Guid roomId, DateTime startDate, DateTime endDate, Guid maintenanceRequestId);
+
+        /// <summary>
+        /// Releases maintenance block rows for the given request and date range.
+        /// </summary>
+        Task ReleaseMaintenanceBlockAsync(Guid roomId, DateTime startDate, DateTime endDate, Guid maintenanceRequestId);
+
     /// <summary>
     /// Sets daily inventory to Vacant for the room and date range; clears ReservationId and StayId.
     /// </summary>

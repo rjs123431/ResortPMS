@@ -53,6 +53,10 @@ const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/Check
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
+const MaintenanceHubPage = lazy(() => import('@pages/Resort/Maintenance/MaintenanceHubPage').then((m) => ({ default: m.MaintenanceHubPage })));
+const WorkOrdersPage = lazy(() => import('@pages/Resort/Maintenance/WorkOrdersPage').then((m) => ({ default: m.WorkOrdersPage })));
+const PreventiveMaintenancePage = lazy(() => import('@pages/Resort/Maintenance/PreventiveMaintenancePage').then((m) => ({ default: m.PreventiveMaintenancePage })));
+const RepairHistoryPage = lazy(() => import('@pages/Resort/Maintenance/RepairHistoryPage').then((m) => ({ default: m.RepairHistoryPage })));
 const HomePage = lazy(() => import('@pages/Home/HomePage').then((m) => ({ default: m.HomePage })));
 const FrontDeskDashboardPage = lazy(() =>
   import('@pages/Resort/FrontDesk/FrontDeskDashboardPage').then((m) => ({ default: m.FrontDeskDashboardPage })),
@@ -391,6 +395,50 @@ const App: React.FC = () => {
                         <PageTitle title="Housekeeping Tasks">
                           <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
                             <HousekeepingTasksPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/housekeeping/room-maintenance"
+                      element={<Navigate to="/maintenance/work-orders" replace />}
+                    />
+                    <Route
+                      path="/maintenance"
+                      element={
+                        <PageTitle title="Maintenance">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Maintenance]}>
+                            <MaintenanceHubPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/maintenance/work-orders"
+                      element={
+                        <PageTitle title="Work Orders">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Maintenance]}>
+                            <WorkOrdersPage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/maintenance/preventive"
+                      element={
+                        <PageTitle title="Preventive Maintenance">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Maintenance]}>
+                            <PreventiveMaintenancePage />
+                          </ProtectedRoute>
+                        </PageTitle>
+                      }
+                    />
+                    <Route
+                      path="/maintenance/repair-history"
+                      element={
+                        <PageTitle title="Repair History">
+                          <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Maintenance]}>
+                            <RepairHistoryPage />
                           </ProtectedRoute>
                         </PageTitle>
                       }

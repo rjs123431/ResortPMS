@@ -115,6 +115,12 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         checkOut.CreateChildPermission(PermissionNames.Pages_CheckOut_WriteOff, L("WriteOff"));
         checkOut.CreateChildPermission(PermissionNames.Pages_CheckOut_Print, L("Print"));
 
+        // MAINTENANCE
+        var maintenance = transactions.CreateChildPermission(PermissionNames.Pages_Maintenance, L("Maintenance"), multiTenancySides: MultiTenancySides.Tenant);
+        maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Create, L("Create"));
+        maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Assign, L("Assign"));
+        maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Edit, L("Edit"));
+
         // POS (F&B)
         var pos = webApp.CreateChildPermission(PermissionNames.Pages_POS, L("POS"), multiTenancySides: MultiTenancySides.Tenant);
         pos.CreateChildPermission(PermissionNames.Pages_POS_Orders, L("Orders"));

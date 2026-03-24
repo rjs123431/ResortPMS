@@ -17,6 +17,7 @@ import { roomChangeService } from './room-change.service';
 import { roomPricingService } from './room-pricing.service';
 import { roomRackService } from './room-rack.service';
 import { roomRatePlanService } from './room-rate-plan.service';
+import { roomMaintenanceService } from './room-maintenance.service';
 import { roomService } from './room.service';
 import { roomTypeService } from './room-type.service';
 import { staffService } from './staff.service';
@@ -40,6 +41,7 @@ export const resortService = {
   ...roomPricingService,
   ...roomRackService,
   ...roomRatePlanService,
+  ...roomMaintenanceService,
   ...roomService,
   ...roomTypeService,
   ...staffService,

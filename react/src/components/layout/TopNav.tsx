@@ -39,6 +39,14 @@ export const TopNav: React.FC = () => {
       >
         Housekeeping
       </NavLink>
+      <NavLink
+        to="/maintenance"
+        className={({ isActive }) =>
+          [navClass, isActive ? activeClass : inactiveClass].join(' ')
+        }
+      >
+        Maintenance
+      </NavLink>
       {showReports && (
         <NavLink
           to="/reports"
