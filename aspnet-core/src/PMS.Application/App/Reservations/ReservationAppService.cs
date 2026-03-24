@@ -96,6 +96,9 @@ public class ReservationAppService(
 
         var reservationNo = await documentNumberService.GenerateNextDocumentNumberAsync("RESERVATION", "RES-");
         var reservationId = Guid.NewGuid();
+        var channelId = input.ChannelId.HasValue && input.ChannelId.Value != Guid.Empty
+            ? input.ChannelId
+            : null;
 
         var firstName = guest != null && string.IsNullOrWhiteSpace(input.FirstName) ? guest.FirstName : (input.FirstName ?? string.Empty).Trim();
         var lastName = guest != null && string.IsNullOrWhiteSpace(input.LastName) ? guest.LastName : (input.LastName ?? string.Empty).Trim();
@@ -157,7 +160,7 @@ public class ReservationAppService(
             Id = reservationId,
             ReservationNo = reservationNo,
             RoomRatePlanCode = (input.RoomRatePlanCode ?? string.Empty).Trim(),
-            ChannelId = input.ChannelId,
+            ChannelId = channelId,
             AgencyId = input.AgencyId,
             GuestId = input.GuestId,
             GuestName = $"{firstName} {lastName}".Trim(),
@@ -325,7 +328,9 @@ public class ReservationAppService(
         reservation.DepartureDate = input.DepartureDate.Date.Add(checkOutTime);
         reservation.Nights = (int)(input.DepartureDate.Date - input.ArrivalDate.Date).TotalDays;
         reservation.RoomRatePlanCode = (input.RoomRatePlanCode ?? string.Empty).Trim();
-        reservation.ChannelId = input.ChannelId;
+        reservation.ChannelId = input.ChannelId.HasValue && input.ChannelId.Value != Guid.Empty
+            ? input.ChannelId
+            : null;
         reservation.AgencyId = input.AgencyId;
         reservation.Adults = input.Adults;
         reservation.Children = input.Children;

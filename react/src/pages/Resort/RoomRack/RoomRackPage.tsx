@@ -71,8 +71,8 @@ function getSelectableDateIndexFromPosition(
 }
 
 type CellInfo =
-  | { type: 'stay'; stayNo: string; guestName: string; stayId: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
-  | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string; reservationStatus?: number; channelName?: string; channelIcon?: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
+  | { type: 'stay'; stayNo: string; guestName: string; stayId: string; channelId?: string; channelName?: string; channelIcon?: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
+  | { type: 'reservation'; reservationNo: string; guestName: string; reservationId: string; reservationStatus?: number; channelId?: string; channelName?: string; channelIcon?: string; isArrivalDate?: boolean; isDepartureDate?: boolean }
   | { type: 'blocked'; label: string }
   | null;
 type CellInfoNonNull = Exclude<CellInfo, null>;
@@ -225,6 +225,9 @@ export const RoomRackPage = () => {
           stayNo: cell.stayNo ?? '',
           guestName: cell.guestName ?? '',
           stayId: cell.stayId ?? '',
+          channelId: cell.channelId,
+          channelName: cell.channelName,
+          channelIcon: cell.channelIcon,
           isArrivalDate: cell.isArrivalDate,
           isDepartureDate: cell.isDepartureDate,
         }];
@@ -236,6 +239,7 @@ export const RoomRackPage = () => {
             guestName: cell.guestName ?? '',
             reservationId: cell.reservationId ?? '',
             reservationStatus: cell.reservationStatus,
+            channelId: cell.channelId,
             channelName: cell.channelName,
             channelIcon: cell.channelIcon,
             isArrivalDate: cell.isArrivalDate,
@@ -608,7 +612,7 @@ export const RoomRackPage = () => {
                       {rooms.map((room) => {
                         const roomNum = room.roomNumber;
                         const n = dateColumns.length;
-                        type SegmentItem = { id: string; guestName: string; channelName?: string; channelIcon?: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; bgStyle?: { backgroundColor: string; color: string }; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
+                        type SegmentItem = { id: string; guestName: string; showChannelAvatar?: boolean; channelName?: string; channelIcon?: string; navPath: string; startIndex: number; endIndex: number; bgClass: string; textClass: string; bgStyle?: { backgroundColor: string; color: string }; extendsBefore: boolean; extendsAfter: boolean; firstDayHalf?: boolean; lastDayHalf?: boolean; tooltip: string; panelItem: RoomRackPanelItem | null };
                         const segments: SegmentItem[] = [];
                         let i = 0;
                         while (i < dateColumns.length) {
@@ -682,8 +686,9 @@ export const RoomRackPage = () => {
                           segments.push({
                             id: `${cellId}-${startIndex}`,
                             guestName: guestName || '—',
-                            channelName: cell.type === 'reservation' ? cell.channelName : undefined,
-                            channelIcon: cell.type === 'reservation' ? cell.channelIcon : undefined,
+                            showChannelAvatar: cell.type === 'reservation' || (cell.type === 'stay' && !!cell.channelId),
+                            channelName: cell.type === 'blocked' ? undefined : cell.channelName,
+                            channelIcon: cell.type === 'blocked' ? undefined : cell.channelIcon,
                             navPath,
                             startIndex,
                             endIndex,
@@ -835,7 +840,7 @@ export const RoomRackPage = () => {
                                         }}
                                         title={seg.tooltip}
                                       >
-                                        {seg.channelIcon ? <ChannelAvatar icon={seg.channelIcon} name={seg.channelName} className="h-3.5 w-3.5 shrink-0" /> : null}
+                                        {seg.showChannelAvatar ? <ChannelAvatar icon={seg.channelIcon} name={seg.channelName} className="h-3.5 w-3.5 shrink-0" /> : null}
                                         <span className="truncate">{seg.guestName}</span>
                                       </button>
                                     </div>

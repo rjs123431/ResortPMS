@@ -182,6 +182,7 @@ export interface RoomRackDayCellDto {
   reservationNo: string;
   stayNo: string;
   guestName: string;
+  channelId?: string;
   channelName?: string;
   channelIcon?: string;
   /** Reservation status when cell is Reserved (e.g. Confirmed=2 → green, Pending=1 → yellow). */

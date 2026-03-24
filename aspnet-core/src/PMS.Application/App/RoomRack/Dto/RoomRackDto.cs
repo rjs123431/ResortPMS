@@ -23,6 +23,7 @@ public class RoomRackDayCellDto
     public string ReservationNo { get; set; } = string.Empty;
     public string StayNo { get; set; } = string.Empty;
     public string GuestName { get; set; } = string.Empty;
+    public Guid? ChannelId { get; set; }
     public string ChannelName { get; set; } = string.Empty;
     public string ChannelIcon { get; set; } = string.Empty;
     /// <summary>Reservation status when this cell is Reserved (Status=2). Confirmed=2 for green, Pending=1 for yellow.</summary>

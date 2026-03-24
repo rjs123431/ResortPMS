@@ -86,25 +86,33 @@ public class RoomRackAppService(
         var allResIds = resIds.Union(resIdsDep).Distinct().ToList();
         var allStayIds = stayIds.Union(stayIdsDep).Distinct().ToList();
 
-        var reservationList = await reservationRepository.GetAll()
-            .AsNoTracking()
-            .Where(r => allResIds.Contains(r.Id))
-            .Select(r => new { r.Id, r.ReservationNo, r.GuestName, r.Status, ChannelName = r.Channel != null ? r.Channel.Name : string.Empty, ChannelIcon = r.Channel != null ? r.Channel.Icon : string.Empty })
-            .ToListAsync();
-
         var stayList = await stayRepository.GetAll()
             .AsNoTracking()
             .Where(s => allStayIds.Contains(s.Id))
-            .Select(s => new { s.Id, s.StayNo, s.GuestName, s.Status })
+            .Select(s => new { s.Id, s.StayNo, s.GuestName, s.Status, s.ReservationId })
             .ToListAsync();
 
-        var resMap = reservationList.ToDictionary(x => x.Id, x => (x.ReservationNo ?? string.Empty, x.GuestName ?? string.Empty, (int)x.Status, x.ChannelName ?? string.Empty, x.ChannelIcon ?? string.Empty));
+        var stayReservationIds = stayList
+            .Where(s => s.ReservationId.HasValue)
+            .Select(s => s.ReservationId!.Value)
+            .Distinct()
+            .ToList();
+
+        allResIds = allResIds.Union(stayReservationIds).Distinct().ToList();
+
+        var reservationList = await reservationRepository.GetAll()
+            .AsNoTracking()
+            .Where(r => allResIds.Contains(r.Id))
+            .Select(r => new { r.Id, r.ReservationNo, r.GuestName, r.Status, r.ChannelId, ChannelName = r.Channel != null ? r.Channel.Name : string.Empty, ChannelIcon = r.Channel != null ? r.Channel.Icon : string.Empty })
+            .ToListAsync();
+
+        var resMap = reservationList.ToDictionary(x => x.Id, x => (x.ReservationNo ?? string.Empty, x.GuestName ?? string.Empty, (int)x.Status, x.ChannelId, x.ChannelName ?? string.Empty, x.ChannelIcon ?? string.Empty));
 
         var checkedOutStayIds = stayList
             .Where(s => s.Status == StayStatus.CheckedOut)
             .Select(s => s.Id)
             .ToHashSet();
-        var stayMap = stayList.ToDictionary(x => x.Id, x => (x.StayNo ?? string.Empty, x.GuestName ?? string.Empty));
+        var stayMap = stayList.ToDictionary(x => x.Id, x => (x.StayNo ?? string.Empty, x.GuestName ?? string.Empty, x.ReservationId));
         var roomById = rooms.ToDictionary(r => r.Id);
 
         var departureByRoomAndDate = new Dictionary<(Guid RoomId, DateTime Date), (Guid? StayId, Guid? ResId, string GuestName, string StayNo, string ResNo, int Status)>();
@@ -194,6 +202,7 @@ public class RoomRackAppService(
             roomById.TryGetValue(i.RoomId, out var room);
             var roomNumber = room?.RoomNumber ?? string.Empty;
             string resNo = string.Empty, stayNo = string.Empty, guestName = string.Empty;
+            Guid? channelId = null;
             string channelName = string.Empty, channelIcon = string.Empty;
             int? resStatus = null;
             var status = (int)i.Status;
@@ -203,13 +212,21 @@ public class RoomRackAppService(
             if (i.ReservationId.HasValue && resMap.TryGetValue(i.ReservationId.Value, out var res))
             {
                 (resNo, guestName, resStatus) = (res.Item1, res.Item2, res.Item3);
-                channelName = res.Item4;
-                channelIcon = res.Item5;
+                channelId = res.Item4;
+                channelName = res.Item5;
+                channelIcon = res.Item6;
             }
             if (i.StayId.HasValue && stayMap.TryGetValue(i.StayId.Value, out var st))
             {
                 stayNo = st.Item1;
                 if (string.IsNullOrEmpty(guestName)) guestName = st.Item2;
+
+                if (st.Item3.HasValue && resMap.TryGetValue(st.Item3.Value, out var stayRes))
+                {
+                    if (channelId == null) channelId = stayRes.Item4;
+                    if (string.IsNullOrEmpty(channelName)) channelName = stayRes.Item5;
+                    if (string.IsNullOrEmpty(channelIcon)) channelIcon = stayRes.Item6;
+                }
             }
 
             var invDate = i.InventoryDate.Date;
@@ -227,8 +244,9 @@ public class RoomRackAppService(
                 if (dep.ResId.HasValue && resMap.TryGetValue(dep.ResId.Value, out var resVal))
                 {
                     resStatus = resVal.Item3;
-                    channelName = resVal.Item4;
-                    channelIcon = resVal.Item5;
+                    channelId = resVal.Item4;
+                    channelName = resVal.Item5;
+                    channelIcon = resVal.Item6;
                 }
             }
             else if (i.ReservationId.HasValue && i.Status == RoomDailyInventoryStatus.Reserved && resDateByResAndRoom.TryGetValue((i.ReservationId.Value, i.RoomId), out var resDates))
@@ -255,6 +273,9 @@ public class RoomRackAppService(
                 resNo = string.Empty;
                 stayNo = string.Empty;
                 guestName = string.Empty;
+                channelId = null;
+                channelName = string.Empty;
+                channelIcon = string.Empty;
                 resStatus = null;
                 isArrival = false;
                 isDeparture = false;
@@ -267,6 +288,9 @@ public class RoomRackAppService(
                 stayId = null;
                 stayNo = string.Empty;
                 guestName = string.Empty;
+                channelId = null;
+                channelName = string.Empty;
+                channelIcon = string.Empty;
                 isArrival = false;
                 isDeparture = false;
             }
@@ -286,6 +310,7 @@ public class RoomRackAppService(
                 ReservationNo = resNo,
                 StayNo = stayNo,
                 GuestName = guestName,
+                ChannelId = channelId,
                 ChannelName = channelName,
                 ChannelIcon = channelIcon,
                 ReservationStatus = resStatus,

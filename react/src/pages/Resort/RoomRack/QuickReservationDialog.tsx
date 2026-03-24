@@ -446,7 +446,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">First Name</label>
                 <input
@@ -465,9 +465,6 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                   onChange={(e) => setLastName(e.target.value)}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Phone</label>
                 <input
