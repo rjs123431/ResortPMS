@@ -34,6 +34,15 @@ type AssignRoomDialogProps = {
   onConfirm?: () => void;
 };
 
+type DialogRoom = {
+  id: string;
+  roomNumber: string;
+  floor?: string;
+  housekeepingStatus: HousekeepingStatus;
+  roomStatusCode?: string;
+  isAvailableForStay: boolean;
+};
+
 
 const getRoomStatusLabel = (housekeepingStatus?: HousekeepingStatus) => {
   return housekeepingStatus !== undefined ? HousekeepingStatus[housekeepingStatus] : '—';
@@ -70,7 +79,7 @@ export const AssignRoomDialog = ({
   const departure = toDateOnly(departureDate ?? undefined);
   const useInventoryAvailability = Boolean(open && roomTypeId && arrival && departure);
 
-  const { data: rooms = [], isLoading } = useQuery({
+  const { data: rooms = [], isLoading } = useQuery<DialogRoom[]>({
     queryKey: [
       'assign-room-dialog-rooms',
       roomTypeId,
@@ -81,8 +90,12 @@ export const AssignRoomDialog = ({
     ],
     queryFn: async () => {
       if (!open || !roomTypeId) return [];
+
+      const allRoomsResult = await resortService.getRooms('', 0, 1000, roomTypeId);
+      const allRooms = allRoomsResult.items;
+
       if (useInventoryAvailability && arrival && departure) {
-        return resortService.getAvailableRooms(
+        const availableRooms = await resortService.getAvailableRooms(
           roomTypeId,
           arrival,
           departure,
@@ -90,9 +103,32 @@ export const AssignRoomDialog = ({
           false,
           false
         );
+
+        const allRoomsById = new Map(allRooms.map((room) => [room.id, room]));
+        const availableRoomIds = new Set(availableRooms.map((room) => room.id));
+
+        const dialogRooms: DialogRoom[] = availableRooms.map((room) => ({
+          ...(allRoomsById.get(room.id) ?? room),
+          isAvailableForStay: true,
+        }));
+
+        if (selectedRoomId && !availableRoomIds.has(selectedRoomId)) {
+          const selectedRoom = allRoomsById.get(selectedRoomId);
+          if (selectedRoom) {
+            dialogRooms.unshift({
+              ...selectedRoom,
+              isAvailableForStay: false,
+            });
+          }
+        }
+
+        return dialogRooms;
       }
-      const result = await resortService.getRooms('', 0, 1000);
-      return result.items.filter((r) => r.roomTypeId === roomTypeId);
+
+      return allRooms.map((room) => ({
+        ...room,
+        isAvailableForStay: true,
+      }));
     },
     enabled: open && !!roomTypeId,
     staleTime: 10 * 1000,
@@ -135,7 +171,9 @@ export const AssignRoomDialog = ({
           </div>
 
           <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">
-            {roomTypeName ? `Select available ${roomTypeName} room.` : 'Select available room.'}
+            {roomTypeName
+              ? `Select ${roomTypeName} room. Out of Order and unavailable rooms are shown but cannot be selected.`
+              : 'Select room. Out of Order and unavailable rooms are shown but cannot be selected.'}
           </p>
 
           {isLoading ? (
@@ -162,7 +200,9 @@ export const AssignRoomDialog = ({
                     const isCurrentlySelected = room.id === selectedRoomId;
                     const isDirty = room.housekeepingStatus === HousekeepingStatus.Dirty;
                     const isOOO = isRoomOutOfOrder(room.roomStatusCode);
-                    const isDisabled = isCurrentlySelected || isOOO || (isDirty && !allowDirtySelection);
+                    const isUnavailableForStay = !room.isAvailableForStay;
+                    const isDisabled =
+                      isCurrentlySelected || isOOO || isUnavailableForStay || (isDirty && !allowDirtySelection);
                     return (
                       <tr
                         key={room.id}
@@ -171,6 +211,8 @@ export const AssignRoomDialog = ({
                             ? 'bg-primary-50 dark:bg-primary-900/20'
                             : isOOO
                               ? 'bg-red-50/60 dark:bg-red-900/10'
+                              : isUnavailableForStay
+                                ? 'bg-gray-100/70 dark:bg-gray-700/30'
                               : isDirty
                                 ? 'bg-yellow-50/50 dark:bg-yellow-900/10'
                                 : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
@@ -186,6 +228,11 @@ export const AssignRoomDialog = ({
                           {isOOO && (
                             <span className="ml-2 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">
                               Out of Order
+                            </span>
+                          )}
+                          {isUnavailableForStay && (
+                            <span className="ml-2 inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                              Not Available
                             </span>
                           )}
                         </td>
@@ -210,7 +257,15 @@ export const AssignRoomDialog = ({
                               onSelectRoom(room.id);
                             }}
                           >
-                            {isCurrentlySelected ? 'Selected' : isOOO ? 'Unavailable' : isDirty && !allowDirtySelection ? 'Dirty' : 'Select'}
+                            {isCurrentlySelected
+                              ? 'Selected'
+                              : isOOO
+                                ? 'Out of Order'
+                                : isUnavailableForStay
+                                  ? 'Unavailable'
+                                  : isDirty && !allowDirtySelection
+                                    ? 'Dirty'
+                                    : 'Select'}
                           </button>
                         </td>
                       </tr>

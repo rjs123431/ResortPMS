@@ -91,6 +91,8 @@ const splitFullName = (fullName: string) => {
   };
 };
 
+const isRoomOutOfOrder = (room?: RoomListDto) => room?.roomStatusCode === 'OOO';
+
 export const CheckInWalkInPage = () => {
   const navigate = useNavigate();
   const { preCheckInId: urlPreCheckInId } = useParams<{ preCheckInId?: string }>();
@@ -306,20 +308,39 @@ export const CheckInWalkInPage = () => {
     [reservationDetailLines]
   );
 
+  const assignedRoomLookup = useMemo(() => {
+    const map = new Map<string, RoomListDto>();
+    for (const room of availableRooms) {
+      map.set(room.id, room);
+    }
+    for (const room of freshRoomStatuses ?? []) {
+      map.set(room.id, room);
+    }
+    return map;
+  }, [availableRooms, freshRoomStatuses]);
+
   const hasUnassignedRooms = useMemo(
-    () => reservationDetailLines.some((line) => !(assignedRoomByLine[line.lineId] ?? '').trim()),
-    [reservationDetailLines, assignedRoomByLine]
+    () =>
+      reservationDetailLines.some((line) => {
+        const assignedRoomId = (assignedRoomByLine[line.lineId] ?? '').trim();
+        if (!assignedRoomId) return true;
+        return !assignedRoomLookup.has(assignedRoomId);
+      }),
+    [reservationDetailLines, assignedRoomByLine, assignedRoomLookup]
   );
 
   const hasDirtyRoomsAssigned = useMemo(() => {
     if (assignedRoomIds.length === 0) return false;
     return assignedRoomIds.some((roomId) => {
-      const freshRoom = (freshRoomStatuses ?? []).find((r) => r.id === roomId);
-      if (freshRoom) return freshRoom.housekeepingStatus === HousekeepingStatus.Dirty;
-      const searchRoom = availableRooms.find((r) => r.id === roomId);
-      return searchRoom?.housekeepingStatus === HousekeepingStatus.Dirty;
+      const assignedRoom = assignedRoomLookup.get(roomId);
+      return assignedRoom?.housekeepingStatus === HousekeepingStatus.Dirty;
     });
-  }, [assignedRoomIds, availableRooms, freshRoomStatuses]);
+  }, [assignedRoomIds, assignedRoomLookup]);
+
+  const hasOutOfOrderRoomsAssigned = useMemo(() => {
+    if (assignedRoomIds.length === 0) return false;
+    return assignedRoomIds.some((roomId) => isRoomOutOfOrder(assignedRoomLookup.get(roomId)));
+  }, [assignedRoomIds, assignedRoomLookup]);
 
   const stayNights = useMemo(() => {
     if (!searchCriteria) return 0;
@@ -749,6 +770,12 @@ export const CheckInWalkInPage = () => {
       if (reservationDetailLines.some((line) => !assignedRoomByLine[line.lineId])) {
         throw new Error('Please assign a room for each selected room line before confirming.');
       }
+      if (hasUnassignedRooms) {
+        throw new Error('One or more assigned rooms are no longer available. Please reassign rooms before confirming.');
+      }
+      if (hasOutOfOrderRoomsAssigned) {
+        throw new Error('One or more assigned rooms are out of order. Please assign different rooms before confirming.');
+      }
       if (refundableDeposit > 0 && !refundableDepositPaymentMethodId) {
         throw new Error('Please select a payment method for refundable cash deposit.');
       }
@@ -1140,16 +1167,21 @@ export const CheckInWalkInPage = () => {
                         <td className="border border-gray-200 p-2 dark:border-gray-700">
                           {(() => {
                             const roomId = assignedRoomByLine[line.lineId];
-                            const assignedRoom = availableRooms.find((room) => room.id === roomId);
+                            const assignedRoom = roomId ? assignedRoomLookup.get(roomId) : undefined;
                             if (!assignedRoom) return 'Unassigned';
-                            const freshRoom = (freshRoomStatuses ?? []).find((r) => r.id === roomId);
-                            const isDirty = (freshRoom ?? assignedRoom).housekeepingStatus === HousekeepingStatus.Dirty;
+                            const isDirty = assignedRoom.housekeepingStatus === HousekeepingStatus.Dirty;
+                            const isOOO = isRoomOutOfOrder(assignedRoom);
                             return (
                               <span className="inline-flex items-center gap-1">
                                 {assignedRoom.roomNumber}
                                 {isDirty && (
                                   <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                                     Dirty
+                                  </span>
+                                )}
+                                {isOOO && (
+                                  <span className="rounded bg-rose-100 px-1.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                                    Out of Order
                                   </span>
                                 )}
                               </span>
@@ -1395,7 +1427,7 @@ export const CheckInWalkInPage = () => {
               <button
                 type="button"
                 onClick={() => setShowGuestInfoStep(true)}
-                disabled={hasUnassignedRooms}
+                disabled={hasUnassignedRooms || hasOutOfOrderRoomsAssigned}
                 className="inline-flex items-center gap-1 rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
               >
                 <span>Next</span>
@@ -1662,6 +1694,7 @@ export const CheckInWalkInPage = () => {
                   reservationDetailLines.length === 0 ||
                   hasUnassignedRooms ||
                   hasDirtyRoomsAssigned ||
+                  hasOutOfOrderRoomsAssigned ||
                   (refundableDeposit > 0 && !refundableDepositPaymentMethodId)
                 }
                 className="ml-auto inline-flex items-center gap-1 rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
@@ -1673,6 +1706,11 @@ export const CheckInWalkInPage = () => {
             {hasDirtyRoomsAssigned && (
               <p className="mt-2 text-sm text-amber-600">
                 Cannot complete check-in: one or more assigned rooms are dirty. Please clean the rooms first or assign different rooms.
+              </p>
+            )}
+            {hasOutOfOrderRoomsAssigned && (
+              <p className="mt-2 text-sm text-rose-600">
+                Cannot complete check-in: one or more assigned rooms are out of order. Please assign different rooms.
               </p>
             )}
             {confirmError ? <p className="mt-2 text-sm text-rose-600">{confirmError}</p> : null}
@@ -1697,6 +1735,8 @@ export const CheckInWalkInPage = () => {
           isChangeRoom={isChangeRoomDialog}
           roomTypeName={assignDialogLine?.roomTypeName}
           roomTypeId={assignDialogLine?.roomTypeId}
+          arrivalDate={searchCriteria?.arrivalDate ?? null}
+          departureDate={searchCriteria?.departureDate ?? null}
           selectedRoomId={assignDialogSelectedRoomId}
           excludeRoomIds={Object.entries(assignedRoomByLine)
             .filter(([lineId, roomId]) => lineId !== assignDialogLineId && Boolean(roomId))
