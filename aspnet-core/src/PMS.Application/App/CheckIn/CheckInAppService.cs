@@ -7,6 +7,8 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.CheckIn.Dto;
+using PMS.App.Events;
+using Abp.Events.Bus;
 using PMS.Application.App.PropertyTimes;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
@@ -45,7 +47,8 @@ public class CheckInAppService(
     IPropertyTimesProvider propertyTimesProvider,
     IRoomDailyInventoryService roomDailyInventoryService,
     IMutationAuditService mutationAuditService,
-    IFinancialAuditService financialAuditService
+    IFinancialAuditService financialAuditService,
+    IEventBus eventBus
 ) : PMSAppServiceBase, ICheckInAppService
 {
     [AbpAuthorize(PermissionNames.Pages_CheckIn_FromReservation)]
@@ -163,7 +166,7 @@ public class CheckInAppService(
         }
 
         // Mark reservation as checked-in
-        reservation.Status = ReservationStatus.CheckedIn;
+        reservation.MarkCheckedIn();
         await reservationRepository.UpdateAsync(reservation);
 
         // Extension point: sync room turn-over consumption (linen/amenities/etc.) when inventory module is available.
@@ -172,6 +175,26 @@ public class CheckInAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
 
         Logger.Info($"Check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {reservation.Guest?.GuestCode ?? reservation.GuestName}.");
+
+        await eventBus.TriggerAsync(new ReservationStatusChangedEvent
+        {
+            ReservationId = reservation.Id,
+            ReservationNo = reservation.ReservationNo,
+            PreviousStatus = ReservationStatus.Confirmed,
+            NewStatus = ReservationStatus.CheckedIn,
+            ChangedAt = Clock.Now
+        });
+
+        await eventBus.TriggerAsync(new StayCheckedInEvent
+        {
+            StayId = stay.Id,
+            StayNo = stay.StayNo,
+            ReservationId = reservation.Id,
+            RoomId = primaryRoom.Id,
+            RoomNumber = primaryRoom.RoomNumber,
+            CheckInDateTime = stay.CheckInDateTime,
+            ExpectedCheckOutDateTime = stay.ExpectedCheckOutDateTime
+        });
 
         return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
     }
@@ -261,6 +284,17 @@ public class CheckInAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
 
         Logger.Info($"Walk-in check-in completed: Stay {stay.StayNo}, Rooms {string.Join(", ", rooms.Select(r => r.RoomNumber))}, Guest {guest?.GuestCode ?? stay.GuestName}.");
+
+        await eventBus.TriggerAsync(new StayCheckedInEvent
+        {
+            StayId = stay.Id,
+            StayNo = stay.StayNo,
+            ReservationId = null,
+            RoomId = primaryRoom.Id,
+            RoomNumber = primaryRoom.RoomNumber,
+            CheckInDateTime = stay.CheckInDateTime,
+            ExpectedCheckOutDateTime = stay.ExpectedCheckOutDateTime
+        });
 
         return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
     }
@@ -457,7 +491,14 @@ public class CheckInAppService(
             .Where(sr => sr.StayId == stay.Id)
             .ToListAsync();
         foreach (var sr in stayRooms)
-            await roomDailyInventoryService.SetInHouseAsync(sr.RoomId, sr.ArrivalDate, sr.DepartureDate, stay.Id);
+        {
+            var claimed = await roomDailyInventoryService.TrySetInHouseAsync(
+                sr.RoomId, sr.ArrivalDate, sr.DepartureDate, stay.Id,
+                reservationId: stay.ReservationId);
+
+            if (!claimed)
+                throw new UserFriendlyException(L("RoomNoLongerAvailablePleaseSelectAnother"));
+        }
     }
 
     private static List<Guid> BuildRequestedRoomIds(Guid primaryRoomId, List<CheckInReservationRoomUpdateDto> reservationRooms)

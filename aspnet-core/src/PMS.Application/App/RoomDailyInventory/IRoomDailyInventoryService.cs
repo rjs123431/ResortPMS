@@ -35,6 +35,14 @@ public interface IRoomDailyInventoryService
     /// </summary>
     Task SetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId);
 
+        /// <summary>
+        /// Atomically marks inventory as InHouse only where the status is still Vacant or Reserved for the
+        /// given reservation. Returns true if exactly (departureDate - arrivalDate) nights were updated;
+        /// false means another operation already claimed at least one night (double-booking prevented).
+        /// Pass null for <paramref name="reservationId"/> on walk-in check-ins (only Vacant nights qualify).
+        /// </summary>
+        Task<bool> TrySetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId, Guid? reservationId);
+
     /// <summary>
     /// Sets daily inventory to Vacant for the room and date range; clears ReservationId and StayId.
     /// </summary>

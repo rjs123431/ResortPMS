@@ -5,6 +5,8 @@ import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
 import type { GuestDto } from '@/types/resort.types';
 import { GuestDialogForm } from './GuestDialogForm';
+import { invalidateResortQueries, resortKeys } from '@/lib/resortQueries';
+import type { GuestFormValues } from '@/lib/resortSchemas';
 
 export const GuestListPage = () => {
   const queryClient = useQueryClient();
@@ -28,7 +30,7 @@ export const GuestListPage = () => {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['resort-guests', filter],
+    queryKey: resortKeys.guests(filter),
     queryFn: () => resortService.getGuests(filter),
   });
 
@@ -36,7 +38,7 @@ export const GuestListPage = () => {
     mutationFn: resortService.createGuest,
     onSuccess: () => {
       setShowCreate(false);
-      void queryClient.invalidateQueries({ queryKey: ['resort-guests'] });
+      invalidateResortQueries(queryClient, 'guests');
     },
   });
 
@@ -44,7 +46,7 @@ export const GuestListPage = () => {
     mutationFn: resortService.updateGuest,
     onSuccess: () => {
       setEditingId(null);
-      void queryClient.invalidateQueries({ queryKey: ['resort-guests'] });
+      invalidateResortQueries(queryClient, 'guests');
     },
   });
 
@@ -155,20 +157,19 @@ export const GuestListPage = () => {
             setShowCreate(false);
             setEditingId(null);
           }}
-          onFormChange={(updater) => setForm((prev) => updater(prev))}
-          onSave={() => {
+          onSave={(values: GuestFormValues) => {
             if (editingId) {
-              updateMutation.mutate(form);
+              updateMutation.mutate({ ...form, ...values });
             } else {
               createMutation.mutate({
-                guestCode: form.guestCode,
-                firstName: form.firstName,
-                lastName: form.lastName,
-                middleName: form.middleName,
-                email: form.email,
-                phone: form.phone,
-                nationality: form.nationality,
-                notes: form.notes,
+                guestCode: values.guestCode,
+                firstName: values.firstName,
+                lastName: values.lastName,
+                middleName: values.middleName,
+                email: values.email,
+                phone: values.phone,
+                nationality: values.nationality,
+                notes: values.notes,
               });
             }
           }}

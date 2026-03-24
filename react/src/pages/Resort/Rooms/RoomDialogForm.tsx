@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { HousekeepingStatus } from '@/types/resort.types';
 import type { RoomDto } from '@/types/resort.types';
 
 type RoomTypeOption = {

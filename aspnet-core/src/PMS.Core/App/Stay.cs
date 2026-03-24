@@ -2,6 +2,7 @@ using Abp.Domain.Entities.Auditing;
 using Abp.Timing;
 using System;
 using System.Collections.Generic;
+using Abp.UI;
 
 namespace PMS.App;
 
@@ -32,6 +33,15 @@ public class Stay : FullAuditedEntity<Guid>
     public virtual ICollection<RoomChangeRequest> RoomChangeRequests { get; set; } = [];
     public virtual ICollection<GuestRequest> GuestRequests { get; set; } = [];
     public virtual ICollection<Incident> Incidents { get; set; } = [];
+    /// <summary>Marks as CheckedOut and records actual check-out time.</summary>
+    public void CompleteCheckOut(DateTime? checkOutTime = null)
+    {
+        if (Status == StayStatus.CheckedOut) return;
+        if (Status != StayStatus.CheckedIn && Status != StayStatus.InHouse)
+            throw new UserFriendlyException($"Cannot check out a stay that is '{Status}'.");
+        Status = StayStatus.CheckedOut;
+        ActualCheckOutDateTime = checkOutTime ?? Clock.Now;
+    }
 }
 
 public class StayGuest : CreationAuditedEntity<Guid>

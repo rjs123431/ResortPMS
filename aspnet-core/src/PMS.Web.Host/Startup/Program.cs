@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
+using System;
 using System.IO;
 
 namespace PMS.Web.Host.Startup
@@ -9,7 +12,32 @@ namespace PMS.Web.Host.Startup
     {
         public static void Main(string[] args)
         {
-            BuildWebHost(args).Run();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .MinimumLevel.Override("Abp", LogEventLevel.Warning)
+                .Enrich.FromLogContext()
+                .Enrich.WithThreadId()
+                .WriteTo.Console()
+                .WriteTo.File(
+                    new CompactJsonFormatter(),
+                    Path.Combine("App_Data", "Logs", "pms-.json"),
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 31)
+                .CreateBootstrapLogger();
+
+            try
+            {
+                BuildWebHost(args).Run();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Host terminated unexpectedly");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
 
         public static IWebHost BuildWebHost(string[] args)
@@ -20,8 +48,3 @@ namespace PMS.Web.Host.Startup
         }
     }
 }
-
-
-
-
-

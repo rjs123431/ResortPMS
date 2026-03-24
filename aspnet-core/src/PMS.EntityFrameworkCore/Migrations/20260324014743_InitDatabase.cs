@@ -1910,7 +1910,8 @@ namespace PMS.Migrations
                     StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     IsSellable = table.Column<bool>(type: "bit", nullable: false),
                     IsBlocked = table.Column<bool>(type: "bit", nullable: false),
-                    IsOutOfOrder = table.Column<bool>(type: "bit", nullable: false)
+                    IsOutOfOrder = table.Column<bool>(type: "bit", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
                 {

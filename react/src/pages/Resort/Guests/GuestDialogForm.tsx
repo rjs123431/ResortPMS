@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import type { GuestDto } from '@/types/resort.types';
+import { guestFormSchema, type GuestFormValues } from '@/lib/resortSchemas';
 
 type GuestDialogFormProps = {
   isOpen: boolean;
@@ -10,8 +13,7 @@ type GuestDialogFormProps = {
   canEdit: boolean;
   isSaving: boolean;
   onClose: () => void;
-  onFormChange: (updater: (prev: GuestDto) => GuestDto) => void;
-  onSave: () => void;
+  onSave: (values: GuestFormValues) => void;
 };
 
 export const GuestDialogForm = ({
@@ -22,9 +24,46 @@ export const GuestDialogForm = ({
   canEdit,
   isSaving,
   onClose,
-  onFormChange,
   onSave,
 }: GuestDialogFormProps) => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<GuestFormValues>({
+    resolver: zodResolver(guestFormSchema),
+    mode: 'onChange',
+    defaultValues: {
+      id: form.id,
+      guestCode: form.guestCode ?? '',
+      firstName: form.firstName ?? '',
+      lastName: form.lastName ?? '',
+      middleName: form.middleName ?? '',
+      email: form.email ?? '',
+      phone: form.phone ?? '',
+      nationality: form.nationality ?? '',
+      notes: form.notes ?? '',
+      isActive: form.isActive ?? true,
+    },
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    reset({
+      id: form.id,
+      guestCode: form.guestCode ?? '',
+      firstName: form.firstName ?? '',
+      lastName: form.lastName ?? '',
+      middleName: form.middleName ?? '',
+      email: form.email ?? '',
+      phone: form.phone ?? '',
+      nationality: form.nationality ?? '',
+      notes: form.notes ?? '',
+      isActive: form.isActive ?? true,
+    });
+  }, [form, isOpen, reset]);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,50 +90,55 @@ export const GuestDialogForm = ({
             </button>
           </div>
 
+          <form onSubmit={handleSubmit(onSave)}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Guest Code</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.guestCode} onChange={(e) => onFormChange((s) => ({ ...s, guestCode: e.target.value }))} />
+              <input className="w-full rounded border p-2 dark:bg-gray-700" {...register('guestCode')} />
+              {errors.guestCode ? <p className="mt-1 text-xs text-red-600">{errors.guestCode.message}</p> : null}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.firstName} onChange={(e) => onFormChange((s) => ({ ...s, firstName: e.target.value }))} />
+              <input className="w-full rounded border p-2 dark:bg-gray-700" {...register('firstName')} />
+              {errors.firstName ? <p className="mt-1 text-xs text-red-600">{errors.firstName.message}</p> : null}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.lastName} onChange={(e) => onFormChange((s) => ({ ...s, lastName: e.target.value }))} />
+              <input className="w-full rounded border p-2 dark:bg-gray-700" {...register('lastName')} />
+              {errors.lastName ? <p className="mt-1 text-xs text-red-600">{errors.lastName.message}</p> : null}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.email ?? ''} onChange={(e) => onFormChange((s) => ({ ...s, email: e.target.value }))} />
+              <input className="w-full rounded border p-2 dark:bg-gray-700" {...register('email')} />
+              {errors.email ? <p className="mt-1 text-xs text-red-600">{errors.email.message}</p> : null}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.phone ?? ''} onChange={(e) => onFormChange((s) => ({ ...s, phone: e.target.value }))} />
+              <input className="w-full rounded border p-2 dark:bg-gray-700" {...register('phone')} />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nationality</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.nationality ?? ''} onChange={(e) => onFormChange((s) => ({ ...s, nationality: e.target.value }))} />
+              <input className="w-full rounded border p-2 dark:bg-gray-700" {...register('nationality')} />
             </div>
           </div>
           <div className="mt-3">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-            <textarea className="w-full rounded border p-2 dark:bg-gray-700" value={form.notes ?? ''} onChange={(e) => onFormChange((s) => ({ ...s, notes: e.target.value }))} />
+            <textarea className="w-full rounded border p-2 dark:bg-gray-700" {...register('notes')} />
           </div>
           {editingId ? (
             <label className="mt-3 flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.isActive} onChange={(e) => onFormChange((s) => ({ ...s, isActive: e.target.checked }))} />
+              <input type="checkbox" {...register('isActive')} />
               Active
             </label>
           ) : null}
           <button
-            type="button"
+            type="submit"
             className="mt-3 rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
-            disabled={isSaving || !form.guestCode || !form.firstName || !form.lastName || (editingId ? !canEdit : !canCreate)}
-            onClick={onSave}
+            disabled={isSaving || !isValid || (editingId ? !canEdit : !canCreate)}
           >
             {isSaving ? 'Saving...' : 'Save'}
           </button>
+          </form>
         </DialogPanel>
       </div>
     </Dialog>

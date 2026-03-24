@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { signalRService } from '@/services/signalr.service';
 import { useAuth } from './AuthContext';
 import { UserNotification } from '@/types/notification.types';
+import { invalidateResortQueries } from '@/lib/resortQueries';
 interface SignalRContextType {
   isConnected: boolean;
   notifications: UserNotification[];
@@ -35,9 +36,7 @@ export const SignalRProvider = ({ children }: { children: ReactNode }) => {
       });
 
       signalRService.onHousekeepingTaskStatusChanged(() => {
-        void queryClient.invalidateQueries({ queryKey: ['housekeeping-tasks'] });
-        void queryClient.invalidateQueries({ queryKey: ['resort-guest-requests'] });
-        void queryClient.invalidateQueries({ queryKey: ['resort-guest-request-completion-context'] });
+        invalidateResortQueries(queryClient, 'housekeepingAndRequests');
       });
 
       signalRService.startConnection().catch((error) => {

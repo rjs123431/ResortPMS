@@ -2,6 +2,7 @@ using Abp.Domain.Entities.Auditing;
 using Abp.Timing;
 using System;
 using System.Collections.Generic;
+using Abp.UI;
 
 namespace PMS.App;
 
@@ -41,6 +42,58 @@ public class Reservation : FullAuditedEntity<Guid>
     public virtual ICollection<ReservationExtraBed> ExtraBeds { get; set; } = [];
     public virtual ICollection<ReservationGuest> Guests { get; set; } = [];
     public virtual ICollection<ReservationDeposit> Deposits { get; set; } = [];
+    /// <summary>Transitions from Draft or Pending to Confirmed.</summary>
+    public void Confirm()
+    {
+        if (Status == ReservationStatus.Confirmed) return;
+        if (Status != ReservationStatus.Draft && Status != ReservationStatus.Pending)
+            throw new UserFriendlyException($"Cannot confirm a reservation in '{Status}' status.");
+        Status = ReservationStatus.Confirmed;
+    }
+
+    /// <summary>Transitions from Draft, Pending, or Confirmed to Cancelled.</summary>
+    public void Cancel(string reason = null)
+    {
+        if (Status == ReservationStatus.Cancelled) return;
+        if (Status == ReservationStatus.CheckedIn || Status == ReservationStatus.Completed)
+            throw new UserFriendlyException($"Cannot cancel a reservation that is '{Status}'.");
+        Status = ReservationStatus.Cancelled;
+        if (!string.IsNullOrWhiteSpace(reason))
+            Notes = string.IsNullOrWhiteSpace(Notes) ? reason : $"{Notes}\nCancelled: {reason}";
+    }
+
+    /// <summary>Transitions to Pending (e.g. awaiting deposit confirmation).</summary>
+    public void SetPending()
+    {
+        if (Status == ReservationStatus.Pending) return;
+        if (Status != ReservationStatus.Draft)
+            throw new UserFriendlyException($"Cannot set a reservation to Pending from '{Status}' status.");
+        Status = ReservationStatus.Pending;
+    }
+
+    /// <summary>Marks a Confirmed reservation as NoShow.</summary>
+    public void MarkNoShow()
+    {
+        if (Status != ReservationStatus.Confirmed)
+            throw new UserFriendlyException($"Cannot mark no-show for a reservation in '{Status}' status.");
+        Status = ReservationStatus.NoShow;
+    }
+
+    /// <summary>Marks as checked-in. For internal use by CheckInAppService.</summary>
+    public void MarkCheckedIn()
+    {
+        if (Status != ReservationStatus.Confirmed)
+            throw new UserFriendlyException($"Only Confirmed reservations can be checked in (current: '{Status}').");
+        Status = ReservationStatus.CheckedIn;
+    }
+
+    /// <summary>Marks as Completed after check-out. For internal use by checkout logic.</summary>
+    public void MarkCompleted()
+    {
+        if (Status != ReservationStatus.CheckedIn)
+            throw new UserFriendlyException($"Only CheckedIn reservations can be completed (current: '{Status}').");
+        Status = ReservationStatus.Completed;
+    }
 }
 
 public class ReservationExtraBed : CreationAuditedEntity<Guid>

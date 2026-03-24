@@ -139,6 +139,43 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         }
     }
 
+        public async Task<bool> TrySetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId, Guid? reservationId)
+        {
+            var start = arrivalDate.Date;
+            var end = departureDate.Date;
+            if (start >= end) return false;
+
+            var expectedNights = (int)(end - start).TotalDays;
+            await EnsureInventoryForDateRangeAsync([roomId], start, end);
+
+            var ctx = await _dbContextProvider.GetDbContextAsync();
+            var inHouse = (int)RoomDailyInventoryStatus.InHouse;
+            var vacant = (int)RoomDailyInventoryStatus.Vacant;
+            var reserved = (int)RoomDailyInventoryStatus.Reserved;
+
+            int rowsAffected;
+            if (reservationId.HasValue)
+            {
+                // Check-in from reservation: accept nights that are Vacant OR Reserved under this reservation.
+                rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
+                    @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}
+                      WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
+                        AND (Status = {5} OR (Status = {6} AND ReservationId = {7}))",
+                    inHouse, stayId, roomId, start, end, vacant, reserved, reservationId.Value);
+            }
+            else
+            {
+                // Walk-in: only Vacant nights are eligible.
+                rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
+                    @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}
+                      WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
+                        AND Status = {5}",
+                    inHouse, stayId, roomId, start, end, vacant);
+            }
+
+            return rowsAffected == expectedNights;
+        }
+
     public async Task SetVacantAsync(Guid roomId, DateTime fromDate, DateTime toDate)
     {
         var start = fromDate.Date;

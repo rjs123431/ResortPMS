@@ -301,6 +301,17 @@ public class ReservationAppService(
     {
         var reservation = await reservationRepository.GetAsync(input.Id);
 
+        var previousArrivalDate = reservation.ArrivalDate.Date;
+        var previousDepartureDate = reservation.DepartureDate.Date;
+        var existingRooms = await reservationRoomRepository.GetAll()
+            .Where(rr => rr.ReservationId == reservation.Id)
+            .ToListAsync();
+        var existingAssignedRoomIds = existingRooms
+            .Where(rr => rr.RoomId.HasValue)
+            .Select(rr => rr.RoomId!.Value)
+            .Distinct()
+            .ToList();
+
         if (reservation.Status == ReservationStatus.CheckedIn || reservation.Status == ReservationStatus.Completed)
             throw new UserFriendlyException(L("CannotEditCheckedInOrCompletedReservation"));
 
@@ -323,13 +334,67 @@ public class ReservationAppService(
         reservation.ReservationConditions = input.ReservationConditions ?? string.Empty;
         reservation.SpecialRequests = input.SpecialRequests ?? string.Empty;
 
+        var updatedAssignedRoomIds = (input.Rooms != null && input.Rooms.Count > 0
+                ? input.Rooms.Where(r => r.RoomId.HasValue).Select(r => r.RoomId!.Value)
+                : existingAssignedRoomIds)
+            .Distinct()
+            .ToList();
+
+        if (input.Rooms != null && input.Rooms.Count > 0)
+        {
+            var unassignedByType = input.Rooms
+                .Where(r => !r.RoomId.HasValue)
+                .GroupBy(r => r.RoomTypeId)
+                .ToList();
+
+            foreach (var unassignedGroup in unassignedByType)
+            {
+                var requestedCount = unassignedGroup.Count();
+                var totalRoomsForType = await roomRepository.GetAll()
+                    .CountAsync(r => r.RoomTypeId == unassignedGroup.Key && r.IsActive);
+
+                var occupiedCount = await reservationRoomRepository.GetAll()
+                    .Where(rr =>
+                        rr.ReservationId != reservation.Id &&
+                        rr.RoomTypeId == unassignedGroup.Key &&
+                        rr.ArrivalDate < reservation.DepartureDate &&
+                        rr.DepartureDate > reservation.ArrivalDate &&
+                        (rr.Reservation.Status == ReservationStatus.Pending ||
+                         rr.Reservation.Status == ReservationStatus.Confirmed ||
+                         rr.Reservation.Status == ReservationStatus.CheckedIn))
+                    .CountAsync();
+
+                if (occupiedCount + requestedCount > totalRoomsForType)
+                {
+                    var roomType = await roomTypeRepository.FirstOrDefaultAsync(unassignedGroup.Key);
+                    throw new UserFriendlyException($"Not enough rooms available for room type '{roomType?.Name ?? "requested"}' for the selected dates.");
+                }
+            }
+        }
+
+        if (existingAssignedRoomIds.Count > 0 || updatedAssignedRoomIds.Count > 0)
+        {
+            foreach (var roomId in existingAssignedRoomIds)
+                await roomDailyInventoryService.SetVacantAsync(roomId, previousArrivalDate, previousDepartureDate);
+
+            foreach (var roomId in updatedAssignedRoomIds)
+            {
+                await roomDailyInventoryService.Ensure365DaysFromTodayAsync([roomId]);
+                var reserved = await roomDailyInventoryService.TryReserveInventoryAsync(
+                    roomId,
+                    reservation.ArrivalDate.Date,
+                    reservation.DepartureDate.Date,
+                    reservation.Id);
+
+                if (!reserved)
+                    throw new UserFriendlyException(L("RoomIsNotAvailableForStayDates"));
+            }
+        }
+
         // Update reservation rooms if provided
         if (input.Rooms != null && input.Rooms.Count > 0)
         {
             // Remove existing rooms
-            var existingRooms = await reservationRoomRepository.GetAll()
-                .Where(rr => rr.ReservationId == reservation.Id)
-                .ToListAsync();
             foreach (var room in existingRooms)
             {
                 await reservationRoomRepository.DeleteAsync(room);
@@ -392,7 +457,7 @@ public class ReservationAppService(
             throw new UserFriendlyException(L("ReservationAlreadyCancelled"));
 
         var previousStatus = reservation.Status;
-        reservation.Status = ReservationStatus.Cancelled;
+        reservation.Cancel();
         var cancellationNoteParts = new List<string>();
         if (!string.IsNullOrWhiteSpace(input.Reason))
             cancellationNoteParts.Add($"Reason: {input.Reason.Trim()}");
@@ -438,7 +503,7 @@ public class ReservationAppService(
         if (reservation.Status != ReservationStatus.Draft && reservation.Status != ReservationStatus.Pending)
             throw new UserFriendlyException(L("OnlyDraftOrPendingCanBeConfirmed"));
 
-        reservation.Status = ReservationStatus.Confirmed;
+        reservation.Confirm();
         await reservationRepository.UpdateAsync(reservation);
 
         await mutationAuditService.RecordAsync(
@@ -459,7 +524,7 @@ public class ReservationAppService(
         if (reservation.Status != ReservationStatus.Draft)
             throw new UserFriendlyException(L("OnlyDraftCanBeSetToPending"));
 
-        reservation.Status = ReservationStatus.Pending;
+        reservation.SetPending();
         await reservationRepository.UpdateAsync(reservation);
 
         await mutationAuditService.RecordAsync(
@@ -480,7 +545,7 @@ public class ReservationAppService(
         if (reservation.Status != ReservationStatus.Confirmed)
             throw new UserFriendlyException(L("OnlyConfirmedCanBeMarkedNoShow"));
 
-        reservation.Status = ReservationStatus.NoShow;
+        reservation.MarkNoShow();
         await reservationRepository.UpdateAsync(reservation);
 
         await mutationAuditService.RecordAsync(

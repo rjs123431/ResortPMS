@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import type { UserDto, CreateUserDto } from '@services/user.service';
+import type { UserDto } from '@services/user.service';
 import type { RoleOption } from '@services/user.service';
 
 type UserFormState = Omit<UserDto, 'id' | 'fullName' | 'lastLoginTime' | 'creationTime'> & {

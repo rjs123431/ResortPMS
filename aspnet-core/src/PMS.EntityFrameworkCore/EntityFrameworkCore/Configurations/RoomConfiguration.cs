@@ -94,6 +94,7 @@ internal class RoomDailyInventoryConfiguration : IEntityTypeConfiguration<RoomDa
 
         entity.Property(e => e.Status).HasConversion<int>();
         entity.Property(e => e.InventoryDate).HasColumnType("date");
+        entity.Property(e => e.RowVersion).IsRowVersion();
 
         entity.HasIndex(e => new { e.RoomId, e.InventoryDate });
 

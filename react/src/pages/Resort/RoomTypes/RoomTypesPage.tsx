@@ -5,6 +5,8 @@ import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
 import { RoomTypeDialogForm, type RoomTypeForm } from './RoomTypeDialogForm';
 import { RoomTypeRoomsDialog } from './RoomTypeRoomsDialog';
+import { invalidateResortQueries, resortKeys } from '@/lib/resortQueries';
+import type { RoomTypeFormValues } from '@/lib/resortSchemas';
 
 const ROOM_TYPE_META_PREFIX = '__RTMETA__';
 
@@ -98,7 +100,7 @@ export const RoomTypeListPage = () => {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['resort-room-types-paged', filter],
+    queryKey: resortKeys.roomTypesPaged(filter),
     queryFn: () => resortService.getRoomTypesPaged(filter),
   });
 
@@ -106,8 +108,7 @@ export const RoomTypeListPage = () => {
     mutationFn: resortService.createRoomType,
     onSuccess: () => {
       setShowCreate(false);
-      void queryClient.invalidateQueries({ queryKey: ['resort-room-types-paged'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-room-types'] });
+      invalidateResortQueries(queryClient, 'roomTypes');
     },
   });
 
@@ -115,8 +116,7 @@ export const RoomTypeListPage = () => {
     mutationFn: resortService.updateRoomType,
     onSuccess: () => {
       setEditingId(null);
-      void queryClient.invalidateQueries({ queryKey: ['resort-room-types-paged'] });
-      void queryClient.invalidateQueries({ queryKey: ['resort-room-types'] });
+      invalidateResortQueries(queryClient, 'roomTypes');
     },
   });
 
@@ -245,23 +245,22 @@ export const RoomTypeListPage = () => {
             setShowCreate(false);
             setEditingId(null);
           }}
-          onFormChange={(updater) => setForm((prev) => updater(prev))}
-          onSave={() => {
+          onSave={(values: RoomTypeFormValues) => {
             if (editingId) {
               updateMutation.mutate({
-                id: form.id,
-                name: form.name,
-                description: encodeRoomTypeDescription(form),
-                maxAdults: form.maxAdults,
-                maxChildren: form.maxChildren,
-                isActive: form.isActive,
+                id: values.id,
+                name: values.name,
+                description: encodeRoomTypeDescription(values),
+                maxAdults: values.maxAdults,
+                maxChildren: values.maxChildren,
+                isActive: values.isActive,
               });
             } else {
               createMutation.mutate({
-                name: form.name,
-                description: encodeRoomTypeDescription(form),
-                maxAdults: form.maxAdults,
-                maxChildren: form.maxChildren,
+                name: values.name,
+                description: encodeRoomTypeDescription(values),
+                maxAdults: values.maxAdults,
+                maxChildren: values.maxChildren,
               });
             }
           }}

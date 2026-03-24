@@ -9,25 +9,26 @@ import {
   type FrontDeskDashboardDto,
   type FrontDeskDepartureRowDto,
 } from '@services/frontdesk.service';
+import { resortKeys } from '@/lib/resortQueries';
 
 export const FrontDeskDashboardPage: React.FC = () => {
   const { isGranted } = useAuth();
   const navigate = useNavigate();
 
   const { data } = useQuery<FrontDeskDashboardDto>({
-    queryKey: ['front-desk-dashboard'],
+    queryKey: resortKeys.frontDeskDashboard(),
     queryFn: () => frontDeskService.getDashboardSummary(),
     staleTime: 60_000,
   });
 
   const { data: arrivals } = useQuery<FrontDeskArrivalRowDto[]>({
-    queryKey: ['front-desk-dashboard', 'arrivals-today'],
+    queryKey: resortKeys.frontDeskArrivalsToday(),
     queryFn: () => frontDeskService.getTodayArrivals(),
     staleTime: 60_000,
   });
 
   const { data: departures } = useQuery<FrontDeskDepartureRowDto[]>({
-    queryKey: ['front-desk-dashboard', 'departures-today'],
+    queryKey: resortKeys.frontDeskDeparturesToday(),
     queryFn: () => frontDeskService.getTodayDepartures(),
     staleTime: 60_000,
   });

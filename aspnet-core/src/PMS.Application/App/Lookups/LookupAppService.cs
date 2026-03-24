@@ -6,6 +6,7 @@ using Abp.Domain.Repositories;
 using Abp.Linq.Extensions;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PMS.App.Lookups.Dto;
 using PMS.Authorization;
 using System.Linq;
@@ -13,6 +14,16 @@ using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
 
 namespace PMS.App.Lookups;
+
+internal static class LookupCacheKeys
+{
+    public const string ChargeTypesActive = "lookup:charge-types:active";
+    public const string PaymentMethodsActive = "lookup:payment-methods:active";
+    public const string ChannelsActive = "lookup:channels:active";
+    public const string AgenciesActive = "lookup:agencies:active";
+    public const string ExtraBedTypesActive = "lookup:extra-bed-types:active";
+    public const string StaffActive = "lookup:staff:active";
+}
 
 public interface IChargeTypeAppService : IApplicationService
 {
@@ -70,7 +81,8 @@ public interface IStaffAppService : IApplicationService
 
 [AbpAuthorize(PermissionNames.Pages_ChargeTypes)]
 public class ChargeTypeAppService(
-    IRepository<ChargeType, Guid> chargeTypeRepository
+    IRepository<ChargeType, Guid> chargeTypeRepository,
+    IMemoryCache memoryCache
 ) : PMSAppServiceBase, IChargeTypeAppService
 {
     public async Task<ChargeTypeDto> GetAsync(Guid id)
@@ -92,8 +104,12 @@ public class ChargeTypeAppService(
 
     public async Task<System.Collections.Generic.List<ChargeTypeListDto>> GetAllActiveAsync()
     {
-        var items = await chargeTypeRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Sort).ThenBy(x => x.Name).ToListAsync();
-        return ObjectMapper.Map<System.Collections.Generic.List<ChargeTypeListDto>>(items);
+        return await memoryCache.GetOrCreateAsync(LookupCacheKeys.ChargeTypesActive, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var items = await chargeTypeRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Sort).ThenBy(x => x.Name).ToListAsync();
+            return ObjectMapper.Map<System.Collections.Generic.List<ChargeTypeListDto>>(items);
+        });
     }
 
     [AbpAuthorize(PermissionNames.Pages_ChargeTypes_Create)]
@@ -131,7 +147,9 @@ public class ChargeTypeAppService(
         entity.Category = category;
         entity.IsActive = true;
 
-        return await chargeTypeRepository.InsertAndGetIdAsync(entity);
+        var id = await chargeTypeRepository.InsertAndGetIdAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.ChargeTypesActive);
+        return id;
     }
 
     [AbpAuthorize(PermissionNames.Pages_ChargeTypes_Edit)]
@@ -166,12 +184,14 @@ public class ChargeTypeAppService(
         entity.Name = name;
         entity.Category = category;
         await chargeTypeRepository.UpdateAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.ChargeTypesActive);
     }
 }
 
 [AbpAuthorize(PermissionNames.Pages_PaymentMethods)]
 public class PaymentMethodAppService(
-    IRepository<PaymentMethod, Guid> paymentMethodRepository
+    IRepository<PaymentMethod, Guid> paymentMethodRepository,
+    IMemoryCache memoryCache
 ) : PMSAppServiceBase, IPaymentMethodAppService
 {
     public async Task<PaymentMethodDto> GetAsync(Guid id)
@@ -193,8 +213,12 @@ public class PaymentMethodAppService(
 
     public async Task<System.Collections.Generic.List<PaymentMethodListDto>> GetAllActiveAsync()
     {
-        var items = await paymentMethodRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
-        return ObjectMapper.Map<System.Collections.Generic.List<PaymentMethodListDto>>(items);
+        return await memoryCache.GetOrCreateAsync(LookupCacheKeys.PaymentMethodsActive, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var items = await paymentMethodRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+            return ObjectMapper.Map<System.Collections.Generic.List<PaymentMethodListDto>>(items);
+        });
     }
 
     [AbpAuthorize(PermissionNames.Pages_PaymentMethods_Create)]
@@ -207,7 +231,9 @@ public class PaymentMethodAppService(
         entity.Name = input.Name.Trim();
         entity.IsActive = true;
 
-        return await paymentMethodRepository.InsertAndGetIdAsync(entity);
+        var id = await paymentMethodRepository.InsertAndGetIdAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.PaymentMethodsActive);
+        return id;
     }
 
     [AbpAuthorize(PermissionNames.Pages_PaymentMethods_Edit)]
@@ -217,12 +243,14 @@ public class PaymentMethodAppService(
         ObjectMapper.Map(input, entity);
         entity.Name = input.Name.Trim();
         await paymentMethodRepository.UpdateAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.PaymentMethodsActive);
     }
 }
 
 [AbpAuthorize(PermissionNames.Pages_Channels)]
 public class ChannelAppService(
-    IRepository<Channel, Guid> channelRepository
+    IRepository<Channel, Guid> channelRepository,
+    IMemoryCache memoryCache
 ) : PMSAppServiceBase, IChannelAppService
 {
     public async Task<ChannelDto> GetAsync(Guid id)
@@ -244,8 +272,12 @@ public class ChannelAppService(
 
     public async Task<System.Collections.Generic.List<ChannelListDto>> GetAllActiveAsync()
     {
-        var items = await channelRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Sort).ThenBy(x => x.Name).ToListAsync();
-        return ObjectMapper.Map<System.Collections.Generic.List<ChannelListDto>>(items);
+        return await memoryCache.GetOrCreateAsync(LookupCacheKeys.ChannelsActive, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var items = await channelRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Sort).ThenBy(x => x.Name).ToListAsync();
+            return ObjectMapper.Map<System.Collections.Generic.List<ChannelListDto>>(items);
+        });
     }
 
     [AbpAuthorize(PermissionNames.Pages_Channels_Create)]
@@ -264,7 +296,9 @@ public class ChannelAppService(
         entity.Sort = input.Sort;
         entity.IsActive = true;
 
-        return await channelRepository.InsertAndGetIdAsync(entity);
+        var id = await channelRepository.InsertAndGetIdAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.ChannelsActive);
+        return id;
     }
 
     [AbpAuthorize(PermissionNames.Pages_Channels_Edit)]
@@ -283,12 +317,14 @@ public class ChannelAppService(
         entity.Icon = icon;
         entity.Sort = input.Sort;
         await channelRepository.UpdateAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.ChannelsActive);
     }
 }
 
 [AbpAuthorize(PermissionNames.Pages_Agencies)]
 public class AgencyAppService(
-    IRepository<Agency, Guid> agencyRepository
+    IRepository<Agency, Guid> agencyRepository,
+    IMemoryCache memoryCache
 ) : PMSAppServiceBase, IAgencyAppService
 {
     public async Task<AgencyDto> GetAsync(Guid id)
@@ -310,8 +346,12 @@ public class AgencyAppService(
 
     public async Task<System.Collections.Generic.List<AgencyListDto>> GetAllActiveAsync()
     {
-        var items = await agencyRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
-        return ObjectMapper.Map<System.Collections.Generic.List<AgencyListDto>>(items);
+        return await memoryCache.GetOrCreateAsync(LookupCacheKeys.AgenciesActive, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var items = await agencyRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+            return ObjectMapper.Map<System.Collections.Generic.List<AgencyListDto>>(items);
+        });
     }
 
     [AbpAuthorize(PermissionNames.Pages_Agencies_Create)]
@@ -327,7 +367,9 @@ public class AgencyAppService(
         entity.Name = name;
         entity.IsActive = true;
 
-        return await agencyRepository.InsertAndGetIdAsync(entity);
+        var id = await agencyRepository.InsertAndGetIdAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.AgenciesActive);
+        return id;
     }
 
     [AbpAuthorize(PermissionNames.Pages_Agencies_Edit)]
@@ -343,12 +385,14 @@ public class AgencyAppService(
         ObjectMapper.Map(input, entity);
         entity.Name = name;
         await agencyRepository.UpdateAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.AgenciesActive);
     }
 }
 
 [AbpAuthorize(PermissionNames.Pages_ExtraBedTypes)]
 public class ExtraBedTypeAppService(
-    IRepository<ExtraBedType, Guid> extraBedTypeRepository
+    IRepository<ExtraBedType, Guid> extraBedTypeRepository,
+    IMemoryCache memoryCache
 ) : PMSAppServiceBase, IExtraBedTypeAppService
 {
     public async Task<ExtraBedTypeDto> GetAsync(Guid id)
@@ -370,8 +414,12 @@ public class ExtraBedTypeAppService(
 
     public async Task<System.Collections.Generic.List<ExtraBedTypeListDto>> GetAllActiveAsync()
     {
-        var items = await extraBedTypeRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
-        return ObjectMapper.Map<System.Collections.Generic.List<ExtraBedTypeListDto>>(items);
+        return await memoryCache.GetOrCreateAsync(LookupCacheKeys.ExtraBedTypesActive, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var items = await extraBedTypeRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+            return ObjectMapper.Map<System.Collections.Generic.List<ExtraBedTypeListDto>>(items);
+        });
     }
 
     [AbpAuthorize(PermissionNames.Pages_ExtraBedTypes_Create)]
@@ -384,7 +432,9 @@ public class ExtraBedTypeAppService(
         entity.Name = input.Name.Trim();
         entity.IsActive = true;
 
-        return await extraBedTypeRepository.InsertAndGetIdAsync(entity);
+        var id = await extraBedTypeRepository.InsertAndGetIdAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.ExtraBedTypesActive);
+        return id;
     }
 
     [AbpAuthorize(PermissionNames.Pages_ExtraBedTypes_Edit)]
@@ -394,12 +444,14 @@ public class ExtraBedTypeAppService(
         ObjectMapper.Map(input, entity);
         entity.Name = input.Name.Trim();
         await extraBedTypeRepository.UpdateAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.ExtraBedTypesActive);
     }
 }
 
 [AbpAuthorize(PermissionNames.Pages_Staff)]
 public class StaffAppService(
-    IRepository<Staff, Guid> staffRepository
+    IRepository<Staff, Guid> staffRepository,
+    IMemoryCache memoryCache
 ) : PMSAppServiceBase, IStaffAppService
 {
     public async Task<StaffDto> GetAsync(Guid id)
@@ -421,8 +473,12 @@ public class StaffAppService(
 
     public async Task<System.Collections.Generic.List<StaffListDto>> GetAllActiveAsync()
     {
-        var items = await staffRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.FullName).ToListAsync();
-        return ObjectMapper.Map<System.Collections.Generic.List<StaffListDto>>(items);
+        return await memoryCache.GetOrCreateAsync(LookupCacheKeys.StaffActive, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var items = await staffRepository.GetAll().Where(x => x.IsActive).OrderBy(x => x.FullName).ToListAsync();
+            return ObjectMapper.Map<System.Collections.Generic.List<StaffListDto>>(items);
+        });
     }
 
     [AbpAuthorize(PermissionNames.Pages_Staff_Create)]
@@ -442,7 +498,9 @@ public class StaffAppService(
         entity.PhoneNumber = input.PhoneNumber?.Trim() ?? string.Empty;
         entity.IsActive = true;
 
-        return await staffRepository.InsertAndGetIdAsync(entity);
+        var id = await staffRepository.InsertAndGetIdAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.StaffActive);
+        return id;
     }
 
     [AbpAuthorize(PermissionNames.Pages_Staff_Edit)]
@@ -462,5 +520,6 @@ public class StaffAppService(
         entity.Position = input.Position?.Trim() ?? string.Empty;
         entity.PhoneNumber = input.PhoneNumber?.Trim() ?? string.Empty;
         await staffRepository.UpdateAsync(entity);
+        memoryCache.Remove(LookupCacheKeys.StaffActive);
     }
 }

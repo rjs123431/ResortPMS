@@ -161,7 +161,6 @@ export const RoomListPage = () => {
                 roomNumber: form.roomNumber,
                 roomTypeId: form.roomTypeId,
                 floor: form.floor,
-                operationalStatus: form.operationalStatus,
               });
             }
           }}

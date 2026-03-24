@@ -7,6 +7,8 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Checkout.Dto;
+using PMS.App.Events;
+using Abp.Events.Bus;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
 using PMS.Auditing;
@@ -44,7 +46,8 @@ public class CheckOutAppService(
     IDocumentNumberService documentNumberService,
     IRoomDailyInventoryService roomDailyInventoryService,
     IMutationAuditService mutationAuditService,
-    IFinancialAuditService financialAuditService
+    IFinancialAuditService financialAuditService,
+    IEventBus eventBus
 ) : PMSAppServiceBase, ICheckOutAppService
 {
     public async Task<CheckOutStatementDto> GetStatementAsync(Guid stayId)
@@ -286,11 +289,19 @@ public class CheckOutAppService(
         }
 
         // Mark stay complete
-        stay.Status = StayStatus.CheckedOut;
-        stay.ActualCheckOutDateTime = Clock.Now;
+        stay.CompleteCheckOut(Clock.Now);
         await stayRepository.UpdateAsync(stay);
 
         Logger.Info($"Check-out completed: Stay {stay.StayNo}, Receipt {receiptNo}.");
+
+        await eventBus.TriggerAsync(new StayCheckedOutEvent
+        {
+            StayId = stay.Id,
+            StayNo = stay.StayNo,
+            ReservationId = stay.ReservationId,
+            ActualCheckOutDateTime = stay.ActualCheckOutDateTime ?? Clock.Now,
+            TotalCharged = totalCharges
+        });
 
         return new CheckOutResultDto
         {

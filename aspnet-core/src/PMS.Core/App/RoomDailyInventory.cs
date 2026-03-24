@@ -1,5 +1,6 @@
 using Abp.Domain.Entities;
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace PMS.App;
 
@@ -25,6 +26,10 @@ public class RoomDailyInventory : Entity<Guid>
     public bool IsSellable { get; set; } = true;
     public bool IsBlocked { get; set; } = false;
     public bool IsOutOfOrder { get; set; } = false;
+
+    /// <summary>SQL Server rowversion — EF Core optimistic concurrency token.</summary>
+    [Timestamp]
+    public byte[] RowVersion { get; set; }
 
     public virtual Room Room { get; set; }
 }

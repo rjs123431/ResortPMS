@@ -8,6 +8,7 @@ using Castle.Facilities.Logging;
 using Hangfire;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,6 +26,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using PMS.Application.Hubs;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Serilog;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 namespace PMS.Web.Host.Startup
 {
@@ -105,6 +110,23 @@ namespace PMS.Web.Host.Startup
                 }
             }
 
+            services.AddHealthChecks();
+            services.AddMemoryCache();
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: "global",
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 200,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0,
+                            AutoReplenishment = true
+                        }));
+            });
+
             // Configure Abp and Dependency Injection
             return services.AddAbp<PMSWebHostModule>(
                 // Configure Log4Net logging
@@ -116,16 +138,20 @@ namespace PMS.Web.Host.Startup
                 )
             );
         }
-
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
+            loggerFactory.AddSerilog();
+
+            app.UseMiddleware<CorrelationIdMiddleware>();
+            app.UseMiddleware<SecurityHeadersMiddleware>();
+
             app.UseAbp(options => { options.UseAbpRequestLocalization = false; }); // Initializes ABP framework.
 
             app.UseCors(_defaultCorsPolicyName); // Enable CORS!
 
             app.Use(async (context, next) =>
             {
-                if (context.Request.Path.Value.Contains("/file/view") 
+                if (context.Request.Path.Value.Contains("/file/view")
                 || context.Request.Path.Value.ToLower().Contains("paysliphtml"))
                 {
                     // Remove the X-Frame-Options header
@@ -143,22 +169,11 @@ namespace PMS.Web.Host.Startup
                 }
             });
 
-            //// Custom middleware to remove X-Frame-Options header for a specific route
-            //app.Use(async (context, next) =>
-            //{
-            //    await next();
-
-            //    // Check if the request path matches the specific route
-            //    if (context.Request.Path.Value.Contains("/file/view"))
-            //    {
-            //        // Remove the X-Frame-Options header
-            //        context.Response.Headers.Remove("X-Frame-Options");
-            //    }
-            //});
-
             app.UseStaticFiles();
 
             app.UseRouting();
+
+            app.UseRateLimiter();
 
             app.UseAuthentication();
 
@@ -170,6 +185,7 @@ namespace PMS.Web.Host.Startup
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapHealthChecks("/health");
                 endpoints.MapHub<AbpCommonHub>("/signalr");
                 endpoints.MapHub<PMS.Application.Hubs.PhysicalCountHub>("/signalr-physicalcount");
                 endpoints.MapHub<PMS.Application.Hubs.PosHub>("/signalr-pos");

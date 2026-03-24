@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import { HousekeepingStatus } from '@/types/resort.types';
@@ -13,20 +12,11 @@ const HK_STATUS_BADGE: Record<HousekeepingStatus, string> = {
 
 export const HousekeepingRoomStatusPage = () => {
   const queryClient = useQueryClient();
-  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
 
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ['housekeeping-room-status-rooms'],
     queryFn: () => resortService.getRooms('', 0, 500),
     staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-  });
-
-  const { data: staffData } = useQuery({
-    queryKey: ['resort-staff'],
-    queryFn: () => resortService.getStaffs(),
-    staleTime: 60 * 1000,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
@@ -41,7 +31,7 @@ export const HousekeepingRoomStatusPage = () => {
 
   const markStatusMutation = useMutation({
     mutationFn: ({ roomId, status }: { roomId: string; status: HousekeepingStatus }) =>
-      resortService.updateRoomHousekeepingStatus(roomId, status, undefined, selectedStaffId || undefined),
+      resortService.updateRoomHousekeepingStatus(roomId, status),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['housekeeping-room-status-rooms'] });
       void queryClient.invalidateQueries({ queryKey: ['housekeeping-logs'] });
@@ -49,7 +39,6 @@ export const HousekeepingRoomStatusPage = () => {
   });
 
   const rooms = roomsData?.items ?? [];
-  const staff = staffData ?? [];
   const logs = logsData?.items ?? [];
 
   return (

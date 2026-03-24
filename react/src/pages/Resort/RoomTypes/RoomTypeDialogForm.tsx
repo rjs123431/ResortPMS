@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import type { RoomTypeDto } from '@/types/resort.types';
+import { roomTypeFormSchema, type RoomTypeFormValues } from '@/lib/resortSchemas';
 
 export type RoomTypeForm = RoomTypeDto & {
   plainDescription: string;
@@ -17,8 +20,7 @@ type RoomTypeDialogFormProps = {
   canEdit: boolean;
   isSaving: boolean;
   onClose: () => void;
-  onFormChange: (updater: (prev: RoomTypeForm) => RoomTypeForm) => void;
-  onSave: () => void;
+  onSave: (values: RoomTypeFormValues) => void;
 };
 
 export const RoomTypeDialogForm = ({
@@ -29,9 +31,32 @@ export const RoomTypeDialogForm = ({
   canEdit,
   isSaving,
   onClose,
-  onFormChange,
   onSave,
 }: RoomTypeDialogFormProps) => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<RoomTypeFormValues>({
+    resolver: zodResolver(roomTypeFormSchema),
+    mode: 'onChange',
+    defaultValues: {
+      ...form,
+      maxAdults: form.maxAdults ?? 1,
+      maxChildren: form.maxChildren ?? 0,
+    },
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    reset({
+      ...form,
+      maxAdults: form.maxAdults ?? 1,
+      maxChildren: form.maxChildren ?? 0,
+    });
+  }, [form, isOpen, reset]);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -58,66 +83,79 @@ export const RoomTypeDialogForm = ({
             </button>
           </div>
 
+          <form onSubmit={handleSubmit(onSave)}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Room Type Name</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" value={form.name} onChange={(e) => onFormChange((s) => ({ ...s, name: e.target.value }))} />
+              <input className="w-full rounded border p-2 dark:bg-gray-700" {...register('name')} />
+              {errors.name ? <p className="mt-1 text-xs text-red-600">{errors.name.message}</p> : null}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Adults</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" type="number" min={1} value={form.maxAdults} onChange={(e) => onFormChange((s) => ({ ...s, maxAdults: Number(e.target.value || 1) }))} />
+              <input
+                className="w-full rounded border p-2 dark:bg-gray-700"
+                type="number"
+                min={1}
+                {...register('maxAdults', { valueAsNumber: true })}
+              />
+              {errors.maxAdults ? <p className="mt-1 text-xs text-red-600">{errors.maxAdults.message}</p> : null}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Children</label>
-              <input className="w-full rounded border p-2 dark:bg-gray-700" type="number" min={0} value={form.maxChildren} onChange={(e) => onFormChange((s) => ({ ...s, maxChildren: Number(e.target.value || 0) }))} />
+              <input
+                className="w-full rounded border p-2 dark:bg-gray-700"
+                type="number"
+                min={0}
+                {...register('maxChildren', { valueAsNumber: true })}
+              />
+              {errors.maxChildren ? <p className="mt-1 text-xs text-red-600">{errors.maxChildren.message}</p> : null}
             </div>
           </div>
           <div className="mt-3">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Bed Configuration</label>
             <input
               className="w-full rounded border p-2 dark:bg-gray-700"
-              value={form.bedTypeSummary}
-              onChange={(e) => onFormChange((s) => ({ ...s, bedTypeSummary: e.target.value }))}
+              {...register('bedTypeSummary')}
             />
+            {errors.bedTypeSummary ? <p className="mt-1 text-xs text-red-600">{errors.bedTypeSummary.message}</p> : null}
           </div>
           <div className="mt-3">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Room Feature Tags</label>
             <textarea
               className="w-full rounded border p-2 dark:bg-gray-700"
-              value={form.featureTagsText}
-              onChange={(e) => onFormChange((s) => ({ ...s, featureTagsText: e.target.value }))}
+              {...register('featureTagsText')}
             />
+            {errors.featureTagsText ? <p className="mt-1 text-xs text-red-600">{errors.featureTagsText.message}</p> : null}
           </div>
           <div className="mt-3">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Room Amenities</label>
             <textarea
               className="w-full rounded border p-2 dark:bg-gray-700"
-              value={form.amenityItemsText}
-              onChange={(e) => onFormChange((s) => ({ ...s, amenityItemsText: e.target.value }))}
+              {...register('amenityItemsText')}
             />
+            {errors.amenityItemsText ? <p className="mt-1 text-xs text-red-600">{errors.amenityItemsText.message}</p> : null}
           </div>
           <div className="mt-3">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Room Type Description</label>
             <textarea
               className="w-full rounded border p-2 dark:bg-gray-700"
-              value={form.plainDescription}
-              onChange={(e) => onFormChange((s) => ({ ...s, plainDescription: e.target.value }))}
+              {...register('plainDescription')}
             />
           </div>
           {editingId ? (
             <label className="mt-3 flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.isActive} onChange={(e) => onFormChange((s) => ({ ...s, isActive: e.target.checked }))} />
+              <input type="checkbox" {...register('isActive')} />
               Active
             </label>
           ) : null}
           <button
-            type="button"
+            type="submit"
             className="mt-3 rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
-            disabled={isSaving || !form.name || (editingId ? !canEdit : !canCreate)}
-            onClick={onSave}
+            disabled={isSaving || !isValid || (editingId ? !canEdit : !canCreate)}
           >
             {isSaving ? 'Saving...' : 'Save'}
           </button>
+          </form>
         </DialogPanel>
       </div>
     </Dialog>

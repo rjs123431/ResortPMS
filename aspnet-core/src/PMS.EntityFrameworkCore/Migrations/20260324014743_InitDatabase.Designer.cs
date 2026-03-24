@@ -12,7 +12,7 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260319132815_InitDatabase")]
+    [Migration("20260324014743_InitDatabase")]
     partial class InitDatabase
     {
         /// <inheritdoc />
@@ -4322,6 +4322,11 @@ namespace PMS.Migrations
 
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
