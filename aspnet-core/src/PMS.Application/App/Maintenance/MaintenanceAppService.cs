@@ -6,6 +6,7 @@ using Abp.EntityFrameworkCore;
 using Abp.Linq.Extensions;
 using Abp.Timing;
 using Abp.UI;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Authorization;
@@ -100,6 +101,7 @@ public class RoomMaintenanceAppService(
     IRoomDailyInventoryService roomDailyInventoryService
 ) : PMSAppServiceBase, IRoomMaintenanceAppService
 {
+    [HttpGet]
     public async Task<PagedResultDto<RoomMaintenanceRequestDto>> GetListAsync(GetRoomMaintenanceInput input)
     {
         var query = maintenanceRepository.GetAll()
@@ -124,6 +126,7 @@ public class RoomMaintenanceAppService(
         return new PagedResultDto<RoomMaintenanceRequestDto>(total, items.Select(MapToDto).ToList());
     }
 
+    [HttpGet]
     public async Task<RoomMaintenanceRequestDto> GetAsync(EntityDto<Guid> input)
     {
         var item = await maintenanceRepository.GetAll()
@@ -139,6 +142,7 @@ public class RoomMaintenanceAppService(
         return MapToDto(item);
     }
 
+    [HttpPost]
     [AbpAuthorize(PermissionNames.Pages_Maintenance_Create)]
     public async Task<Guid> CreateAsync(CreateRoomMaintenanceRequestDto input)
     {
@@ -210,6 +214,7 @@ public class RoomMaintenanceAppService(
         return request.Id;
     }
 
+    [HttpPut("Assign")]
     [AbpAuthorize(PermissionNames.Pages_Maintenance_Assign)]
     public async Task AssignAsync(AssignRoomMaintenanceRequestDto input)
     {
@@ -219,6 +224,7 @@ public class RoomMaintenanceAppService(
         await maintenanceRepository.UpdateAsync(request);
     }
 
+    [HttpPut("Start")]
     [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task StartAsync(EntityDto<Guid> input)
     {
@@ -227,6 +233,7 @@ public class RoomMaintenanceAppService(
         await maintenanceRepository.UpdateAsync(request);
     }
 
+    [HttpPut("Complete")]
     [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task CompleteAsync(EntityDto<Guid> input)
     {
@@ -241,6 +248,7 @@ public class RoomMaintenanceAppService(
             request.Id);
     }
 
+    [HttpPut("Cancel")]
     [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task CancelAsync(CancelRoomMaintenanceRequestDto input)
     {

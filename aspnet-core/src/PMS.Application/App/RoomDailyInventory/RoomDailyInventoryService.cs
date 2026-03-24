@@ -73,7 +73,10 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         }
 
         if (toAdd.Count > 0)
+        {
             await ctx.RoomDailyInventories.AddRangeAsync(toAdd);
+            await ctx.SaveChangesAsync();
+        }
     }
 
     public async Task SetReservedAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid reservationId)

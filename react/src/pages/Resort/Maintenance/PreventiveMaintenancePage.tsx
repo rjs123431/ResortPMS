@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { MaintenanceLayout } from '@components/layout/MaintenanceLayout';
+import { SearchStaffDialog } from '@/pages/Resort/Shared/SearchStaffDialog';
 import { PermissionNames } from '@/config/permissionNames';
 import { useAuth } from '@/contexts/AuthContext';
 import { resortService } from '@/services/resort.service';
@@ -13,6 +14,7 @@ import {
   type CreateRoomMaintenanceRequestDto,
 } from '@/types/resort.types';
 import { confirmAction } from '@/utils/alerts';
+import { CancelOrderDialog } from './WorkOrderActionDialogs';
 
 const PRIORITY_LABEL: Record<RoomMaintenancePriority, string> = {
   [RoomMaintenancePriority.Low]: 'Low',
@@ -56,7 +58,10 @@ export const PreventiveMaintenancePage = () => {
   const canEdit = isGranted(PermissionNames.Pages_Maintenance_Edit);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState<CreateRoomMaintenanceRequestDto>(makeDefaultForm);
+  const [form, setForm] = useState<CreateRoomMaintenanceRequestDto>(makeDefaultForm());
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [actionOrderId, setActionOrderId] = useState<string | null>(null);
 
   const { data: roomsData } = useQuery({
     queryKey: ['resort-room-maintenance-rooms'],
@@ -202,12 +207,9 @@ export const PreventiveMaintenancePage = () => {
                               type="button"
                               className="rounded border border-indigo-300 px-2 py-1 text-xs text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/50 dark:text-indigo-300 dark:hover:bg-indigo-900/20"
                               disabled={assignMutation.isPending}
-                              onClick={async () => {
-                                if (activeStaff.length === 0) return;
-                                const selected = window.prompt('Enter staff full name to assign', activeStaff[0].fullName);
-                                const match = activeStaff.find((s) => s.fullName.toLowerCase() === (selected ?? '').trim().toLowerCase());
-                                if (!match) return;
-                                assignMutation.mutate({ id: request.id, staffId: match.id });
+                              onClick={() => {
+                                setActionOrderId(request.id);
+                                setAssignDialogOpen(true);
                               }}
                             >
                               {request.assignedStaffId ? 'Re-assign' : 'Assign'}
@@ -247,11 +249,9 @@ export const PreventiveMaintenancePage = () => {
                               type="button"
                               className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                               disabled={cancelMutation.isPending}
-                              onClick={async () => {
-                                const result = await confirmAction(`Cancel preventive order for room ${request.roomNumber}?`, { confirmButtonText: 'Cancel Order' });
-                                if (!result.isConfirmed) return;
-                                const reason = window.prompt('Cancellation reason', 'Cancelled by user') ?? '';
-                                cancelMutation.mutate({ id: request.id, reason });
+                              onClick={() => {
+                                setActionOrderId(request.id);
+                                setCancelDialogOpen(true);
                               }}
                             >
                               Cancel
@@ -267,6 +267,39 @@ export const PreventiveMaintenancePage = () => {
           ) : null}
         </section>
       </div>
+
+      {/* Assign Staff Dialog - Using shared SearchStaffDialog */}
+      <SearchStaffDialog
+        open={assignDialogOpen}
+        onClose={() => {
+          setAssignDialogOpen(false);
+          setActionOrderId(null);
+        }}
+        onSelectStaff={(staff) => {
+          if (actionOrderId) {
+            assignMutation.mutate({ id: actionOrderId, staffId: staff.id });
+            setAssignDialogOpen(false);
+            setActionOrderId(null);
+          }
+        }}
+      />
+
+      {/* Cancel Order Dialog */}
+      <CancelOrderDialog
+        open={cancelDialogOpen}
+        onClose={() => {
+          setCancelDialogOpen(false);
+          setActionOrderId(null);
+        }}
+        isLoading={cancelMutation.isPending}
+        onConfirm={(reason) => {
+          if (actionOrderId) {
+            cancelMutation.mutate({ id: actionOrderId, reason });
+            setCancelDialogOpen(false);
+            setActionOrderId(null);
+          }
+        }}
+      />
 
       {/* New Preventive Order Dialog */}
       <Dialog open={dialogOpen} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
