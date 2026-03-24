@@ -47,19 +47,19 @@ export const roomMaintenanceService = {
   },
 
   assignRoomMaintenanceRequest: async (id: string, staffId: string) => {
-    await api.put('/api/services/app/RoomMaintenance/Assign', { id, staffId });
+    await api.post('/api/services/app/RoomMaintenance/Assign', { id, staffId });
   },
 
   startRoomMaintenanceRequest: async (id: string) => {
-    await api.put('/api/services/app/RoomMaintenance/Start', { id });
+    await api.post('/api/services/app/RoomMaintenance/Start', { id });
   },
 
   completeRoomMaintenanceRequest: async (id: string) => {
-    await api.put('/api/services/app/RoomMaintenance/Complete', { id });
+    await api.post('/api/services/app/RoomMaintenance/Complete', { id });
   },
 
   cancelRoomMaintenanceRequest: async (id: string, reason?: string) => {
-    await api.put('/api/services/app/RoomMaintenance/Cancel', { id, reason: reason ?? '' });
+    await api.post('/api/services/app/RoomMaintenance/Cancel', { id, reason: reason ?? '' });
   },
 
   // Maintenance types
