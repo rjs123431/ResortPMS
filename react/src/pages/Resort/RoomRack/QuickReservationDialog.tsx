@@ -76,6 +76,20 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     enabled: open,
   });
 
+  const availabilityQuery = useQuery({
+    queryKey: ['quick-reservation-availability', payload?.roomTypeId, payload?.checkInDate, payload?.checkOutDate, true],
+    enabled: open && !!payload,
+    queryFn: () =>
+      resortService.getAvailableRooms(
+        payload!.roomTypeId,
+        payload!.checkInDate,
+        payload!.checkOutDate,
+        undefined,
+        true, // subtract unassigned reservations from available count to prevent overbooking
+      ),
+    staleTime: 30 * 1000,
+  });
+
   const ratePlanOptionsQuery = useQuery({
     queryKey: ['quick-reservation-rate-plans', payload?.roomTypeId, payload?.checkInDate, payload?.checkOutDate, selectedChannelId],
     enabled: open && !!payload && !!selectedChannelId,
@@ -356,6 +370,9 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       : `${monthDay(checkIn)} – ${monthDay(checkOut)}, ${checkOut.getFullYear()}`;
 
   const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (24 * 60 * 60 * 1000)));
+  const availableRoomCount = availabilityQuery.data?.length ?? null;
+  const isFullyBooked = availabilityQuery.data != null && availabilityQuery.data.length === 0;
+
   const canSubmit =
     firstName.trim() !== '' &&
     lastName.trim() !== '' &&
@@ -365,6 +382,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     !ratePlanOptionsQuery.isLoading &&
     !ratePlanOptionsQuery.isError &&
     ratePerNight > 0 &&
+    !isFullyBooked &&
     !createMutation.isPending &&
     !checkInMutation.isPending;
 
@@ -373,11 +391,24 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
       <div className="relative flex min-h-screen items-start justify-center p-4 pt-8 pointer-events-none">
         <DialogPanel className="w-full max-w-3xl rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800 pointer-events-auto">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick reservation</h2>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <h2 className="shrink-0 text-lg font-semibold text-gray-900 dark:text-white">Quick reservation</h2>
+              <div className="w-[180px]">
+                <select
+                  className={controlClassName}
+                  value={selectedChannelId}
+                  onChange={(e) => setSelectedChannelId(e.target.value)}
+                >
+                  {(channels ?? []).map((channel) => (
+                    <option key={channel.id} value={channel.id}>{channel.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <button
               type="button"
-              className="rounded bg-gray-200 px-2 py-1 text-sm dark:bg-gray-700"
+              className="shrink-0 rounded bg-gray-200 px-2 py-1 text-sm dark:bg-gray-700"
               onClick={onClose}
             >
               Close
@@ -398,16 +429,21 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
                 <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Room</dt>
                 <dd className="mt-0.5 font-medium text-gray-900 dark:text-white">{payload.roomNumber}</dd>
               </div>
-              <div className="sm:min-w-[100px] sm:flex-1">
-                <select
-                  className={controlClassName}
-                  value={selectedChannelId}
-                  onChange={(e) => setSelectedChannelId(e.target.value)}
-                >
-                  {(channels ?? []).map((channel) => (
-                    <option key={channel.id} value={channel.id}>{channel.name}</option>
-                  ))}
-                </select>
+              <div className="sm:min-w-[160px]">
+                <dt className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Availability</dt>
+                <dd className="mt-0.5">
+                  {availabilityQuery.isLoading ? (
+                    <span className="text-sm text-gray-400 dark:text-gray-500">Checking…</span>
+                  ) : isFullyBooked ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                      Fully booked
+                    </span>
+                  ) : availableRoomCount !== null ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                      {availableRoomCount} room{availableRoomCount !== 1 ? 's' : ''} available
+                    </span>
+                  ) : null}
+                </dd>
               </div>
             </div>
           </dl>
@@ -559,6 +595,12 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
               />
             </div>
           </div>
+
+          {isFullyBooked && (
+            <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+              No rooms available for {payload.roomTypeName} on these dates. All rooms are already reserved.
+            </p>
+          )}
 
           {(createMutation.isError || checkInMutation.isError) && (
             <p className="mt-3 text-sm text-red-600 dark:text-red-400">

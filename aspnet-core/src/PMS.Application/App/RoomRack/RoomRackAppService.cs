@@ -159,7 +159,7 @@ public class RoomRackAppService(
                        m.StartDate <= today && m.EndDate >= today)
             .ToDictionaryAsync(m => m.RoomId, m => (Title: m.Title ?? string.Empty, Reason: m.Description ?? string.Empty));
 
-        var bookingStatuses = new[] { (int)PMS.App.ReservationStatus.Draft, (int)PMS.App.ReservationStatus.Pending };
+        var bookingStatuses = new[] { (int)PMS.App.ReservationStatus.Draft, (int)PMS.App.ReservationStatus.Pending, (int)PMS.App.ReservationStatus.Confirmed };
 
         var unassignedRooms = await reservationRoomRepository.GetAll()
             .AsNoTracking()
