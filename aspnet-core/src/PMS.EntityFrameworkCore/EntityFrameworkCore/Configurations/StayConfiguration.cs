@@ -19,7 +19,14 @@ internal class StayConfiguration : IEntityTypeConfiguration<Stay>
 
         entity.HasIndex(e => e.StayNo).IsUnique();
         entity.HasIndex(e => e.Status);
+        entity.HasIndex(e => e.ChannelId);
         entity.HasIndex("AssignedRoomId");
+
+        entity.HasOne(e => e.Channel)
+            .WithMany()
+            .HasForeignKey(e => e.ChannelId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
 
         entity.HasOne(e => e.Guest)
             .WithMany()

@@ -154,13 +154,15 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
     {
         var start = arrivalDate.Date;
         var end = departureDate.Date;
-        if (start >= end) return false;
+        if (start > end) return false;
 
-        var expectedNights = (int)(end - start).TotalDays;
-        await EnsureInventoryForDateRangeAsync([roomId], start, end);
+        // Normalize to an exclusive end date so same-day check-in/check-out still occupies one inventory day.
+        var endExclusive = start == end ? end.AddDays(1) : end;
+        var expectedNights = (int)(endExclusive - start).TotalDays;
+        await EnsureInventoryForDateRangeAsync([roomId], start, endExclusive);
 
         var rows = await _inventoryRepository.GetAll()
-            .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end)
+            .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < endExclusive)
             .ToListAsync();
 
         // Filter for valid rows based on reservation

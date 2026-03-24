@@ -10,6 +10,7 @@ public class Stay : FullAuditedEntity<Guid>
 {
     public string StayNo { get; set; } = string.Empty;
     public Guid? ReservationId { get; set; }
+    public Guid? ChannelId { get; set; }
     public Guid? GuestId { get; set; }
     public DateTime CheckInDateTime { get; set; } = Clock.Now;
     public DateTime ExpectedCheckOutDateTime { get; set; }
@@ -24,6 +25,7 @@ public class Stay : FullAuditedEntity<Guid>
     public string Email { get; set; } = string.Empty;
 
     public virtual Reservation Reservation { get; set; }
+    public virtual Channel Channel { get; set; }
     public virtual Guest Guest { get; set; }
     public virtual Room AssignedRoom { get; set; }
     public virtual ICollection<StayGuest> Guests { get; set; } = [];

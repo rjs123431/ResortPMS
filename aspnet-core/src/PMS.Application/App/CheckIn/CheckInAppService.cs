@@ -110,6 +110,7 @@ public class CheckInAppService(
 
         var stay = await CreateStayAsync(
             reservationId: reservation.Id,
+            channelId: reservation.ChannelId,
             guest: reservation.Guest,
             firstName: reservation.FirstName,
             lastName: reservation.LastName,
@@ -233,6 +234,7 @@ public class CheckInAppService(
 
         var stay = await CreateStayAsync(
             reservationId: null,
+            channelId: null,
             guest: guest,
             firstName: input.FirstName ?? string.Empty,
             lastName: input.LastName ?? string.Empty,
@@ -516,6 +518,7 @@ public class CheckInAppService(
 
     private async Task<Stay> CreateStayAsync(
         Guid? reservationId,
+        Guid? channelId,
         Guest guest,
         string firstName,
         string lastName,
@@ -540,6 +543,7 @@ public class CheckInAppService(
         {
             StayNo = stayNo,
             ReservationId = reservationId,
+            ChannelId = channelId,
             GuestId = guest?.Id,
             GuestName = guestName,
             FirstName = firstName ?? guest?.FirstName ?? string.Empty,
