@@ -13,7 +13,7 @@ public class PreCheckIn : FullAuditedEntity<Guid>
     public DateTime PreCheckInDate { get; set; } = Clock.Now;
     public DateTime ArrivalDate { get; set; }
     public DateTime DepartureDate { get; set; }
-    public int Nights { get; set; }
+    public int Nights { get; set; } 
     public int Adults { get; set; } = 1;
     public int Children { get; set; } = 0;
     public PreCheckInStatus Status { get; set; } = PreCheckInStatus.Pending;

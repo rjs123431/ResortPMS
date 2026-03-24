@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogPanel } from '@headlessui/react';
+import { useNavigate } from 'react-router-dom';
 import { resortService } from '@services/resort.service';
 import { formatMoney } from '@utils/helpers';
 
@@ -45,6 +46,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservationDialogProps) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -256,8 +258,68 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     createMutation.mutate(true);
   };
 
+  const walkInMutation = useMutation({
+    mutationFn: async () => {
+      if (!payload) throw new Error('Missing reservation data.');
+      if (!firstName.trim()) throw new Error('First name is required.');
+      if (!lastName.trim()) throw new Error('Last name is required.');
+      if (!contactNumber.trim()) throw new Error('Contact number is required.');
+      if (!selectedChannelId) throw new Error('Reservation channel is required.');
+
+      const checkInTime = '14:00:00';
+      const checkOutTime = '12:00:00';
+      const arrivalDate = payload.checkInDate.includes('T') ? payload.checkInDate : `${payload.checkInDate}T${checkInTime}`;
+      const departureDate = payload.checkOutDate.includes('T') ? payload.checkOutDate : `${payload.checkOutDate}T${checkOutTime}`;
+      const nights = Math.max(1, Math.ceil((new Date(departureDate).getTime() - new Date(arrivalDate).getTime()) / (24 * 60 * 60 * 1000)));
+      const selectedRatePlan = (ratePlanOptionsQuery.data ?? []).find((option) => option.roomRatePlanId === selectedRatePlanId);
+      const ratePerNight = selectedRatePlan?.pricePerNight ?? 0;
+      const amount = round2(ratePerNight * nights);
+
+      const preCheckInId = await resortService.createPreCheckIn({
+        arrivalDate,
+        departureDate,
+        adults,
+        children,
+        totalAmount: amount,
+        notes: notes.trim() || undefined,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: contactNumber.trim(),
+        email: email.trim() || undefined,
+        rooms: [
+          {
+            roomTypeId: payload.roomTypeId,
+            roomId: payload.roomId || undefined,
+            roomTypeName: payload.roomTypeName,
+            roomNumber: payload.roomNumber,
+            ratePerNight: round2(ratePerNight),
+            numberOfNights: nights,
+            amount,
+            seniorCitizenCount: 0,
+            seniorCitizenDiscountAmount: 0,
+            netAmount: amount,
+          },
+        ],
+      });
+
+      return preCheckInId;
+    },
+    onSuccess: (preCheckInId) => {
+      onClose();
+      void queryClient.invalidateQueries({ queryKey: ['resort-precheckins-pending'] });
+      navigate(`/front-desk/walk-in/${preCheckInId}`, {
+        state: {
+          quickWalkInContext: {
+            channelId: selectedChannelId,
+            agencyId: selectedAgencyId || undefined,
+          },
+        },
+      });
+    },
+  });
+
   const handleWalkInCheckIn = () => {
-    createMutation.mutate(true);
+    walkInMutation.mutate();
   };
 
   const handleOpenDepositDialog = () => {
@@ -303,7 +365,8 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     !ratePlanOptionsQuery.isLoading &&
     !ratePlanOptionsQuery.isError &&
     ratePerNight > 0 &&
-    !createMutation.isPending;
+    !createMutation.isPending &&
+    !walkInMutation.isPending;
 
   return (
     <Dialog open={open} onClose={() => { }} className="fixed inset-0 z-50 overflow-y-auto">
@@ -497,9 +560,9 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
             </div>
           </div>
 
-          {createMutation.isError && (
+          {(createMutation.isError || walkInMutation.isError) && (
             <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-              {getErrorMessage(createMutation.error, 'Failed to create reservation.')}
+              {getErrorMessage(walkInMutation.error ?? createMutation.error, 'Failed to create reservation.')}
             </p>
           )}
 
@@ -507,11 +570,11 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
             <button
               type="button"
               onClick={handleWalkInCheckIn}
-              disabled={!canSubmit || createMutation.isPending}
+              disabled={!canSubmit || createMutation.isPending || walkInMutation.isPending}
               className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
               title="Create a walk-in/check-in draft"
             >
-              Walk In/Check In
+              {walkInMutation.isPending ? 'Loading Walk-In...' : 'Walk In/Check In'}
             </button>
             <div className="flex flex-wrap justify-end gap-2">
               <button

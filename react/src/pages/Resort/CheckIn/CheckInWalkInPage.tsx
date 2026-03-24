@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { resortService } from '@services/resort.service';
 import { HousekeepingStatus, type RoomListDto } from '@/types/resort.types';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
@@ -93,8 +93,16 @@ const splitFullName = (fullName: string) => {
 
 const isRoomOutOfOrder = (room?: RoomListDto) => room?.roomStatusCode === 'OOO';
 
+type WalkInLocationState = {
+  quickWalkInContext?: {
+    channelId?: string;
+    agencyId?: string;
+  };
+};
+
 export const CheckInWalkInPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { preCheckInId: urlPreCheckInId } = useParams<{ preCheckInId?: string }>();
   const queryClient = useQueryClient();
   const [stayRange, setStayRange] = useState<[Date | null, Date | null]>(() => {
@@ -172,14 +180,24 @@ export const CheckInWalkInPage = () => {
   });
 
   const [selectedChannelId, setSelectedChannelId] = useState('');
+  const quickWalkInContext = (location.state as WalkInLocationState | null)?.quickWalkInContext;
 
   useEffect(() => {
+    const preferredChannelId = quickWalkInContext?.channelId;
+
+    if (preferredChannelId && channels?.some((channel) => channel.id === preferredChannelId)) {
+      if (selectedChannelId !== preferredChannelId) {
+        setSelectedChannelId(preferredChannelId);
+      }
+      return;
+    }
+
     if (selectedChannelId) return;
     const firstChannelId = channels?.[0]?.id;
     if (firstChannelId) {
       setSelectedChannelId(firstChannelId);
     }
-  }, [channels, selectedChannelId]);
+  }, [channels, quickWalkInContext?.channelId, selectedChannelId]);
 
   useEffect(() => {
     if (!selectedGuest) return;
@@ -660,7 +678,7 @@ export const CheckInWalkInPage = () => {
       setAdults(preCheckIn.adults);
       setChildren(preCheckIn.children);
 
-      const effectiveChannelId = selectedChannelId || channels?.[0]?.id || '';
+      const effectiveChannelId = selectedChannelId || quickWalkInContext?.channelId || channels?.[0]?.id || '';
 
       const criteria: SearchCriteria = {
         roomTypeIds: roomTypeIdsFromPreCheckIn,
@@ -690,6 +708,53 @@ export const CheckInWalkInPage = () => {
       const allRooms = searchResults.flat();
       setAvailableRooms(allRooms);
 
+      const roomTypeMetaById = new Map((roomTypes ?? []).map((roomType) => [roomType.id, roomType]));
+      const availableRoomCountsByType = allRooms.reduce<Record<string, number>>((acc, room) => {
+        acc[room.roomTypeId] = (acc[room.roomTypeId] || 0) + 1;
+        return acc;
+      }, {});
+
+      const preCheckInRowsByType = preCheckIn.rooms.reduce<
+        Record<
+          string,
+          {
+            roomTypeId: string;
+            roomTypeName: string;
+            baseRate: number;
+            count: number;
+          }
+        >
+      >((acc, room) => {
+        if (!acc[room.roomTypeId]) {
+          acc[room.roomTypeId] = {
+            roomTypeId: room.roomTypeId,
+            roomTypeName: room.roomTypeName || roomTypeMetaById.get(room.roomTypeId)?.name || 'Room Type',
+            baseRate: room.ratePerNight,
+            count: 0,
+          };
+        }
+
+        acc[room.roomTypeId].count += 1;
+        return acc;
+      }, {});
+
+      const loadedAvailabilityRows = Object.values(preCheckInRowsByType)
+        .map((row) => {
+          const typeMeta = roomTypeMetaById.get(row.roomTypeId);
+          return {
+            roomTypeId: row.roomTypeId,
+            roomTypeName: row.roomTypeName,
+            bedTypeSummary: undefined,
+            maxAdults: typeMeta?.maxAdults ?? 1,
+            maxChildren: typeMeta?.maxChildren ?? 0,
+            baseRate: row.baseRate,
+            availableCount: availableRoomCountsByType[row.roomTypeId] ?? row.count,
+          };
+        })
+        .sort((left, right) => left.baseRate - right.baseRate);
+
+      setAvailabilityRows(loadedAvailabilityRows);
+
       const amounts: Record<string, number> = {};
       preCheckIn.rooms.forEach((room) => {
         amounts[room.roomTypeId] = (amounts[room.roomTypeId] || 0) + 1;
@@ -698,8 +763,10 @@ export const CheckInWalkInPage = () => {
 
       const seniors: Record<string, number> = {};
       const assigned: Record<string, string> = {};
-      preCheckIn.rooms.forEach((room, idx) => {
-        const lineId = `${room.roomTypeId}-${idx + 1}`;
+      const roomTypeLineCounters: Record<string, number> = {};
+      preCheckIn.rooms.forEach((room) => {
+        roomTypeLineCounters[room.roomTypeId] = (roomTypeLineCounters[room.roomTypeId] || 0) + 1;
+        const lineId = `${room.roomTypeId}-${roomTypeLineCounters[room.roomTypeId]}`;
         seniors[lineId] = room.seniorCitizenCount;
         if (room.roomId) {
           const foundRoom = allRooms.find((r) => r.id === room.roomId);
@@ -725,21 +792,24 @@ export const CheckInWalkInPage = () => {
         setSelectedGuest({
           id: preCheckIn.guestId,
           guestCode: '',
-          fullName: preCheckIn.guestName || '',
+          fullName: preCheckIn.guestName || `${preCheckIn.firstName || ''} ${preCheckIn.lastName || ''}`.trim(),
           email: preCheckIn.email,
           phone: preCheckIn.phone,
           nationality: '',
         });
-        setGuestInfoForm({
-          guestCode: '',
-          firstName: preCheckIn.firstName || '',
-          middleName: '',
-          lastName: preCheckIn.lastName || '',
-          email: preCheckIn.email || '',
-          phone: preCheckIn.phone || '',
-          nationality: '',
-        });
+      } else {
+        setSelectedGuest(null);
       }
+
+      setGuestInfoForm({
+        guestCode: '',
+        firstName: preCheckIn.firstName || '',
+        middleName: '',
+        lastName: preCheckIn.lastName || '',
+        email: preCheckIn.email || '',
+        phone: preCheckIn.phone || '',
+        nationality: '',
+      });
 
       setTransactionNotes(preCheckIn.notes || '');
       setSpecialRequests(preCheckIn.specialRequests || '');
