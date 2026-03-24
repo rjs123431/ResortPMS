@@ -611,6 +611,9 @@ export const CheckInReservationPage = () => {
         isChangeRoom={isChangeRoomDialog}
         roomTypeName={assignDialogRoomLine?.roomTypeName}
         roomTypeId={assignDialogRoomLine?.roomTypeId}
+        arrivalDate={arrivalDate}
+        departureDate={departureDate}
+        reservationId={reservationId}
         selectedRoomId={assignDialogSelectedRoomId}
         excludeRoomIds={roomEdits
           .filter((row) => row.reservationRoomId !== assignDialogReservationRoomId && Boolean(row.roomId))

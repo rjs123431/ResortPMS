@@ -40,6 +40,8 @@ type DialogRoom = {
   floor?: string;
   housekeepingStatus: HousekeepingStatus;
   roomStatusCode?: string;
+  maintenanceTitle?: string;
+  maintenanceReason?: string;
   isAvailableForStay: boolean;
 };
 
@@ -58,7 +60,10 @@ const getRoomStatusBadgeClass = (housekeepingStatus?: HousekeepingStatus) => {
   return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
 };
 
-const isRoomOutOfOrder = (roomStatusCode?: string) => roomStatusCode === 'OOO';
+const isRoomOutOfOrder = (room: Pick<DialogRoom, 'roomStatusCode' | 'maintenanceTitle' | 'maintenanceReason'>) => {
+  const code = room.roomStatusCode?.trim().toUpperCase();
+  return code === 'OOO' || Boolean(room.maintenanceTitle || room.maintenanceReason);
+};
 
 export const AssignRoomDialog = ({
   open,
@@ -199,7 +204,7 @@ export const AssignRoomDialog = ({
                   {filteredRooms.map((room) => {
                     const isCurrentlySelected = room.id === selectedRoomId;
                     const isDirty = room.housekeepingStatus === HousekeepingStatus.Dirty;
-                    const isOOO = isRoomOutOfOrder(room.roomStatusCode);
+                    const isOOO = isRoomOutOfOrder(room);
                     const isUnavailableForStay = !room.isAvailableForStay;
                     const isDisabled =
                       isCurrentlySelected || isOOO || isUnavailableForStay || (isDirty && !allowDirtySelection);

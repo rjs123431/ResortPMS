@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
@@ -96,8 +96,11 @@ const createTempId = (prefix: string) => `${prefix}${Date.now()}-${Math.random()
 
 export const ReservationDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const from = new URLSearchParams(location.search).get('from');
+  const backPath = from === 'fd-dashboard' ? '/front-desk' : '/front-desk/reservations';
   const [depositAmount, setDepositAmount] = useState('');
   const [depositPaymentMethodId, setDepositPaymentMethodId] = useState('');
   const [depositPaidDate, setDepositPaidDate] = useState(formatDateLocal(new Date()));
@@ -708,7 +711,7 @@ export const ReservationDetailPage = () => {
             <button
               type="button"
               className="inline-flex w-full items-center justify-center gap-1 rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 sm:w-auto dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-              onClick={() => navigate('/front-desk/reservations')}
+              onClick={() => navigate(backPath)}
             >
               <ChevronLeftIcon className="h-4 w-4" />
               Back

@@ -189,7 +189,7 @@ export const FrontDeskDashboardPage: React.FC = () => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate(`/front-desk/reservations/${row.reservationId}`)}
+                              onClick={() => navigate(`/front-desk/reservations/${row.reservationId}?from=fd-dashboard`)}
                               className="rounded border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-500 dark:text-gray-200 dark:hover:bg-gray-700"
                             >
                               View
