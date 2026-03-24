@@ -55,4 +55,7 @@ export const PermissionNames = {
   Pages_POS_Outlets: 'Pages.POS.Outlets',
   Pages_POS_Menu: 'Pages.POS.Menu',
   Pages_Reports: 'Pages.Reports',
+  Pages_Incidents: 'Pages.Incidents',
+  Pages_Incidents_Create: 'Pages.Incidents.Create',
+  Pages_Incidents_Resolve: 'Pages.Incidents.Resolve',
 } as const;

@@ -36,6 +36,7 @@ public interface IStayAppService : IApplicationService
     Task<Guid> PostRefundAsync(PostRefundDto input);
     Task<FolioSummaryDto> GetFolioSummaryAsync(Guid stayId);
     Task SettleFolioAsync(SettleFolioDto input);
+    Task VoidFolioTransactionAsync(VoidFolioTransactionDto input);
 }
 
 [AbpAuthorize(PermissionNames.Pages_Stays)]
@@ -651,6 +652,37 @@ public class StayAppService(
 
         folio.Status = FolioStatus.Settled;
         await folioRepository.UpdateAsync(folio);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Stays_VoidTransaction)]
+    [UnitOfWork]
+    public async Task VoidFolioTransactionAsync(VoidFolioTransactionDto input)
+    {
+        var folio = await folioRepository.GetAll()
+            .Include(f => f.Transactions)
+            .FirstOrDefaultAsync(f => f.StayId == input.StayId);
+
+        if (folio == null) throw new UserFriendlyException(L("FolioNotFound"));
+
+        if (folio.Status == FolioStatus.Settled || folio.Status == FolioStatus.Voided || folio.Status == FolioStatus.WrittenOff)
+            throw new UserFriendlyException(L("FolioIsAlreadyClosed"));
+
+        var transaction = folio.Transactions.FirstOrDefault(t => t.Id == input.TransactionId && !t.IsDeleted);
+        if (transaction == null) throw new UserFriendlyException("Transaction not found.");
+        if (transaction.IsVoided) throw new UserFriendlyException("Transaction is already voided.");
+
+        transaction.IsVoided = true;
+        transaction.VoidReason = input.VoidReason;
+
+        folio.Balance -= transaction.NetAmount;
+        UpdateFolioStatus(folio);
+
+        await folioTransactionRepository.UpdateAsync(transaction);
+        await folioRepository.UpdateAsync(folio);
+
+        await financialAuditService.RecordTransactionCreatedAsync(
+            input.TransactionId, folio.Id, folio.StayId, -transaction.NetAmount,
+            $"Void: {transaction.Description} — {input.VoidReason}", null);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

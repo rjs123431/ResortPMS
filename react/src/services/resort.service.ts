@@ -9,6 +9,7 @@ import { extraBedPricingService } from './extra-bed-pricing.service';
 import { extraBedTypeService } from './extra-bed-type.service';
 import { guestService } from './guest.service';
 import { housekeepingService } from './housekeeping.service';
+import { incidentService } from './incident.service';
 import { paymentMethodService } from './payment-method.service';
 import { preCheckInService } from './pre-check-in.service';
 import { quotationService } from './quotation.service';
@@ -34,6 +35,7 @@ export const resortService = {
   ...extraBedTypeService,
   ...guestService,
   ...housekeepingService,
+  ...incidentService,
   ...paymentMethodService,
   ...preCheckInService,
   ...quotationService,

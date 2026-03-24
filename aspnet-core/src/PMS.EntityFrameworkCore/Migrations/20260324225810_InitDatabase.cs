@@ -2474,9 +2474,15 @@ namespace PMS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
+                    Severity = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Category = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    ReportedByName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
                     ReportedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Resolution = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    ResolvedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
                     LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -3356,6 +3362,11 @@ namespace PMS.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_HousekeepingTask_Status",
                 table: "HousekeepingTask",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Incident_Status",
+                table: "Incident",
                 column: "Status");
 
             migrationBuilder.CreateIndex(

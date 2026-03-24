@@ -1,39 +1,58 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MainLayout } from '@components/layout/MainLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { reportingService } from '@services/reporting.service';
 import type { DashboardKpisDto } from '@services/reporting.service';
+import { resortService } from '@services/resort.service';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import { formatMoney } from '@utils/helpers';
 
 const formatCurrency = (value: number) => formatMoney(value);
 
-type RoomAvailabilitySample = {
-  roomType: string;
-  totalRooms: number;
-  occupied: number;
-  available: number;
-  avgRate: string;
-};
-
-const sampleRoomAvailability: RoomAvailabilitySample[] = [
-  { roomType: 'Deluxe King', totalRooms: 24, occupied: 18, available: 6, avgRate: '$185' },
-  { roomType: 'Ocean View Suite', totalRooms: 12, occupied: 9, available: 3, avgRate: '$320' },
-  { roomType: 'Family Villa', totalRooms: 8, occupied: 5, available: 3, avgRate: '$410' },
-  { roomType: 'Standard Twin', totalRooms: 20, occupied: 11, available: 9, avgRate: '$145' },
-];
-
 export const DashboardPage: React.FC = () => {
   const { isGranted } = useAuth();
   const hasReports = isGranted(PermissionNames.Pages_Reports);
   const today = new Date().toISOString().slice(0, 10);
+
   const { data: kpis, isLoading } = useQuery({
     queryKey: ['dashboard-kpis', today],
     queryFn: () => reportingService.getDashboardKpis(today),
     enabled: hasReports,
   });
+
+  const { data: roomTypes } = useQuery({
+    queryKey: ['dashboard-room-types'],
+    queryFn: () => resortService.getRoomTypes(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: allRooms } = useQuery({
+    queryKey: ['dashboard-all-rooms'],
+    queryFn: () => resortService.getRooms('', 0, 500),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: availableRooms } = useQuery({
+    queryKey: ['dashboard-available-rooms', today],
+    queryFn: () => resortService.getAvailableRooms(undefined, today, today),
+    staleTime: 60 * 1000,
+  });
+
+  const roomAvailability = useMemo(() => {
+    if (!roomTypes || !allRooms || !availableRooms) return null;
+    const allRoomsList = allRooms.items ?? [];
+    return roomTypes
+      .filter((rt) => rt.isActive)
+      .map((rt) => {
+        const total = allRoomsList.filter((r) => r.roomTypeId === rt.id && r.isActive).length;
+        const available = availableRooms.filter((r) => r.roomTypeId === rt.id).length;
+        const occupied = Math.max(0, total - available);
+        return { id: rt.id, roomType: rt.name, totalRooms: total, occupied, available };
+      })
+      .filter((rt) => rt.totalRooms > 0);
+  }, [roomTypes, allRooms, availableRooms]);
 
   return (
     <MainLayout>
@@ -67,25 +86,30 @@ export const DashboardPage: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[80px]">Room Type</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">Total Rooms</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">Occupied</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[90px]">Available</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[90px]">Avg Rate</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Room Type</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Occupied</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {sampleRoomAvailability.map((room) => (
-                  <tr key={room.roomType} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-medium text-gray-900 dark:text-white">{room.roomType}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-600 dark:text-gray-400">{room.totalRooms}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-600 dark:text-gray-400">{room.occupied}</td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">{room.available}</span>
-                    </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-600 dark:text-gray-400">{room.avgRate}</td>
-                  </tr>
-                ))}
+                {roomAvailability
+                  ? roomAvailability.map((row) => (
+                      <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-medium text-gray-900 dark:text-white">{row.roomType}</td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-600 dark:text-gray-400">{row.totalRooms}</td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-600 dark:text-gray-400">{row.occupied}</td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">{row.available}</span>
+                        </td>
+                      </tr>
+                    ))
+                  : (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-6 text-center text-sm text-gray-400">Loading…</td>
+                      </tr>
+                    )
+                }
               </tbody>
             </table>
           </div>

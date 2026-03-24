@@ -97,6 +97,10 @@ export const stayService = {
     await api.post('/api/services/app/Stay/SettleFolio', { stayId });
   },
 
+  voidFolioTransaction: async (stayId: string, transactionId: string, voidReason: string) => {
+    await api.post('/api/services/app/Stay/VoidFolioTransaction', { stayId, transactionId, voidReason });
+  },
+
   addGuestRequest: async (input: AddGuestRequestDto) => {
     const response = await api.post<ApiResponse<string>>('/api/services/app/Stay/AddGuestRequest', input);
     return response.data.result;

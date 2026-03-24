@@ -6,7 +6,7 @@ const navItems = [
   { to: '/housekeeping', label: 'Overview', title: 'Housekeeping overview', Icon: HomeIcon },
   { to: '/housekeeping/room-status', label: 'Room Status', title: 'Update room housekeeping status', Icon: TableCellsIcon },
   { to: '/housekeeping/cleaning-board', label: 'Cleaning Board', title: 'Rooms needing cleaning/inspection', Icon: SparklesIcon },
-  { to: '/housekeeping/tasks', label: 'Tasks', title: 'Housekeeping tasks list', Icon: ClipboardDocumentListIcon },
+  { to: '/housekeeping/tasks', label: 'Cleaning Tasks', title: 'Housekeeping tasks list', Icon: ClipboardDocumentListIcon },
 ] as const;
 
 export const HousekeepingSidebar: React.FC = () => {

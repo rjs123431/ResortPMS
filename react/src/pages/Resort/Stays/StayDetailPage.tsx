@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Dialog } from '@headlessui/react';
 import { resortService } from '@services/resort.service';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { CompleteGuestRequestDialog } from '../Shared/CompleteGuestRequestDialog';
@@ -13,6 +14,7 @@ import {
   RoomChangeReason,
   RoomChangeRequestStatus,
   RoomChargeType,
+  type FolioTransactionDto,
   type StayRoomRecordDto,
 } from '@/types/resort.types';
 import { formatMoney } from '@utils/helpers';
@@ -102,6 +104,8 @@ export const StayDetailPage = () => {
   const [showRoomChangeDialog, setShowRoomChangeDialog] = useState(false);
   const [selectedGuestRequestId, setSelectedGuestRequestId] = useState('');
   const [selectedRoomForTransfer, setSelectedRoomForTransfer] = useState<{ stayRoomId: string; roomId: string; roomNumber: string } | null>(null);
+  const [voidTarget, setVoidTarget] = useState<FolioTransactionDto | null>(null);
+  const [voidReason, setVoidReason] = useState('');
 
   const { data: stayLookup, isFetching: isFetchingStayLookup } = useQuery({
     queryKey: ['resort-stays-all-for-detail'],
@@ -184,6 +188,17 @@ export const StayDetailPage = () => {
       }),
     onSuccess: () => {
       setShowPostChargeDialog(false);
+      void queryClient.invalidateQueries({ queryKey: ['resort-folio-detail', stayId] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-statement', stayId] });
+    },
+  });
+
+  const voidTransactionMutation = useMutation({
+    mutationFn: ({ transactionId, reason }: { transactionId: string; reason: string }) =>
+      resortService.voidFolioTransaction(stayId, transactionId, reason),
+    onSuccess: () => {
+      setVoidTarget(null);
+      setVoidReason('');
       void queryClient.invalidateQueries({ queryKey: ['resort-folio-detail', stayId] });
       void queryClient.invalidateQueries({ queryKey: ['resort-statement', stayId] });
     },
@@ -479,6 +494,7 @@ export const StayDetailPage = () => {
                       <th className="p-2">Type</th>
                       <th className="p-2">Description</th>
                       <th className="p-2 text-right">Amount</th>
+                      <th className="p-2">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -488,11 +504,22 @@ export const StayDetailPage = () => {
                       </tr>
                     ) : (
                       folio.transactions.map((transaction) => (
-                        <tr className="border-b dark:border-gray-700" key={transaction.id}>
+                        <tr className={`border-b dark:border-gray-700 ${transaction.isVoided ? 'opacity-50' : ''}`} key={transaction.id}>
                           <td className="p-2">{toDateTime(transaction.transactionDate)}</td>
                           <td className="p-2">{transaction.chargeTypeName || getTransactionTypeLabel(transaction.transactionType)}</td>
-                          <td className="p-2">{transaction.description || '-'}</td>
+                          <td className="p-2">{transaction.description || '-'}{transaction.isVoided && <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Voided</span>}</td>
                           <td className="p-2 text-right">{formatMoney(transaction.netAmount)}</td>
+                          <td className="p-2">
+                            {!transaction.isVoided && folio.status < 2 && (
+                              <button
+                                type="button"
+                                className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                                onClick={() => { setVoidTarget(transaction); setVoidReason(''); }}
+                              >
+                                Void
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}
@@ -658,6 +685,54 @@ export const StayDetailPage = () => {
         }}
         onSave={(values) => transferRoomMutation.mutate(values)}
       />
+
+      {/* Void Transaction Dialog */}
+      <Dialog open={!!voidTarget} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
+        <div className="relative flex min-h-screen items-center justify-center p-4 pointer-events-none">
+          <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800 pointer-events-auto">
+            <Dialog.Title className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
+              Void Transaction
+            </Dialog.Title>
+            {voidTarget && (
+              <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                Void <span className="font-medium">{voidTarget.description || voidTarget.chargeTypeName}</span> for{' '}
+                <span className="font-medium">{formatMoney(voidTarget.netAmount)}</span>? This cannot be undone.
+              </p>
+            )}
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              rows={3}
+              value={voidReason}
+              onChange={(e) => setVoidReason(e.target.value)}
+              placeholder="Enter void reason..."
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+                onClick={() => { setVoidTarget(null); setVoidReason(''); }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!voidReason.trim() || voidTransactionMutation.isPending}
+                className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                onClick={() => {
+                  if (!voidTarget || !voidReason.trim()) return;
+                  voidTransactionMutation.mutate({ transactionId: voidTarget.id, reason: voidReason.trim() });
+                }}
+              >
+                {voidTransactionMutation.isPending ? 'Voiding…' : 'Void Transaction'}
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
     </>
   );
 };

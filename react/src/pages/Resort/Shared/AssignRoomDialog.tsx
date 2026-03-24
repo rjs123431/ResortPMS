@@ -177,8 +177,8 @@ export const AssignRoomDialog = ({
 
           <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">
             {roomTypeName
-              ? `Select ${roomTypeName} room. Out of Order and unavailable rooms are shown but cannot be selected.`
-              : 'Select room. Out of Order and unavailable rooms are shown but cannot be selected.'}
+              ? `Select ${roomTypeName} room.`
+              : 'Select room.'}
           </p>
 
           {isLoading ? (

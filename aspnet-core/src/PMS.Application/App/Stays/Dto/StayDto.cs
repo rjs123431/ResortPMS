@@ -300,3 +300,10 @@ public class SettleFolioDto
 {
     [Required] public Guid StayId { get; set; }
 }
+
+public class VoidFolioTransactionDto
+{
+    [Required] public Guid StayId { get; set; }
+    [Required] public Guid TransactionId { get; set; }
+    [Required][StringLength(500)] public string VoidReason { get; set; } = string.Empty;
+}

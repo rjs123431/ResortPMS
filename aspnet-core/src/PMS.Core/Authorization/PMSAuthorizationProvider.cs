@@ -126,6 +126,11 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Assign, L("Assign"));
         maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Edit, L("Edit"));
 
+        // INCIDENTS
+        var incidents = transactions.CreateChildPermission(PermissionNames.Pages_Incidents, L("Incidents"), multiTenancySides: MultiTenancySides.Tenant);
+        incidents.CreateChildPermission(PermissionNames.Pages_Incidents_Create, L("Create"));
+        incidents.CreateChildPermission(PermissionNames.Pages_Incidents_Resolve, L("Resolve"));
+
         // POS (F&B)
         var pos = webApp.CreateChildPermission(PermissionNames.Pages_POS, L("POS"), multiTenancySides: MultiTenancySides.Tenant);
         pos.CreateChildPermission(PermissionNames.Pages_POS_Orders, L("Orders"));

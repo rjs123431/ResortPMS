@@ -1829,7 +1829,7 @@ export const CheckInWalkInPage = () => {
           excludeRoomIds={Object.entries(assignedRoomByLine)
             .filter(([lineId, roomId]) => lineId !== assignDialogLineId && Boolean(roomId))
             .map(([, roomId]) => roomId)}
-          allowDirtySelection={Boolean(loadedPreCheckInId)}
+          allowDirtySelection={true}
           onSelectRoom={(roomId) => {
             setAssignDialogSelectedRoomId(roomId);
             confirmAssignRoom(roomId);

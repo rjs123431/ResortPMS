@@ -86,8 +86,16 @@ internal class IncidentConfiguration : IEntityTypeConfiguration<Incident>
     {
         entity.ToTable("Incident");
 
+        entity.Property(e => e.Title).HasMaxLength(256).IsRequired();
         entity.Property(e => e.Description).HasMaxLength(2048).IsRequired();
+        entity.Property(e => e.Category).HasMaxLength(64).IsUnicode(false);
+        entity.Property(e => e.ReportedByName).HasMaxLength(128);
         entity.Property(e => e.Resolution).HasMaxLength(2048);
+        entity.Property(e => e.Severity).HasConversion<int>();
+        entity.Property(e => e.Status).HasConversion<int>();
+
+        entity.HasIndex(e => e.Status);
+        entity.HasIndex(e => e.StayId);
 
         entity.HasOne(e => e.Stay)
             .WithMany(s => s.Incidents)

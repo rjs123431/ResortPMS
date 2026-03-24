@@ -4,6 +4,8 @@ import {
   ArrowLeftEndOnRectangleIcon,
   ArrowRightStartOnRectangleIcon,
   CalendarDaysIcon,
+  ClipboardDocumentListIcon,
+  ExclamationTriangleIcon,
   HomeIcon,
   Squares2X2Icon,
   UserGroupIcon,
@@ -19,6 +21,8 @@ const navItems = [
   { to: '/front-desk/stays', label: 'In House', title: 'Manage in-house stays', Icon: HomeIcon },
   { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon },
   { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon },
+  { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon },
+  { to: '/front-desk/incidents', label: 'Incidents', title: 'Log and track incidents', Icon: ExclamationTriangleIcon },
 ] as const;
 
 export const FrontDeskSidebar: React.FC = () => {

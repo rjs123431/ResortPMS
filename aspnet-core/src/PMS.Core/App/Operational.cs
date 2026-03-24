@@ -16,12 +16,34 @@ public class GuestRequest : FullAuditedEntity<Guid>
     public virtual Stay Stay { get; set; }
 }
 
+public enum IncidentStatus
+{
+    Open = 0,
+    InProgress = 1,
+    Resolved = 2,
+    Closed = 3,
+}
+
+public enum IncidentSeverity
+{
+    Low = 0,
+    Medium = 1,
+    High = 2,
+    Critical = 3,
+}
+
 public class Incident : FullAuditedEntity<Guid>
 {
     public Guid StayId { get; set; }
+    public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public IncidentSeverity Severity { get; set; } = IncidentSeverity.Medium;
+    public IncidentStatus Status { get; set; } = IncidentStatus.Open;
+    public string Category { get; set; } = string.Empty;
+    public string ReportedByName { get; set; } = string.Empty;
     public DateTime ReportedAt { get; set; } = Clock.Now;
     public string Resolution { get; set; } = string.Empty;
+    public DateTime? ResolvedAt { get; set; }
 
     public virtual Stay Stay { get; set; }
 }

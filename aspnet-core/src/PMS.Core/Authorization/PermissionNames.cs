@@ -120,6 +120,11 @@ namespace PMS.Authorization
         public const string Pages_Maintenance_Assign = "Pages.Maintenance.Assign";
         public const string Pages_Maintenance_Edit = "Pages.Maintenance.Edit";
 
+        // INCIDENTS
+        public const string Pages_Incidents = "Pages.Incidents";
+        public const string Pages_Incidents_Create = "Pages.Incidents.Create";
+        public const string Pages_Incidents_Resolve = "Pages.Incidents.Resolve";
+
         // POS (F&B)
         public const string Pages_POS = "Pages.POS";
         public const string Pages_POS_Orders = "Pages.POS.Orders";

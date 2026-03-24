@@ -51,6 +51,9 @@ const StayDetailPage = lazy(() => import('@pages/Resort/Stays/StayDetailPage').t
 const CheckOutListPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutListPage').then((m) => ({ default: m.CheckOutListPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
 const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutConfirmationPage').then((m) => ({ default: m.CheckOutConfirmationPage })));
+const QuotationsPage = lazy(() => import('@pages/Resort/Quotations/QuotationsPage').then((m) => ({ default: m.QuotationsPage })));
+const PreCheckInsPage = lazy(() => import('@pages/Resort/PreCheckIns/PreCheckInsPage').then((m) => ({ default: m.PreCheckInsPage })));
+const IncidentsPage = lazy(() => import('@pages/Resort/Incidents/IncidentsPage').then((m) => ({ default: m.IncidentsPage })));
 const CleaningBoardPage = lazy(() => import('@pages/Resort/Housekeeping/CleaningBoardPage').then((m) => ({ default: m.CleaningBoardPage })));
 const HousekeepingRoomStatusPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingRoomStatusPage').then((m) => ({ default: m.HousekeepingRoomStatusPage })));
 const HousekeepingTasksPage = lazy(() => import('@pages/Resort/Housekeeping/HousekeepingTasksPage').then((m) => ({ default: m.HousekeepingTasksPage })));
@@ -300,6 +303,26 @@ const App: React.FC = () => {
                           <PageTitle title="Guests">
                             <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Guests]}>
                               <GuestListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="pre-check-ins"
+                        element={
+                          <PageTitle title="Pre Check-In">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_CheckIn]}>
+                              <PreCheckInsPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="incidents"
+                        element={
+                          <PageTitle title="Incidents">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Incidents]}>
+                              <IncidentsPage />
                             </ProtectedRoute>
                           </PageTitle>
                         }
