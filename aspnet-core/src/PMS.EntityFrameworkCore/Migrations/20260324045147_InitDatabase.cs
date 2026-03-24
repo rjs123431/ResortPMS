@@ -254,6 +254,27 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RoomMaintenanceType",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomMaintenanceType", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RoomRatePlanGroup",
                 columns: table => new
                 {
@@ -1908,6 +1929,7 @@ namespace PMS.Migrations
                     Status = table.Column<int>(type: "int", nullable: false),
                     ReservationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MaintenanceRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     IsSellable = table.Column<bool>(type: "bit", nullable: false),
                     IsBlocked = table.Column<bool>(type: "bit", nullable: false),
                     IsOutOfOrder = table.Column<bool>(type: "bit", nullable: false),
@@ -1922,6 +1944,51 @@ namespace PMS.Migrations
                         principalTable: "Room",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomMaintenanceRequest",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AssignedStaffId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Category = table.Column<int>(type: "int", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "date", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "date", nullable: false),
+                    OpenedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CancelledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CancellationReason = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomMaintenanceRequest", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomMaintenanceRequest_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RoomMaintenanceRequest_Staff_AssignedStaffId",
+                        column: x => x.AssignedStaffId,
+                        principalTable: "Staff",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -2251,6 +2318,31 @@ namespace PMS.Migrations
                         name: "FK_ReservationDailyRate_ReservationRoom_ReservationRoomId",
                         column: x => x.ReservationRoomId,
                         principalTable: "ReservationRoom",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomMaintenanceRequestType",
+                columns: table => new
+                {
+                    RequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomMaintenanceRequestType", x => new { x.RequestId, x.TypeId });
+                    table.ForeignKey(
+                        name: "FK_RoomMaintenanceRequestType_RoomMaintenanceRequest_RequestId",
+                        column: x => x.RequestId,
+                        principalTable: "RoomMaintenanceRequest",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RoomMaintenanceRequestType_RoomMaintenanceType_TypeId",
+                        column: x => x.TypeId,
+                        principalTable: "RoomMaintenanceType",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -3678,9 +3770,46 @@ namespace PMS.Migrations
                 column: "ToRoomTypeId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RoomDailyInventory_MaintenanceRequestId",
+                table: "RoomDailyInventory",
+                column: "MaintenanceRequestId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoomDailyInventory_RoomId_InventoryDate",
                 table: "RoomDailyInventory",
-                columns: new[] { "RoomId", "InventoryDate" });
+                columns: new[] { "RoomId", "InventoryDate" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomMaintenanceRequest_AssignedStaffId",
+                table: "RoomMaintenanceRequest",
+                column: "AssignedStaffId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomMaintenanceRequest_Category",
+                table: "RoomMaintenanceRequest",
+                column: "Category");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomMaintenanceRequest_RoomId_Status",
+                table: "RoomMaintenanceRequest",
+                columns: new[] { "RoomId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomMaintenanceRequest_Status_CreationTime",
+                table: "RoomMaintenanceRequest",
+                columns: new[] { "Status", "CreationTime" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomMaintenanceRequestType_TypeId",
+                table: "RoomMaintenanceRequestType",
+                column: "TypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomMaintenanceType_Name",
+                table: "RoomMaintenanceType",
+                column: "Name",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoomRatePlan_RoomRatePlanGroupId",
@@ -4298,6 +4427,9 @@ namespace PMS.Migrations
                 name: "RoomDailyInventory");
 
             migrationBuilder.DropTable(
+                name: "RoomMaintenanceRequestType");
+
+            migrationBuilder.DropTable(
                 name: "RoomRatePlanDay");
 
             migrationBuilder.DropTable(
@@ -4440,6 +4572,12 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ExtraBedType");
+
+            migrationBuilder.DropTable(
+                name: "RoomMaintenanceRequest");
+
+            migrationBuilder.DropTable(
+                name: "RoomMaintenanceType");
 
             migrationBuilder.DropTable(
                 name: "RoomRatePlan");

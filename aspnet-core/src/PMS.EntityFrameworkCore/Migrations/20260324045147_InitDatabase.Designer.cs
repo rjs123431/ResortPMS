@@ -12,7 +12,7 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260324014743_InitDatabase")]
+    [Migration("20260324045147_InitDatabase")]
     partial class InitDatabase
     {
         /// <inheritdoc />
@@ -4317,6 +4317,9 @@ namespace PMS.Migrations
                     b.Property<bool>("IsSellable")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("MaintenanceRequestId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("ReservationId")
                         .HasColumnType("uniqueidentifier");
 
@@ -4336,9 +4339,166 @@ namespace PMS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoomId", "InventoryDate");
+                    b.HasIndex("MaintenanceRequestId");
+
+                    b.HasIndex("RoomId", "InventoryDate")
+                        .IsUnique();
 
                     b.ToTable("RoomDailyInventory", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.RoomMaintenanceRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AssignedStaffId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("DeleterUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedStaffId");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("RoomId", "Status");
+
+                    b.HasIndex("Status", "CreationTime");
+
+                    b.ToTable("RoomMaintenanceRequest", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.RoomMaintenanceRequestType", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RequestId", "TypeId");
+
+                    b.HasIndex("TypeId");
+
+                    b.ToTable("RoomMaintenanceRequestType", (string)null);
+                });
+
+            modelBuilder.Entity("PMS.App.RoomMaintenanceType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("DeleterUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("RoomMaintenanceType", (string)null);
                 });
 
             modelBuilder.Entity("PMS.App.RoomRatePlan", b =>
@@ -6379,6 +6539,43 @@ namespace PMS.Migrations
                     b.Navigation("Room");
                 });
 
+            modelBuilder.Entity("PMS.App.RoomMaintenanceRequest", b =>
+                {
+                    b.HasOne("PMS.App.Staff", "AssignedStaff")
+                        .WithMany()
+                        .HasForeignKey("AssignedStaffId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("PMS.App.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedStaff");
+
+                    b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("PMS.App.RoomMaintenanceRequestType", b =>
+                {
+                    b.HasOne("PMS.App.RoomMaintenanceRequest", "Request")
+                        .WithMany("MaintenanceTypes")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.App.RoomMaintenanceType", "Type")
+                        .WithMany()
+                        .HasForeignKey("TypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+
+                    b.Navigation("Type");
+                });
+
             modelBuilder.Entity("PMS.App.RoomRatePlan", b =>
                 {
                     b.HasOne("PMS.App.RoomRatePlanGroup", "RoomRatePlanGroup")
@@ -6835,6 +7032,11 @@ namespace PMS.Migrations
                     b.Navigation("HousekeepingTasks");
 
                     b.Navigation("StatusLogs");
+                });
+
+            modelBuilder.Entity("PMS.App.RoomMaintenanceRequest", b =>
+                {
+                    b.Navigation("MaintenanceTypes");
                 });
 
             modelBuilder.Entity("PMS.App.RoomRatePlan", b =>

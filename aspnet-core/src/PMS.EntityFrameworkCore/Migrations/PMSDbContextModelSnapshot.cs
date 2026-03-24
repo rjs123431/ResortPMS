@@ -4441,6 +4441,9 @@ namespace PMS.Migrations
                     b.Property<Guid>("TypeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("RequestId", "TypeId");
 
                     b.HasIndex("TypeId");

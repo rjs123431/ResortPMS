@@ -1,10 +1,8 @@
 using Abp.Dependency;
 using Abp.Domain.Repositories;
-using Abp.EntityFrameworkCore;
 using Abp.Timing;
 using Microsoft.EntityFrameworkCore;
 using PMS.App;
-using PMS.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,18 +16,15 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
 {
     private readonly IRepository<RoomDailyInventoryEntity, Guid> _inventoryRepository;
     private readonly IRepository<Room, Guid> _roomRepository;
-    private readonly IDbContextProvider<PMSDbContext> _dbContextProvider;
 
     private const int MaxDaysToEnsure = 365;
 
     public RoomDailyInventoryService(
         IRepository<RoomDailyInventoryEntity, Guid> inventoryRepository,
-        IRepository<Room, Guid> roomRepository,
-        IDbContextProvider<PMSDbContext> dbContextProvider)
+        IRepository<Room, Guid> roomRepository)
     {
         _inventoryRepository = inventoryRepository;
         _roomRepository = roomRepository;
-        _dbContextProvider = dbContextProvider;
     }
 
     public async Task EnsureInventoryForDateRangeAsync(IReadOnlyList<Guid> roomIds, DateTime startDate, DateTime endDate)
@@ -40,8 +35,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         var end = endDate.Date;
         if (start >= end) return;
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var existing = await ctx.RoomDailyInventories
+        var existing = await _inventoryRepository.GetAll()
             .AsNoTracking()
             .Where(i => roomIds.Contains(i.RoomId) && i.InventoryDate >= start && i.InventoryDate < end)
             .Select(i => new { i.RoomId, i.InventoryDate })
@@ -74,8 +68,10 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
 
         if (toAdd.Count > 0)
         {
-            await ctx.RoomDailyInventories.AddRangeAsync(toAdd);
-            await ctx.SaveChangesAsync();
+            foreach (var item in toAdd)
+            {
+                await _inventoryRepository.InsertAsync(item);
+            }
         }
     }
 
@@ -87,8 +83,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
 
         await EnsureInventoryForDateRangeAsync([roomId], start, end);
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var rows = await ctx.RoomDailyInventories
+        var rows = await _inventoryRepository.GetAll()
             .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end)
             .ToListAsync();
 
@@ -98,6 +93,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             row.ReservationId = reservationId;
             row.StayId = null;
             row.MaintenanceRequestId = null;
+            await _inventoryRepository.UpdateAsync(row);
         }
     }
 
@@ -111,16 +107,22 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         var expectedNights = (int)(end - start).TotalDays;
         await EnsureInventoryForDateRangeAsync([roomId], start, end);
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var vacant = (int)RoomDailyInventoryStatus.Vacant;
-        var reserved = (int)RoomDailyInventoryStatus.Reserved;
+        var rows = await _inventoryRepository.GetAll()
+            .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end && i.Status == RoomDailyInventoryStatus.Vacant)
+            .ToListAsync();
 
-        var rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
-                        @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = {1}, StayId = NULL, MaintenanceRequestId = NULL
-              WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4} AND Status = {5}",
-            reserved, reservationId, roomId, start, end, vacant);
+        if (rows.Count != expectedNights) return false;
 
-        return rowsAffected == expectedNights;
+        foreach (var row in rows)
+        {
+            row.Status = RoomDailyInventoryStatus.Reserved;
+            row.ReservationId = reservationId;
+            row.StayId = null;
+            row.MaintenanceRequestId = null;
+            await _inventoryRepository.UpdateAsync(row);
+        }
+
+        return true;
     }
 
     public async Task SetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId)
@@ -131,8 +133,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
 
         await EnsureInventoryForDateRangeAsync([roomId], start, end);
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var rows = await ctx.RoomDailyInventories
+        var rows = await _inventoryRepository.GetAll()
             .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end)
             .ToListAsync();
 
@@ -142,45 +143,52 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             row.ReservationId = null;
             row.StayId = stayId;
             row.MaintenanceRequestId = null;
+            await _inventoryRepository.UpdateAsync(row);
         }
     }
 
-        public async Task<bool> TrySetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId, Guid? reservationId)
+    public async Task<bool> TrySetInHouseAsync(Guid roomId, DateTime arrivalDate, DateTime departureDate, Guid stayId, Guid? reservationId)
+    {
+        var start = arrivalDate.Date;
+        var end = departureDate.Date;
+        if (start >= end) return false;
+
+        var expectedNights = (int)(end - start).TotalDays;
+        await EnsureInventoryForDateRangeAsync([roomId], start, end);
+
+        var rows = await _inventoryRepository.GetAll()
+            .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end)
+            .ToListAsync();
+
+        // Filter for valid rows based on reservation
+        List<RoomDailyInventoryEntity> validRows;
+        if (reservationId.HasValue)
         {
-            var start = arrivalDate.Date;
-            var end = departureDate.Date;
-            if (start >= end) return false;
-
-            var expectedNights = (int)(end - start).TotalDays;
-            await EnsureInventoryForDateRangeAsync([roomId], start, end);
-
-            var ctx = await _dbContextProvider.GetDbContextAsync();
-            var inHouse = (int)RoomDailyInventoryStatus.InHouse;
-            var vacant = (int)RoomDailyInventoryStatus.Vacant;
-            var reserved = (int)RoomDailyInventoryStatus.Reserved;
-
-            int rowsAffected;
-            if (reservationId.HasValue)
-            {
-                // Check-in from reservation: accept nights that are Vacant OR Reserved under this reservation.
-                rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
-                                        @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}, MaintenanceRequestId = NULL
-                      WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
-                        AND (Status = {5} OR (Status = {6} AND ReservationId = {7}))",
-                    inHouse, stayId, roomId, start, end, vacant, reserved, reservationId.Value);
-            }
-            else
-            {
-                // Walk-in: only Vacant nights are eligible.
-                rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
-                                        @"UPDATE RoomDailyInventory SET Status = {0}, ReservationId = NULL, StayId = {1}, MaintenanceRequestId = NULL
-                      WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
-                        AND Status = {5}",
-                    inHouse, stayId, roomId, start, end, vacant);
-            }
-
-            return rowsAffected == expectedNights;
+            // Check-in from reservation: accept nights that are Vacant OR Reserved under this reservation.
+            validRows = rows
+                .Where(r => r.Status == RoomDailyInventoryStatus.Vacant || 
+                           (r.Status == RoomDailyInventoryStatus.Reserved && r.ReservationId == reservationId.Value))
+                .ToList();
         }
+        else
+        {
+            // Walk-in: only Vacant nights are eligible.
+            validRows = rows.Where(r => r.Status == RoomDailyInventoryStatus.Vacant).ToList();
+        }
+
+        if (validRows.Count != expectedNights) return false;
+
+        foreach (var row in validRows)
+        {
+            row.Status = RoomDailyInventoryStatus.InHouse;
+            row.ReservationId = null;
+            row.StayId = stayId;
+            row.MaintenanceRequestId = null;
+            await _inventoryRepository.UpdateAsync(row);
+        }
+
+        return true;
+    }
 
     public async Task SetVacantAsync(Guid roomId, DateTime fromDate, DateTime toDate)
     {
@@ -188,8 +196,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         var end = toDate.Date;
         if (start >= end) return;
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var rows = await ctx.RoomDailyInventories
+        var rows = await _inventoryRepository.GetAll()
             .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end)
             .Where(i => !i.IsOutOfOrder && !i.IsBlocked && i.MaintenanceRequestId == null)
             .ToListAsync();
@@ -199,6 +206,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             row.Status = RoomDailyInventoryStatus.Vacant;
             row.ReservationId = null;
             row.StayId = null;
+            await _inventoryRepository.UpdateAsync(row);
         }
     }
 
@@ -211,18 +219,25 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         var expectedNights = (int)(end - start).TotalDays;
         await EnsureInventoryForDateRangeAsync([roomId], start, end);
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var outOfOrder = (int)RoomDailyInventoryStatus.OutOfOrder;
-        var vacant = (int)RoomDailyInventoryStatus.Vacant;
+        var rows = await _inventoryRepository.GetAll()
+            .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end &&
+                       i.Status == RoomDailyInventoryStatus.Vacant && !i.IsBlocked && !i.IsOutOfOrder)
+            .ToListAsync();
 
-        var rowsAffected = await ctx.Database.ExecuteSqlRawAsync(
-            @"UPDATE RoomDailyInventory
-              SET Status = {0}, ReservationId = NULL, StayId = NULL, MaintenanceRequestId = {1}, IsOutOfOrder = 1, IsSellable = 0
-              WHERE RoomId = {2} AND InventoryDate >= {3} AND InventoryDate < {4}
-                AND Status = {5} AND IsBlocked = 0 AND IsOutOfOrder = 0",
-            outOfOrder, maintenanceRequestId, roomId, start, end, vacant);
+        if (rows.Count != expectedNights) return false;
 
-        return rowsAffected == expectedNights;
+        foreach (var row in rows)
+        {
+            row.Status = RoomDailyInventoryStatus.OutOfOrder;
+            row.MaintenanceRequestId = maintenanceRequestId;
+            row.ReservationId = null;
+            row.StayId = null;
+            row.IsOutOfOrder = true;
+            row.IsSellable = false;
+            await _inventoryRepository.UpdateAsync(row);
+        }
+
+        return true;
     }
 
     public async Task ReleaseMaintenanceBlockAsync(Guid roomId, DateTime startDate, DateTime endDate, Guid maintenanceRequestId)
@@ -231,14 +246,21 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
         var end = endDate.Date;
         if (start >= end) return;
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var vacant = (int)RoomDailyInventoryStatus.Vacant;
+        var rows = await _inventoryRepository.GetAll()
+            .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end && 
+                       i.MaintenanceRequestId == maintenanceRequestId)
+            .ToListAsync();
 
-        await ctx.Database.ExecuteSqlRawAsync(
-            @"UPDATE RoomDailyInventory
-              SET Status = {0}, ReservationId = NULL, StayId = NULL, MaintenanceRequestId = NULL, IsOutOfOrder = 0, IsSellable = 1
-              WHERE RoomId = {1} AND InventoryDate >= {2} AND InventoryDate < {3} AND MaintenanceRequestId = {4}",
-            vacant, roomId, start, end, maintenanceRequestId);
+        foreach (var row in rows)
+        {
+            row.Status = RoomDailyInventoryStatus.Vacant;
+            row.ReservationId = null;
+            row.StayId = null;
+            row.MaintenanceRequestId = null;
+            row.IsOutOfOrder = false;
+            row.IsSellable = true;
+            await _inventoryRepository.UpdateAsync(row);
+        }
     }
 
     public async Task<bool> IsRoomAvailableForDatesAsync(
@@ -260,8 +282,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             start,
             end > Clock.Now.Date.AddDays(MaxDaysToEnsure) ? Clock.Now.Date.AddDays(MaxDaysToEnsure) : end);
 
-        var ctx = await _dbContextProvider.GetDbContextAsync();
-        var rows = await ctx.RoomDailyInventories
+        var rows = await _inventoryRepository.GetAll()
             .AsNoTracking()
             .Where(i => i.RoomId == roomId && i.InventoryDate >= start && i.InventoryDate < end)
             .ToListAsync();

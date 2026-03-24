@@ -1,3 +1,4 @@
+using Abp.Domain.Entities;
 using Abp.Domain.Entities.Auditing;
 using Abp.Timing;
 using Abp.UI;
@@ -42,7 +43,7 @@ public class RoomMaintenanceType : FullAuditedEntity<Guid>
 /// <summary>
 /// Join between a work-order and one or more maintenance types.
 /// </summary>
-public class RoomMaintenanceRequestType
+public class RoomMaintenanceRequestType : Entity<Guid>
 {
     public Guid RequestId { get; set; }
     public Guid TypeId { get; set; }

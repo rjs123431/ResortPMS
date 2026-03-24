@@ -32,6 +32,7 @@ namespace PMS
 
             IocManager.RegisterAssemblyByConvention(thisAssembly);
             IocManager.Register(typeof(IPosHubBroadcaster), typeof(PosHubBroadcaster), DependencyLifeStyle.Singleton);
+            IocManager.Register(typeof(IRoomStatusHubBroadcaster), typeof(RoomStatusHubBroadcaster), DependencyLifeStyle.Singleton);
 
             Configuration.Modules.AbpAutoMapper().Configurators.Add(
                 // Scan the assembly for classes which inherit from AutoMapper.Profile

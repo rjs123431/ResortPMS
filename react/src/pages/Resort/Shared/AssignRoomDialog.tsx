@@ -49,6 +49,8 @@ const getRoomStatusBadgeClass = (housekeepingStatus?: HousekeepingStatus) => {
   return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
 };
 
+const isRoomOutOfOrder = (roomStatusCode?: string) => roomStatusCode === 'OOO';
+
 export const AssignRoomDialog = ({
   open,
   isChangeRoom,
@@ -159,16 +161,19 @@ export const AssignRoomDialog = ({
                   {filteredRooms.map((room) => {
                     const isCurrentlySelected = room.id === selectedRoomId;
                     const isDirty = room.housekeepingStatus === HousekeepingStatus.Dirty;
-                    const isDisabled = isCurrentlySelected || (isDirty && !allowDirtySelection);
+                    const isOOO = isRoomOutOfOrder(room.roomStatusCode);
+                    const isDisabled = isCurrentlySelected || isOOO || (isDirty && !allowDirtySelection);
                     return (
                       <tr
                         key={room.id}
                         className={`border-b dark:border-gray-700 ${
                           isCurrentlySelected
                             ? 'bg-primary-50 dark:bg-primary-900/20'
-                            : isDirty
-                              ? 'bg-yellow-50/50 dark:bg-yellow-900/10'
-                              : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            : isOOO
+                              ? 'bg-red-50/60 dark:bg-red-900/10'
+                              : isDirty
+                                ? 'bg-yellow-50/50 dark:bg-yellow-900/10'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
                         }`}
                       >
                         <td className="p-2">
@@ -176,6 +181,11 @@ export const AssignRoomDialog = ({
                           {isCurrentlySelected && (
                             <span className="ml-2 inline-flex rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
                               Current
+                            </span>
+                          )}
+                          {isOOO && (
+                            <span className="ml-2 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                              Out of Order
                             </span>
                           )}
                         </td>
@@ -200,7 +210,7 @@ export const AssignRoomDialog = ({
                               onSelectRoom(room.id);
                             }}
                           >
-                            {isCurrentlySelected ? 'Selected' : isDirty && !allowDirtySelection ? 'Dirty' : 'Select'}
+                            {isCurrentlySelected ? 'Selected' : isOOO ? 'Unavailable' : isDirty && !allowDirtySelection ? 'Dirty' : 'Select'}
                           </button>
                         </td>
                       </tr>

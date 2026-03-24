@@ -2,14 +2,13 @@ using Abp.Application.Services;
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
-using Abp.EntityFrameworkCore;
 using Abp.Linq.Extensions;
 using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.Application.App.RoomDailyInventory;
+using PMS.Application.Hubs;
 using PMS.Authorization;
-using PMS.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -92,12 +91,13 @@ public class CancelRoomMaintenanceRequestDto
 public class RoomMaintenanceAppService(
     IRepository<RoomMaintenanceRequest, Guid> maintenanceRepository,
     IRepository<RoomMaintenanceType, Guid> maintenanceTypeRepository,
-    IDbContextProvider<PMSDbContext> dbContextProvider,
+    IRepository<RoomStatusLog, Guid> roomStatusLogRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<Staff, Guid> staffRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
-    IRoomDailyInventoryService roomDailyInventoryService
+    IRoomDailyInventoryService roomDailyInventoryService,
+    IRoomStatusHubBroadcaster roomStatusHubBroadcaster
 ) : PMSAppServiceBase, IRoomMaintenanceAppService
 {
     public async Task<PagedResultDto<RoomMaintenanceRequestDto>> GetListAsync(GetRoomMaintenanceInput input)
@@ -192,20 +192,33 @@ public class RoomMaintenanceAppService(
 
         await maintenanceRepository.InsertAsync(request);
 
-        // Insert type join rows
+        // Add maintenance types via navigation property
         if (input.TypeIds?.Count > 0)
         {
-            var db = await dbContextProvider.GetDbContextAsync();
-            var validTypeIds = await maintenanceTypeRepository.GetAll()
+            var validTypes = await maintenanceTypeRepository.GetAll()
                 .Where(t => input.TypeIds.Contains(t.Id) && t.IsActive)
-                .Select(t => t.Id)
                 .ToListAsync();
 
-            foreach (var typeId in validTypeIds)
-                db.RoomMaintenanceRequestTypes.Add(new RoomMaintenanceRequestType { RequestId = request.Id, TypeId = typeId });
+            foreach (var type in validTypes)
+            {
+                request.MaintenanceTypes.Add(new RoomMaintenanceRequestType { TypeId = type.Id });
+            }
 
-            await db.SaveChangesAsync();
+            await maintenanceRepository.UpdateAsync(request);
         }
+
+        // Log room status change to OutOfOrder
+        var roomStatusLog = new RoomStatusLog
+        {
+            Id = Guid.NewGuid(),
+            RoomId = request.RoomId,
+            OperationalStatus = RoomOperationalStatus.OutOfOrder,
+            Remarks = $"Maintenance work order created: {request.Title}",
+            ChangedAt = Clock.Now
+        };
+        await roomStatusLogRepository.InsertAsync(roomStatusLog);
+
+        await roomStatusHubBroadcaster.NotifyRoomStatusChangedAsync(request.RoomId, (int)RoomOperationalStatus.OutOfOrder);
 
         return request.Id;
     }
@@ -239,6 +252,19 @@ public class RoomMaintenanceAppService(
             request.StartDate,
             request.EndDate,
             request.Id);
+
+        // Log room status change back to Vacant
+        var roomStatusLog = new RoomStatusLog
+        {
+            Id = Guid.NewGuid(),
+            RoomId = request.RoomId,
+            OperationalStatus = RoomOperationalStatus.Vacant,
+            Remarks = $"Maintenance work order completed: {request.Title}",
+            ChangedAt = Clock.Now
+        };
+        await roomStatusLogRepository.InsertAsync(roomStatusLog);
+
+        await roomStatusHubBroadcaster.NotifyRoomStatusChangedAsync(request.RoomId, (int)RoomOperationalStatus.Vacant);
     }
 
     [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
@@ -253,6 +279,30 @@ public class RoomMaintenanceAppService(
             request.StartDate,
             request.EndDate,
             request.Id);
+
+        // Log room status - may already be Vacant or need to revert from OutOfOrder
+        var lastLog = await roomStatusLogRepository.GetAll()
+            .Where(l => l.RoomId == request.RoomId)
+            .OrderByDescending(l => l.ChangedAt)
+            .FirstOrDefaultAsync();
+
+        var statusToRevert = lastLog?.OperationalStatus ?? RoomOperationalStatus.Vacant;
+        if (statusToRevert == RoomOperationalStatus.OutOfOrder)
+        {
+            statusToRevert = RoomOperationalStatus.Vacant;
+        }
+
+        var roomStatusLog = new RoomStatusLog
+        {
+            Id = Guid.NewGuid(),
+            RoomId = request.RoomId,
+            OperationalStatus = statusToRevert,
+            Remarks = $"Maintenance work order cancelled: {request.Title}",
+            ChangedAt = Clock.Now
+        };
+        await roomStatusLogRepository.InsertAsync(roomStatusLog);
+
+        await roomStatusHubBroadcaster.NotifyRoomStatusChangedAsync(request.RoomId, (int)statusToRevert);
     }
 
     private async Task ValidateStaffAsync(Guid staffId)
