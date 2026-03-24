@@ -31,7 +31,8 @@ public class RoomRackAppService(
     IRepository<Stay, Guid> stayRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
-    IRoomDailyInventoryService roomDailyInventoryService
+    IRoomDailyInventoryService roomDailyInventoryService,
+    IRepository<RoomMaintenanceRequest, Guid> maintenanceRepository
 ) : PMSAppServiceBase, IRoomRackAppService
 {
     public async Task<GetRoomRackResultDto> GetRoomInfoAsync(GetRoomRackInput input)
@@ -149,7 +150,17 @@ public class RoomRackAppService(
         var roomTypeIds = rooms.Select(r => r.RoomTypeId).Distinct().ToList();
         var roomTypeIdToName = rooms.GroupBy(r => r.RoomTypeId).ToDictionary(g => g.Key, g => g.First().RoomType?.Name ?? string.Empty);
 
+        // Fetch active maintenance requests for rooms currently out of order
+        var activeMaintenanceByRoom = await maintenanceRepository.GetAll()
+            .AsNoTracking()
+            .Where(m => roomIds.Contains(m.RoomId) && 
+                       m.Status != RoomMaintenanceStatus.Completed && 
+                       m.Status != RoomMaintenanceStatus.Cancelled &&
+                       m.StartDate <= today && m.EndDate >= today)
+            .ToDictionaryAsync(m => m.RoomId, m => (Title: m.Title ?? string.Empty, Reason: m.Description ?? string.Empty));
+
         var bookingStatuses = new[] { (int)PMS.App.ReservationStatus.Draft, (int)PMS.App.ReservationStatus.Pending };
+
         var unassignedRooms = await reservationRoomRepository.GetAll()
             .AsNoTracking()
             .Where(rr => rr.RoomId == null && roomTypeIds.Contains(rr.RoomTypeId) && rr.ArrivalDate < end && rr.DepartureDate > start)
@@ -195,7 +206,8 @@ public class RoomRackAppService(
         {
             todayInventoryByRoom.TryGetValue(r.Id, out var invStatus);
             var statusCode = GetRoomStatusCode(invStatus, r.HousekeepingStatus);
-            return MapToRoomListDto(r, statusCode);
+            activeMaintenanceByRoom.TryGetValue(r.Id, out var maintenance);
+            return MapToRoomListDto(r, statusCode, maintenance.Title, maintenance.Reason);
         }).ToList();
         var cells = inventory.Select(i =>
         {
@@ -346,7 +358,7 @@ public class RoomRackAppService(
         return isClean ? "VC" : "VD";
     }
 
-    private static RoomListDto MapToRoomListDto(Room room, string roomStatusCode)
+    private static RoomListDto MapToRoomListDto(Room room, string roomStatusCode, string maintenanceTitle = "", string maintenanceReason = "")
     {
         var rt = room.RoomType;
         return new RoomListDto
@@ -365,6 +377,8 @@ public class RoomRackAppService(
             HousekeepingStatus = room.HousekeepingStatus,
             IsActive = room.IsActive,
             RoomStatusCode = roomStatusCode,
+            MaintenanceTitle = maintenanceTitle,
+            MaintenanceReason = maintenanceReason,
         };
     }
 }

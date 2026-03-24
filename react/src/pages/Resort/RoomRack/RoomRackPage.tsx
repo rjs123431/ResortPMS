@@ -743,7 +743,7 @@ export const RoomRackPage = () => {
                                         : code === 'VD' ? 'Vacant Dirty – Needs cleaning'
                                         : code === 'OC' ? 'Occupied Clean – Guest inside, room serviced'
                                         : code === 'OD' ? 'Occupied Dirty – Guest inside, needs service'
-                                        : code === 'OOO' ? 'Out of Order – Cannot be used'
+                                        : code === 'OOO' ? `Out of Order${room.maintenanceTitle ? ` · ${room.maintenanceTitle}` : ''}${room.maintenanceReason ? `\n${room.maintenanceReason}` : ''}`
                                         : undefined
                                       }
                                     >

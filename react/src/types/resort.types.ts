@@ -160,6 +160,10 @@ export interface RoomListDto {
   isActive: boolean;
   /** Compact current room status code derived from daily inventory + housekeeping, e.g. VC, VD, OC, OD, OOO. */
   roomStatusCode?: string;
+  /** Maintenance request title when room is Out of Order. */
+  maintenanceTitle?: string;
+  /** Maintenance request description when room is Out of Order. */
+  maintenanceReason?: string;
 }
 
 /** Room rack: daily inventory status (matches backend RoomDailyInventoryStatus). */

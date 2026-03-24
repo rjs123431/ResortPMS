@@ -79,6 +79,14 @@ public class RoomListDto : EntityDto<Guid>
     /// Compact current room status code derived from daily inventory + housekeeping, e.g. VC, VD, OC, OD, OOO.
     /// </summary>
     public string RoomStatusCode { get; set; }
+    /// <summary>
+    /// Maintenance request title when room is Out of Order.
+    /// </summary>
+    public string MaintenanceTitle { get; set; }
+    /// <summary>
+    /// Maintenance request description when room is Out of Order.
+    /// </summary>
+    public string MaintenanceReason { get; set; }
 }
 
 [AutoMapTo(typeof(Room))]

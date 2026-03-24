@@ -124,6 +124,9 @@ export interface RoomListDto {
   floor?: string;
   housekeepingStatus: HousekeepingStatus;
   isActive: boolean;
+  roomStatusCode?: string;
+  maintenanceTitle?: string;
+  maintenanceReason?: string;
 }
 
 /** Room rack: daily inventory status (matches backend RoomDailyInventoryStatus). */
