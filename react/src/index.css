@@ -284,6 +284,10 @@ html.dark .app-swal-modal {
   color: inherit !important;
 }
 
+.app-swal-actions {
+  gap: 0.5rem !important;
+}
+
 .app-swal-confirm-btn,
 .app-swal-cancel-btn {
   border-radius: 0.375rem;

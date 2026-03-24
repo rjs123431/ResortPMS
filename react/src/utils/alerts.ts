@@ -72,6 +72,7 @@ export const confirmAction = async (
       popup: 'app-swal-modal',
       title: 'app-swal-title',
       htmlContainer: 'app-swal-text',
+      actions: 'app-swal-actions',
       confirmButton: 'app-swal-confirm-btn',
       cancelButton: 'app-swal-cancel-btn',
     },

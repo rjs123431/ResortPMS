@@ -284,8 +284,6 @@ export const StayDetailPage = () => {
             <p className="mt-3 text-sm text-gray-500">Loading stay info...</p>
           ) : (
             <div className="mt-4 grid grid-cols-1 gap-2 text-sm md:grid-cols-2 lg:grid-cols-3">
-              <p><span className="font-medium">Stay ID:</span> {stayId || '-'}</p>
-              <p><span className="font-medium">Stay No:</span> {stay?.stayNo ?? statement?.stayNo ?? '-'}</p>
               <p><span className="font-medium">Guest:</span> {stay?.guestName ?? statement?.guestName ?? '-'}</p>
               <p><span className="font-medium">Check-In:</span> {toDateTime(stay?.checkInDateTime)}</p>
               <p><span className="font-medium">Expected Check-Out:</span> {toDateTime(stay?.expectedCheckOutDateTime)}</p>

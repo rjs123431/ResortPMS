@@ -168,28 +168,50 @@ public class ResortSetupDataCreator
     {
         var definitions = new[]
         {
-            new { Name = "Walk In", Sort = 0 },
-            new { Name = "Social Media", Sort = 1 },
-            new { Name = "OTA", Sort = 2 },
-            new { Name = "Agency", Sort = 3 },
+            new { Name = "Walk in", Sort = 0, Icon = "/assets/channel-icons/front-desk.svg", Aliases = new[] { "Walk In" } },
+            new { Name = "Phone", Sort = 1, Icon = "/assets/channel-icons/phone.svg", Aliases = Array.Empty<string>() },
+            new { Name = "Facebook", Sort = 2, Icon = "/assets/channel-icons/facebook.svg", Aliases = new[] { "Social Media" } },
+            new { Name = "Email", Sort = 3, Icon = "/assets/channel-icons/email.svg", Aliases = Array.Empty<string>() },
+            new { Name = "Online Travel Agency", Sort = 4, Icon = "/assets/channel-icons/booking.svg", Aliases = new[] { "OTA" } },
         };
+
+        var existingChannels = _context.Channels.ToList();
+        var touchedChannelIds = new HashSet<Guid>();
 
         foreach (var definition in definitions)
         {
-            var existing = _context.Channels.FirstOrDefault(x => x.Name == definition.Name);
+            var existing = existingChannels.FirstOrDefault(x => x.Name == definition.Name)
+                ?? existingChannels.FirstOrDefault(x => definition.Aliases.Contains(x.Name));
+
             if (existing != null)
             {
+                existing.Name = definition.Name;
                 existing.Sort = definition.Sort;
+                if (string.IsNullOrWhiteSpace(existing.Icon))
+                {
+                    existing.Icon = definition.Icon;
+                }
                 existing.IsActive = true;
+                touchedChannelIds.Add(existing.Id);
                 continue;
             }
 
-            _context.Channels.Add(new Channel
+            var channel = new Channel
             {
                 Name = definition.Name,
+                Icon = definition.Icon,
                 Sort = definition.Sort,
                 IsActive = true,
-            });
+            };
+
+            _context.Channels.Add(channel);
+            existingChannels.Add(channel);
+        }
+
+        var obsoleteChannelNames = new[] { "Walk In", "Social Media", "OTA", "Agency" };
+        foreach (var channel in existingChannels.Where(x => obsoleteChannelNames.Contains(x.Name) && !touchedChannelIds.Contains(x.Id)))
+        {
+            channel.IsActive = false;
         }
 
         _context.SaveChanges();
@@ -324,7 +346,7 @@ public class ResortSetupDataCreator
 
             foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
             {
-                var rate = day == DayOfWeek.Saturday || day == DayOfWeek.Sunday
+                var rate = day == DayOfWeek.Saturday
                     ? weekendRate
                     : weekdayRate;
 
