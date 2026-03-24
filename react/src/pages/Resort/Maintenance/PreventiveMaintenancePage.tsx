@@ -381,7 +381,14 @@ export const PreventiveMaintenancePage = () => {
                   type="date"
                   className="w-full rounded border p-2 text-sm dark:bg-gray-700"
                   value={form.startDate}
-                  onChange={(e) => setForm((s) => ({ ...s, startDate: e.target.value }))}
+                  onChange={(e) => {
+                    const nextStartDate = e.target.value;
+                    setForm((s) => ({
+                      ...s,
+                      startDate: nextStartDate,
+                      endDate: s.endDate && s.endDate < nextStartDate ? nextStartDate : s.endDate,
+                    }));
+                  }}
                 />
               </div>
 
@@ -389,6 +396,7 @@ export const PreventiveMaintenancePage = () => {
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date <span className="text-red-500">*</span></label>
                 <input
                   type="date"
+                  min={form.startDate}
                   className="w-full rounded border p-2 text-sm dark:bg-gray-700"
                   value={form.endDate}
                   onChange={(e) => setForm((s) => ({ ...s, endDate: e.target.value }))}

@@ -229,6 +229,30 @@ public class AssignReservationRoomDto
     [Required] public Guid RoomId { get; set; }
 }
 
+public class AssignReservationRoomsDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    [Required][MinLength(1)] public List<AssignReservationRoomItemDto> Assignments { get; set; } = [];
+}
+
+public class AssignReservationRoomItemDto
+{
+    [Required] public Guid ReservationRoomId { get; set; }
+    [Required] public Guid RoomId { get; set; }
+}
+
+public class ApplyReservationChangesDto
+{
+    [Required] public Guid ReservationId { get; set; }
+    public Guid? LinkedGuestId { get; set; }
+    public List<AddReservationRoomTypeItemDto> RoomTypesToAdd { get; set; } = [];
+    public List<Guid> ReservationRoomIdsToRemove { get; set; } = [];
+    public List<AssignReservationRoomItemDto> RoomAssignments { get; set; } = [];
+    public List<AddReservationExtraBedItemDto> ExtraBedsToAdd { get; set; } = [];
+    public List<Guid> ReservationExtraBedIdsToRemove { get; set; } = [];
+    public List<RecordReservationDepositDto> DepositsToAdd { get; set; } = [];
+}
+
 // ── Children DTOs ─────────────────────────────────────────────────────────────
 [AutoMapFrom(typeof(ReservationRoom))]
 public class ReservationRoomDto : EntityDto<Guid>

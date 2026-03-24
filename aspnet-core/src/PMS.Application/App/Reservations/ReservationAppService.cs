@@ -43,6 +43,8 @@ public interface IReservationAppService : IApplicationService
     Task RemoveRoomAsync(RemoveReservationRoomDto input);
     Task RemoveExtraBedAsync(RemoveReservationExtraBedDto input);
     Task AssignRoomAsync(AssignReservationRoomDto input);
+    Task<int> AssignRoomsAsync(AssignReservationRoomsDto input);
+    Task<int> ApplyChangesAsync(ApplyReservationChangesDto input);
 }
 
 [AbpAuthorize(PermissionNames.Pages_Reservations)]
@@ -1068,6 +1070,128 @@ public class ReservationAppService(
     [UnitOfWork]
     public async Task AssignRoomAsync(AssignReservationRoomDto input)
     {
+        await AssignRoomInternalAsync(input, shouldAudit: true);
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
+    public async Task<int> AssignRoomsAsync(AssignReservationRoomsDto input)
+    {
+        if (input.Assignments == null || input.Assignments.Count == 0)
+            throw new UserFriendlyException("No room assignments provided.");
+
+        var duplicateReservationRoom = input.Assignments
+            .GroupBy(x => x.ReservationRoomId)
+            .FirstOrDefault(g => g.Count() > 1);
+        if (duplicateReservationRoom != null)
+            throw new UserFriendlyException("Duplicate reservation room assignment found in request.");
+
+        var duplicateTargetRoom = input.Assignments
+            .GroupBy(x => x.RoomId)
+            .FirstOrDefault(g => g.Count() > 1);
+        if (duplicateTargetRoom != null)
+            throw new UserFriendlyException("The same room cannot be assigned to multiple reservation lines in one save.");
+
+        foreach (var item in input.Assignments)
+        {
+            await AssignRoomInternalAsync(new AssignReservationRoomDto
+            {
+                ReservationId = input.ReservationId,
+                ReservationRoomId = item.ReservationRoomId,
+                RoomId = item.RoomId,
+            }, shouldAudit: true);
+        }
+
+        return input.Assignments.Count;
+    }
+
+    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
+    [UnitOfWork]
+    public async Task<int> ApplyChangesAsync(ApplyReservationChangesDto input)
+    {
+        var totalOperations = 0;
+
+        if (input.LinkedGuestId.HasValue)
+        {
+            await LinkGuestAsync(new LinkReservationGuestDto
+            {
+                ReservationId = input.ReservationId,
+                GuestId = input.LinkedGuestId.Value,
+            });
+            totalOperations++;
+        }
+
+        if (input.RoomTypesToAdd?.Count > 0)
+        {
+            await AddRoomTypesAsync(new AddReservationRoomTypesDto
+            {
+                ReservationId = input.ReservationId,
+                RoomTypes = input.RoomTypesToAdd,
+            });
+            totalOperations += input.RoomTypesToAdd.Count;
+        }
+
+        if (input.ReservationRoomIdsToRemove?.Count > 0)
+        {
+            foreach (var reservationRoomId in input.ReservationRoomIdsToRemove)
+            {
+                await RemoveRoomAsync(new RemoveReservationRoomDto
+                {
+                    ReservationId = input.ReservationId,
+                    ReservationRoomId = reservationRoomId,
+                });
+                totalOperations++;
+            }
+        }
+
+        if (input.RoomAssignments?.Count > 0)
+        {
+            await AssignRoomsAsync(new AssignReservationRoomsDto
+            {
+                ReservationId = input.ReservationId,
+                Assignments = input.RoomAssignments,
+            });
+            totalOperations += input.RoomAssignments.Count;
+        }
+
+        if (input.ExtraBedsToAdd?.Count > 0)
+        {
+            await AddExtraBedsAsync(new AddReservationExtraBedsDto
+            {
+                ReservationId = input.ReservationId,
+                ExtraBeds = input.ExtraBedsToAdd,
+            });
+            totalOperations += input.ExtraBedsToAdd.Count;
+        }
+
+        if (input.ReservationExtraBedIdsToRemove?.Count > 0)
+        {
+            foreach (var reservationExtraBedId in input.ReservationExtraBedIdsToRemove)
+            {
+                await RemoveExtraBedAsync(new RemoveReservationExtraBedDto
+                {
+                    ReservationId = input.ReservationId,
+                    ReservationExtraBedId = reservationExtraBedId,
+                });
+                totalOperations++;
+            }
+        }
+
+        if (input.DepositsToAdd?.Count > 0)
+        {
+            foreach (var deposit in input.DepositsToAdd)
+            {
+                deposit.ReservationId = input.ReservationId;
+                await RecordDepositAsync(deposit);
+                totalOperations++;
+            }
+        }
+
+        return totalOperations;
+    }
+
+    private async Task AssignRoomInternalAsync(AssignReservationRoomDto input, bool shouldAudit)
+    {
         var reservation = await reservationRepository.GetAsync(input.ReservationId);
         if (reservation.Status == ReservationStatus.Cancelled ||
             reservation.Status == ReservationStatus.NoShow ||
@@ -1137,14 +1261,17 @@ public class ReservationAppService(
         reservationRoom.RoomNumber = room.RoomNumber;
         await reservationRoomRepository.UpdateAsync(reservationRoom);
 
-        await mutationAuditService.RecordAsync(
-            "Reservation",
-            reservation.Id.ToString(),
-            "Updated",
-            new { RoomId = oldRoomId, RoomNumber = oldRoomNumber },
-            new { RoomId = room.Id, RoomNumber = room.RoomNumber },
-            nameof(AssignRoomAsync),
-            "AssignRoom");
+        if (shouldAudit)
+        {
+            await mutationAuditService.RecordAsync(
+                "Reservation",
+                reservation.Id.ToString(),
+                "Updated",
+                new { RoomId = oldRoomId, RoomNumber = oldRoomNumber },
+                new { RoomId = room.Id, RoomNumber = room.RoomNumber },
+                nameof(AssignRoomAsync),
+                "AssignRoom");
+        }
     }
 
     public async Task<ReservationDto> GetAsync(Guid id)

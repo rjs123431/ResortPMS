@@ -162,6 +162,46 @@ export const reservationService = {
   },
 
   assignReservationRoom: async (input: { reservationId: string; reservationRoomId: string; roomId: string }) => {
-    await api.post('/api/services/app/Reservation/AssignRoom', input);
+    await api.post('/api/services/app/Reservation/AssignRooms', {
+      reservationId: input.reservationId,
+      assignments: [{ reservationRoomId: input.reservationRoomId, roomId: input.roomId }],
+    });
+  },
+
+  assignReservationRoomsBatch: async (input: {
+    reservationId: string;
+    assignments: Array<{ reservationRoomId: string; roomId: string }>;
+  }) => {
+    await api.post('/api/services/app/Reservation/AssignRooms', input);
+  },
+
+  applyReservationChanges: async (input: {
+    reservationId: string;
+    linkedGuestId?: string;
+    roomTypesToAdd?: Array<{ roomTypeId: string; quantity: number }>;
+    reservationRoomIdsToRemove?: string[];
+    roomAssignments?: Array<{ reservationRoomId: string; roomId: string }>;
+    extraBedsToAdd?: Array<{ extraBedTypeId: string; quantity: number }>;
+    reservationExtraBedIdsToRemove?: string[];
+    depositsToAdd?: Array<{
+      reservationId: string;
+      amount: number;
+      paymentMethodId: string;
+      paidDate: string;
+      referenceNo?: string;
+    }>;
+  }) => {
+    const payload = {
+      reservationId: input.reservationId,
+      linkedGuestId: input.linkedGuestId,
+      roomTypesToAdd: input.roomTypesToAdd ?? [],
+      reservationRoomIdsToRemove: input.reservationRoomIdsToRemove ?? [],
+      roomAssignments: input.roomAssignments ?? [],
+      extraBedsToAdd: input.extraBedsToAdd ?? [],
+      reservationExtraBedIdsToRemove: input.reservationExtraBedIdsToRemove ?? [],
+      depositsToAdd: input.depositsToAdd ?? [],
+    };
+
+    await api.post('/api/services/app/Reservation/ApplyChanges', payload);
   },
 };

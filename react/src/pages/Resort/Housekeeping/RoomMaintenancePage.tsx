@@ -5,6 +5,7 @@ import { PermissionNames } from '@/config/permissionNames';
 import { useAuth } from '@/contexts/AuthContext';
 import { resortService } from '@/services/resort.service';
 import {
+  MaintenanceCategory,
   RoomMaintenancePriority,
   RoomMaintenanceStatus,
   type RoomListDto,
@@ -110,8 +111,10 @@ export const RoomMaintenancePage = () => {
       title: title.trim(),
       description: description.trim(),
       priority,
+      category: MaintenanceCategory.Reactive,
       startDate,
       endDate,
+      typeIds: [],
     };
     createMutation.mutate(payload);
   };
@@ -169,11 +172,28 @@ export const RoomMaintenancePage = () => {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
-              <input type="date" className="w-full rounded border p-2 text-sm dark:bg-gray-700" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input
+                type="date"
+                className="w-full rounded border p-2 text-sm dark:bg-gray-700"
+                value={startDate}
+                onChange={(e) => {
+                  const nextStartDate = e.target.value;
+                  setStartDate(nextStartDate);
+                  if (endDate && endDate < nextStartDate) {
+                    setEndDate(nextStartDate);
+                  }
+                }}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
-              <input type="date" className="w-full rounded border p-2 text-sm dark:bg-gray-700" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <input
+                type="date"
+                min={startDate}
+                className="w-full rounded border p-2 text-sm dark:bg-gray-700"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
             </div>
             <div className="md:col-span-2">
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>

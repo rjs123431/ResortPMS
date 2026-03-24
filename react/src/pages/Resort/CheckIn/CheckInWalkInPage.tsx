@@ -580,12 +580,18 @@ export const CheckInWalkInPage = () => {
       if (reservationDetailLines.length === 0) {
         throw new Error('No room selections found.');
       }
+      if (hasUnassignedRooms) {
+        throw new Error('One or more assigned rooms are no longer available. Please reassign rooms before saving.');
+      }
+      if (hasOutOfOrderRoomsAssigned) {
+        throw new Error('One or more assigned rooms are out of order. Please assign different rooms before saving.');
+      }
 
       const preCheckInRooms = reservationDetailLines.map((line) => ({
         roomTypeId: line.roomTypeId,
         roomId: assignedRoomByLine[line.lineId] || undefined,
         roomTypeName: line.roomTypeName,
-        roomNumber: availableRooms.find((r) => r.id === assignedRoomByLine[line.lineId])?.roomNumber || '',
+        roomNumber: assignedRoomLookup.get(assignedRoomByLine[line.lineId] || '')?.roomNumber || '',
         ratePerNight: round2(line.ratePerNight),
         numberOfNights: line.nights,
         amount: round2(line.grossAmount),
@@ -903,7 +909,7 @@ export const CheckInWalkInPage = () => {
               <button
                 type="button"
                 className="rounded bg-amber-600 px-3 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-50"
-                disabled={savePreCheckInMutation.isPending}
+                disabled={savePreCheckInMutation.isPending || hasUnassignedRooms || hasOutOfOrderRoomsAssigned}
                 onClick={() => savePreCheckInMutation.mutate()}
               >
                 {savePreCheckInMutation.isPending ? 'Saving...' : loadedPreCheckInId ? 'Update Pre-Check-In' : 'Save as Pre-Check-In'}

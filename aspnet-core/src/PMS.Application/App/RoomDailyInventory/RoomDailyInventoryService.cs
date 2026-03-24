@@ -16,6 +16,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
 {
     private readonly IRepository<RoomDailyInventoryEntity, Guid> _inventoryRepository;
     private readonly IRepository<Room, Guid> _roomRepository;
+    private readonly HashSet<(Guid RoomId, DateTime InventoryDate)> _pendingInventoryKeys = [];
 
     private const int MaxDaysToEnsure = 365;
 
@@ -42,6 +43,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
             .ToListAsync();
 
         var existingSet = existing.Select(x => (x.RoomId, x.InventoryDate)).ToHashSet();
+        existingSet.UnionWith(_pendingInventoryKeys.Where(k => roomIds.Contains(k.RoomId) && k.InventoryDate >= start && k.InventoryDate < end));
 
         var toAdd = new List<RoomDailyInventoryEntity>();
         for (var d = start; d < end; d = d.AddDays(1))
@@ -63,6 +65,7 @@ public class RoomDailyInventoryService : IRoomDailyInventoryService, ITransientD
                     IsOutOfOrder = false,
                 });
                 existingSet.Add((roomId, d));
+                _pendingInventoryKeys.Add((roomId, d));
             }
         }
 

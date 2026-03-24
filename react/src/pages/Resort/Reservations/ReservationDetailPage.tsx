@@ -247,45 +247,34 @@ export const ReservationDetailPage = () => {
     mutationFn: async () => {
       if (!id) return;
 
-      if (pendingLinkedGuestId) {
-        await resortService.linkReservationGuest(id, pendingLinkedGuestId);
-      }
-
       const roomTypesToAdd = Object.entries(pendingAddedRoomTypeCounts)
         .filter(([, quantity]) => quantity > 0)
         .map(([roomTypeId, quantity]) => ({ roomTypeId, quantity }));
-      if (roomTypesToAdd.length > 0) {
-        await resortService.addReservationRoomTypes(id, roomTypesToAdd);
-      }
 
-      for (const reservationRoomId of pendingRemovedRoomIds) {
-        await resortService.removeReservationRoom(id, reservationRoomId);
-      }
-
-      for (const [reservationRoomId, roomId] of Object.entries(pendingRoomAssignments)) {
-        await resortService.assignReservationRoom({ reservationId: id, reservationRoomId, roomId });
-      }
+      const roomAssignments = Object.entries(pendingRoomAssignments)
+        .map(([reservationRoomId, roomId]) => ({ reservationRoomId, roomId }))
+        .filter((x) => Boolean(x.reservationRoomId) && Boolean(x.roomId));
 
       const extraBedsToAdd = pendingAddedExtraBeds
         .map(({ extraBedTypeId, quantity }) => ({ extraBedTypeId, quantity }))
         .filter((x) => Boolean(x.extraBedTypeId) && x.quantity > 0);
-      if (extraBedsToAdd.length > 0) {
-        await resortService.addReservationExtraBeds(id, extraBedsToAdd);
-      }
 
-      for (const reservationExtraBedId of pendingRemovedExtraBedIds) {
-        await resortService.removeReservationExtraBed(id, reservationExtraBedId);
-      }
-
-      for (const deposit of pendingAddedDeposits) {
-        await resortService.recordReservationDeposit({
+      await resortService.applyReservationChanges({
+        reservationId: id,
+        linkedGuestId: pendingLinkedGuestId ?? undefined,
+        roomTypesToAdd,
+        reservationRoomIdsToRemove: pendingRemovedRoomIds,
+        roomAssignments,
+        extraBedsToAdd,
+        reservationExtraBedIdsToRemove: pendingRemovedExtraBedIds,
+        depositsToAdd: pendingAddedDeposits.map((deposit) => ({
           reservationId: id,
           amount: deposit.amount,
           paymentMethodId: deposit.paymentMethodId,
           paidDate: deposit.paidDate,
           referenceNo: deposit.referenceNo || undefined,
-        });
-      }
+        })),
+      });
     },
     onSuccess: () => {
       setPendingLinkedGuestId(null);

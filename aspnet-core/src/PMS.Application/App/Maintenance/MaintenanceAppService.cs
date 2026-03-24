@@ -148,17 +148,21 @@ public class RoomMaintenanceAppService(
 
         var startDate = input.StartDate.Date;
         var endDate = input.EndDate.Date;
-        if (startDate >= endDate)
-            throw new UserFriendlyException("Maintenance end date must be after start date.");
+        if (endDate < startDate)
+            throw new UserFriendlyException("Maintenance end date must be on or after start date.");
+
+        // Maintenance input dates are inclusive (same start/end means a 1-day work order).
+        // Inventory and overlap checks use end-exclusive ranges.
+        var endDateExclusive = endDate.AddDays(1);
 
         var room = await roomRepository.FirstOrDefaultAsync(input.RoomId);
         if (room == null || !room.IsActive)
             throw new UserFriendlyException("Room is invalid or inactive.");
 
-        if (await HasActiveStayConflictAsync(input.RoomId, startDate, endDate))
+        if (await HasActiveStayConflictAsync(input.RoomId, startDate, endDateExclusive))
             throw new UserFriendlyException("Maintenance cannot overlap with an active stay.");
 
-        if (await HasReservationConflictAsync(input.RoomId, startDate, endDate))
+        if (await HasReservationConflictAsync(input.RoomId, startDate, endDateExclusive))
             throw new UserFriendlyException("Maintenance conflicts with an active reservation for this room.");
 
         var request = new RoomMaintenanceRequest
@@ -184,7 +188,7 @@ public class RoomMaintenanceAppService(
         var blocked = await roomDailyInventoryService.TryBlockForMaintenanceAsync(
             request.RoomId,
             request.StartDate,
-            request.EndDate,
+            endDateExclusive,
             request.Id);
 
         if (!blocked)
@@ -250,7 +254,7 @@ public class RoomMaintenanceAppService(
         await roomDailyInventoryService.ReleaseMaintenanceBlockAsync(
             request.RoomId,
             request.StartDate,
-            request.EndDate,
+            request.EndDate.Date.AddDays(1),
             request.Id);
 
         // Log room status change back to Vacant
@@ -277,7 +281,7 @@ public class RoomMaintenanceAppService(
         await roomDailyInventoryService.ReleaseMaintenanceBlockAsync(
             request.RoomId,
             request.StartDate,
-            request.EndDate,
+            request.EndDate.Date.AddDays(1),
             request.Id);
 
         // Log room status - may already be Vacant or need to revert from OutOfOrder
@@ -326,8 +330,7 @@ public class RoomMaintenanceAppService(
         return await reservationRoomRepository.GetAll()
             .Where(rr => rr.RoomId == roomId)
             .Where(rr => rr.Reservation.Status == ReservationStatus.Pending
-                || rr.Reservation.Status == ReservationStatus.Confirmed
-                || rr.Reservation.Status == ReservationStatus.CheckedIn)
+                || rr.Reservation.Status == ReservationStatus.Confirmed)
             .Where(rr => rr.ArrivalDate < endDate && rr.DepartureDate > startDate)
             .AnyAsync();
     }
