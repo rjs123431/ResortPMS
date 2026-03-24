@@ -258,7 +258,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     createMutation.mutate(true);
   };
 
-  const walkInMutation = useMutation({
+  const checkInMutation = useMutation({
     mutationFn: async () => {
       if (!payload) throw new Error('Missing reservation data.');
       if (!firstName.trim()) throw new Error('First name is required.');
@@ -274,52 +274,57 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
       const selectedRatePlan = (ratePlanOptionsQuery.data ?? []).find((option) => option.roomRatePlanId === selectedRatePlanId);
       const ratePerNight = selectedRatePlan?.pricePerNight ?? 0;
       const amount = round2(ratePerNight * nights);
+      const validPayments =
+        Number.parseFloat(depositPaymentAmount || '0') > 0 && depositPaymentMethodId
+          ? [{
+              paymentMethodId: depositPaymentMethodId,
+              amount: round2(Number.parseFloat(depositPaymentAmount || '0')),
+              paidDate: new Date().toISOString(),
+              referenceNo: depositReferenceNo.trim() || undefined,
+            }]
+          : undefined;
 
-      const preCheckInId = await resortService.createPreCheckIn({
-        arrivalDate,
-        departureDate,
-        adults,
-        children,
-        totalAmount: amount,
-        notes: notes.trim() || undefined,
+      const checkInResult = await resortService.checkInWalkIn({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: contactNumber.trim(),
         email: email.trim() || undefined,
-        rooms: [
+        roomId: payload.roomId,
+        expectedCheckOutDate: payload.checkOutDate,
+        reservationRooms: [
           {
             roomTypeId: payload.roomTypeId,
-            roomId: payload.roomId || undefined,
-            roomTypeName: payload.roomTypeName,
-            roomNumber: payload.roomNumber,
+            roomId: payload.roomId,
             ratePerNight: round2(ratePerNight),
             numberOfNights: nights,
             amount,
-            seniorCitizenCount: 0,
-            seniorCitizenDiscountAmount: 0,
+            discountAmount: 0,
             netAmount: amount,
           },
         ],
+        payments: validPayments,
       });
 
-      return preCheckInId;
+      return checkInResult;
     },
-    onSuccess: (preCheckInId) => {
+    onSuccess: (result) => {
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['resort-precheckins-pending'] });
-      navigate(`/front-desk/walk-in/${preCheckInId}`, {
+      void queryClient.invalidateQueries({ queryKey: ['resort-stays'] });
+      void queryClient.invalidateQueries({ queryKey: ['room-rack-info'] });
+      void queryClient.invalidateQueries({ queryKey: ['resort-available-rooms'] });
+      navigate('/front-desk/check-in/confirmation', {
         state: {
-          quickWalkInContext: {
-            channelId: selectedChannelId,
-            agencyId: selectedAgencyId || undefined,
-          },
+          stayId: result.stayId,
+          stayNo: result.stayNo,
+          folioId: result.folioId,
+          folioNo: result.folioNo,
         },
       });
     },
   });
 
-  const handlePreCheckIn = () => {
-    walkInMutation.mutate();
+  const handleCheckIn = () => {
+    checkInMutation.mutate();
   };
 
   const handleOpenDepositDialog = () => {
@@ -366,7 +371,7 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
     !ratePlanOptionsQuery.isError &&
     ratePerNight > 0 &&
     !createMutation.isPending &&
-    !walkInMutation.isPending;
+    !checkInMutation.isPending;
 
   return (
     <Dialog open={open} onClose={() => { }} className="fixed inset-0 z-50 overflow-y-auto">
@@ -560,21 +565,21 @@ export const QuickReservationDialog = ({ open, onClose, payload }: QuickReservat
             </div>
           </div>
 
-          {(createMutation.isError || walkInMutation.isError) && (
+          {(createMutation.isError || checkInMutation.isError) && (
             <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-              {getErrorMessage(walkInMutation.error ?? createMutation.error, 'Failed to create reservation.')}
+              {getErrorMessage(checkInMutation.error ?? createMutation.error, 'Failed to complete check-in.')}
             </p>
           )}
 
           <div className="mt-6 flex flex-wrap justify-between gap-2">
             <button
               type="button"
-              onClick={handlePreCheckIn}
-              disabled={!canSubmit || createMutation.isPending || walkInMutation.isPending}
+              onClick={handleCheckIn}
+              disabled={!canSubmit || createMutation.isPending || checkInMutation.isPending}
               className="rounded border border-primary-600 bg-white px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-500 dark:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/20"
-              title="Create a pre-check-in for this room"
+              title="Check in this room now"
             >
-              {walkInMutation.isPending ? 'Creating Pre-Check In...' : 'Pre-Check In'}
+              {checkInMutation.isPending ? 'Checking In...' : 'Check In'}
             </button>
             <div className="flex flex-wrap justify-end gap-2">
               <button
