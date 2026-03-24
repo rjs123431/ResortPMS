@@ -8,7 +8,7 @@ using Abp.Timing;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using PMS.App.Reservations.Dto;
-using PMS.App.RoomRatePlans;
+using PMS.App.Rooms;
 using PMS.Application.App.PropertyTimes;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Application.App.Services;
@@ -57,7 +57,7 @@ public class ReservationAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomType, Guid> roomTypeRepository,
     IRepository<ExtraBedType, Guid> extraBedTypeRepository,
-    IRoomRatePlanAppService roomRatePlanAppService,
+    IRoomPricingManager roomPricingManager,
     IDocumentNumberService documentNumberService,
     IPropertyTimesProvider propertyTimesProvider,
     IRoomDailyInventoryService roomDailyInventoryService,
@@ -568,7 +568,7 @@ public class ReservationAppService(
         foreach (var roomTypeRow in roomTypeRows)
         {
             var roomType = roomTypes[roomTypeRow.RoomTypeId];
-            var ratePerNight = await roomRatePlanAppService.GetEffectiveRatePerNightForStayAsync(
+            var ratePerNight = await roomPricingManager.GetBestRatePerNightAsync(
                 roomTypeRow.RoomTypeId,
                 arrivalDate,
                 departureDate,
