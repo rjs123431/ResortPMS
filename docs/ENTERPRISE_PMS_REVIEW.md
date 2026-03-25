@@ -21,7 +21,7 @@ PMS delivers a solid **Reservation → Check-In → Stay → Check-Out** workflo
 - **No built-in dashboards** for KPIs (occupancy %, ADR, RevPAR, no-shows, cancellation rate).
 - **No export of PMS data** (reservations, stays, guests) to CSV/Excel for external analysis; only user import exists.
 
-**Recommendation:** Introduce a Reporting module (app services + optional report definitions) and implement at least: Night Audit summary, Occupancy report, Revenue/Folio summary, POS sales summary. Add CSV/Excel export for key entities (reservations, stays, guests).
+**Recommendation:** Introduce a Reporting module (app services + optional report definitions) and implement at least: Night Audit summary, Occupancy report, Revenue/Folio summary. Add CSV/Excel export for key entities (reservations, stays, guests).
 
 ---
 
@@ -192,7 +192,7 @@ PMS delivers a solid **Reservation → Check-In → Stay → Check-Out** workflo
 ## 4. Next Steps
 
 1. **Immediate:** Harden **room availability** (locking or optimistic concurrency) and extend **auditing** to full mutation + financial trail.
-2. **Short term:** Add **Reporting** (Night Audit, Occupancy, Revenue, POS sales) and **POS reports + EOD**; introduce **approval workflows** for refunds and discounts.
+2. **Short term:** Add **Reporting** (Night Audit, Occupancy, Revenue) and **POS reports + EOD**; introduce **approval workflows** for refunds and discounts.
 3. **Medium term:** **API versioning**, **health checks**, **feature flags**, **secrets management**, **domain events**, and **notification templates + rules**.
 4. **Roadmap:** **Channel manager / OTA**, **BAR and rate strategy**, **bulk import/export**, and optional **separate operator/admin** or **offline** capabilities.
 

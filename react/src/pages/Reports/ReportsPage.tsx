@@ -431,7 +431,7 @@ export const ReportsPage = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports &amp; Analytics</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Dashboard KPIs, occupancy, revenue, night audit, and POS sales.
+              Dashboard KPIs, occupancy, revenue and night audit.
             </p>
           </div>
         </div>
