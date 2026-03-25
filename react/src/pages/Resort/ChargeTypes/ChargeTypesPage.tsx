@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
-import { RoomChargeType, type ChargeTypeDto } from '@/types/resort.types';
+import { RoomChargeType, type ChargeTypeDto } from '@/types/charge-type.types';
 import { ChargeTypeDialogForm } from './ChargeTypeDialogForm';
 
 const getRoomChargeTypeLabel = (value: RoomChargeType) => {

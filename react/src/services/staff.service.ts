@@ -1,5 +1,6 @@
 import { api } from './api.service';
-import { ApiResponse, CreateStaffDto, PagedResultDto, StaffDto, StaffListDto } from '@/types/resort.types';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type { CreateStaffDto, StaffDto, StaffListDto } from '@/types/staff.types';
 
 export const staffService = {
   getStaffsPaged: async (filter = '', skipCount = 0, maxResultCount = 100) => {

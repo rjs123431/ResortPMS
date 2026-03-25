@@ -7,7 +7,7 @@ import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/reac
 import { useTheme } from '@contexts/ThemeContext';
 import { resortService } from '@services/resort.service';
 import type { RoomListDto } from '@/types/resort.types';
-import { ReservationStatus } from '@/types/resort.types';
+import { ReservationStatus } from '@/types/reservation.types';
 import { ChannelAvatar } from '@/lib/channelIcons';
 import { QuickReservationDialog, type QuickReservationPayload } from './QuickReservationDialog';
 import { RoomRackDetailPanel, type RoomRackPanelItem } from './RoomRackDetailPanel';

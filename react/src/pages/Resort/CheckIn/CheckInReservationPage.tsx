@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus } from '@/types/resort.types';
+import { ReservationStatus } from '@/types/reservation.types';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';

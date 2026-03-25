@@ -1,16 +1,15 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type {
   AddGuestRequestDto,
   CompleteGuestRequestDto,
   FolioDto,
   FolioSummaryDto,
   GuestRequestCompletionContextDto,
   GuestRequestListDto,
-  PagedResultDto,
   StayListDto,
   TransferRoomDto,
-} from '@/types/resort.types';
+} from '@/types/stay.types';
 
 export const stayService = {
   getInHouseStays: async (filter = '', skipCount = 0, maxResultCount = 50) => {

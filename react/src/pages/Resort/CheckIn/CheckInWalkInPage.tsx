@@ -4,7 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { resortService } from '@services/resort.service';
-import { HousekeepingStatus, type RoomListDto } from '@/types/resort.types';
+import { HousekeepingStatus, type RoomListDto } from '@/types/room.types';
 import { SearchGuestDialog, SelectedGuest } from '../Shared/SearchGuestDialog';
 import { AddPaymentDialog } from '../Shared/AddPaymentDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';

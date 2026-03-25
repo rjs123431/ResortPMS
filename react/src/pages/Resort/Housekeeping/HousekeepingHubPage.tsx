@@ -5,7 +5,7 @@ import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
-import { HousekeepingStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/room.types';
 
 interface NavCardProps {
   to: string;

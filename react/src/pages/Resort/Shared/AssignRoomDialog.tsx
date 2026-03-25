@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { useQuery } from '@tanstack/react-query';
-import { HousekeepingStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/room.types';
 import { resortService } from '@/services/resort.service';
 
 /** Format date for API (YYYY-MM-DD). */

@@ -1,11 +1,6 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
-  CreateGuestDto,
-  GuestDto,
-  GuestListDto,
-  PagedResultDto,
-} from '@/types/resort.types';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type { CreateGuestDto, GuestDto, GuestListDto } from '@/types/guest.types';
 
 export const guestService = {
   getGuests: async (filter = '', skipCount = 0, maxResultCount = 50) => {

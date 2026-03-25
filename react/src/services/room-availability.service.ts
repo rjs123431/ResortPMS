@@ -1,5 +1,6 @@
 import { api } from './api.service';
-import { ApiResponse, RoomListDto } from '@/types/resort.types';
+import type { ApiResponse } from '@/types/common.types'
+import type { RoomListDto } from '@/types/room.types';
 
 export const roomAvailabilityService = {
   getAvailableRooms: async (

@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   ArrowLeftEndOnRectangleIcon,
   ArrowRightStartOnRectangleIcon,
+  ArrowsRightLeftIcon,
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
   ExclamationTriangleIcon,
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon },
   { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon },
   { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon },
+  { to: '/front-desk/room-change-requests', label: 'Room Changes', title: 'Review pending room change requests', Icon: ArrowsRightLeftIcon },
   { to: '/front-desk/incidents', label: 'Incidents', title: 'Log and track incidents', Icon: ExclamationTriangleIcon },
 ] as const;
 

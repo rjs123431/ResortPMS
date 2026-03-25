@@ -1,11 +1,6 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
-  CreateRoomTypeDto,
-  PagedResultDto,
-  RoomTypeDto,
-  RoomTypeListDto,
-} from '@/types/resort.types';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type { CreateRoomTypeDto, RoomTypeDto, RoomTypeListDto } from '@/types/room-type.types';
 
 export const roomTypeService = {
   getRoomTypes: async () => {

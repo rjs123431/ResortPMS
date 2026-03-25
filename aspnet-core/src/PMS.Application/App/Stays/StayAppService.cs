@@ -11,6 +11,7 @@ using PMS.App.Stays.Dto;
 using PMS.Application.App.RoomDailyInventory;
 using PMS.Auditing;
 using PMS.Authorization;
+using PMS.Authorization.Users;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,7 +55,8 @@ public class StayAppService(
     IRepository<HousekeepingTask, Guid> housekeepingTaskRepository,
     IRepository<ReservationRoom, Guid> reservationRoomRepository,
     IRoomDailyInventoryService roomDailyInventoryService,
-    IFinancialAuditService financialAuditService
+    IFinancialAuditService financialAuditService,
+    UserManager userManager
 ) : PMSAppServiceBase, IStayAppService
 {
     private static List<StayRoomDto> MapStayRooms(IEnumerable<StayRoom> rooms)
@@ -501,7 +503,31 @@ public class StayAppService(
             .FirstOrDefaultAsync(f => f.StayId == stayId);
 
         if (folio == null) throw new UserFriendlyException(L("FolioNotFound"));
-        return ObjectMapper.Map<FolioDto>(folio);
+
+        var dto = ObjectMapper.Map<FolioDto>(folio);
+
+        var creatorUserIds = folio.Transactions
+            .Where(t => t.CreatorUserId.HasValue)
+            .Select(t => t.CreatorUserId.Value)
+            .Distinct()
+            .ToList();
+
+        if (creatorUserIds.Count > 0)
+        {
+            var userLookup = await userManager.Users
+                .Where(u => creatorUserIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.UserName })
+                .ToDictionaryAsync(u => u.Id, u => u.UserName);
+
+            foreach (var tx in dto.Transactions)
+            {
+                var srcTx = folio.Transactions.FirstOrDefault(t => t.Id == tx.Id);
+                if (srcTx?.CreatorUserId != null && userLookup.TryGetValue(srcTx.CreatorUserId.Value, out var userName))
+                    tx.CreatorUserName = userName;
+            }
+        }
+
+        return dto;
     }
 
     public async Task<FolioSummaryDto> GetFolioSummaryAsync(Guid stayId)

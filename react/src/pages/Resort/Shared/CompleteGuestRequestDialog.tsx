@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { HousekeepingTaskStatus, HousekeepingTaskType, type GuestRequestCompletionContextDto } from '@/types/resort.types';
+import { HousekeepingTaskStatus, HousekeepingTaskType } from '@/types/housekeeping.types'
+import type { GuestRequestCompletionContextDto } from '@/types/stay.types';
 
 type CompleteGuestRequestDialogProps = {
   open: boolean;

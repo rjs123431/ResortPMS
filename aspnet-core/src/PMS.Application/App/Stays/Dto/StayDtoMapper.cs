@@ -25,7 +25,10 @@ public class StayDtoMapper : Profile
 
         CreateMap<FolioTransaction, FolioTransactionDto>()
             .ForMember(dto => dto.ChargeTypeName, opt => opt.MapFrom(
-                src => src.ChargeType != null ? src.ChargeType.Name : string.Empty));
+                src => src.ChargeType != null ? src.ChargeType.Name : string.Empty))
+            .ForMember(dto => dto.VoidedAt, opt => opt.MapFrom(
+                src => src.IsVoided ? src.LastModificationTime : null))
+            .ForMember(dto => dto.CreatorUserName, opt => opt.Ignore());
 
         CreateMap<FolioPayment, FolioPaymentDto>()
             .ForMember(dto => dto.PaymentMethodName, opt => opt.MapFrom(

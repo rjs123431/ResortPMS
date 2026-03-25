@@ -1,13 +1,12 @@
 import { api } from './api.service';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
 import {
-  ApiResponse,
-  CreateReservationDto,
-  PagedResultDto,
-  RecordReservationDepositDto,
-  ReservationDetailDto,
-  ReservationListDto,
+  type CreateReservationDto,
+  type RecordReservationDepositDto,
+  type ReservationDetailDto,
+  type ReservationListDto,
   ReservationStatus,
-} from '@/types/resort.types';
+} from '@/types/reservation.types';
 
 export const reservationService = {
   getReservations: async (

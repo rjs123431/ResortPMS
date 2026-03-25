@@ -1,14 +1,13 @@
 import { api } from './api.service';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
 import {
-  ApiResponse,
-  CreateIncidentDto,
-  IncidentDto,
-  IncidentListDto,
+  type CreateIncidentDto,
+  type IncidentDto,
+  type IncidentListDto,
   IncidentSeverity,
   IncidentStatus,
-  PagedResultDto,
-  ResolveIncidentDto,
-} from '@/types/resort.types';
+  type ResolveIncidentDto,
+} from '@/types/incident.types';
 
 export const incidentService = {
   getIncidents: async (params?: {

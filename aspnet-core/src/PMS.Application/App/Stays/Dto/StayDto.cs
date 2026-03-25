@@ -257,6 +257,8 @@ public class FolioTransactionDto : EntityDto<Guid>
     public DateTime TransactionDate { get; set; }
     public bool IsVoided { get; set; }
     public string VoidReason { get; set; }
+    public string CreatorUserName { get; set; }
+    public DateTime? VoidedAt { get; set; }
 }
 
 public class FolioPaymentDto : EntityDto<Guid>

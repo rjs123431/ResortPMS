@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
 import { MainLayout } from '@components/layout/MainLayout';
-import { QuotationStatus } from '@/types/resort.types';
+import { QuotationStatus } from '@/types/quotation.types';
 import { formatDate, formatMoney } from '@utils/helpers';
 
 const STATUS_TABS: { label: string; value: QuotationStatus | undefined }[] = [

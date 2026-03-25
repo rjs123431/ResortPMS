@@ -1,13 +1,12 @@
 import { api } from './api.service';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
 import {
-  ApiResponse,
-  CreatePreCheckInDto,
-  PagedResultDto,
-  PreCheckInDto,
-  PreCheckInListDto,
+  type CreatePreCheckInDto,
+  type PreCheckInDto,
+  type PreCheckInListDto,
   PreCheckInStatus,
-  UpdatePreCheckInDto,
-} from '@/types/resort.types';
+  type UpdatePreCheckInDto,
+} from '@/types/pre-check-in.types';
 
 export const preCheckInService = {
   getPreCheckIns: async (params?: {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
-import { HousekeepingStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/room.types';
 import { resortService } from '@services/resort.service';
 
 const CLEANING_TYPE_BADGE: Record<string, string> = {

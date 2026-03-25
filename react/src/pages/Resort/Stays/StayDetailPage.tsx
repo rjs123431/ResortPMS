@@ -8,15 +8,11 @@ import { CompleteGuestRequestDialog } from '../Shared/CompleteGuestRequestDialog
 import { GuestRequestDialog, GUEST_REQUEST_TYPE_OPTIONS } from '../Shared/GuestRequestDialog';
 import { PostChargeDialog } from '../Shared/PostChargeDialog';
 import { RoomChangeRequestDialog, ROOM_CHANGE_REASON_OPTIONS, ROOM_CHANGE_SOURCE_OPTIONS } from '../Shared/RoomChangeRequestDialog';
-import {
-  GuestRequestType,
-  RoomChangeSource,
-  RoomChangeReason,
-  RoomChangeRequestStatus,
-  RoomChargeType,
-  type FolioTransactionDto,
-  type StayRoomRecordDto,
-} from '@/types/resort.types';
+import { TransactionDetailDialog } from '../Shared/TransactionDetailDialog';
+import { GuestRequestType, type FolioTransactionDto } from '@/types/stay.types'
+import { RoomChargeType } from '@/types/charge-type.types'
+import { RoomChangeSource, RoomChangeReason, RoomChangeRequestStatus } from '@/types/room-change.types'
+import type { StayRoomRecordDto } from '@/types/check-out.types';
 import { formatMoney } from '@utils/helpers';
 
 const getRequestTypeLabels = (value: GuestRequestType) => {
@@ -106,6 +102,7 @@ export const StayDetailPage = () => {
   const [selectedRoomForTransfer, setSelectedRoomForTransfer] = useState<{ stayRoomId: string; roomId: string; roomNumber: string } | null>(null);
   const [voidTarget, setVoidTarget] = useState<FolioTransactionDto | null>(null);
   const [voidReason, setVoidReason] = useState('');
+  const [selectedTransaction, setSelectedTransaction] = useState<FolioTransactionDto | null>(null);
 
   const { data: stayLookup, isFetching: isFetchingStayLookup } = useQuery({
     queryKey: ['resort-stays-all-for-detail'],
@@ -476,6 +473,35 @@ export const StayDetailPage = () => {
               >
                 Add Payment
               </button>
+              <button
+                type="button"
+                className="rounded bg-gray-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+                disabled={!folio}
+                onClick={() => {
+                  if (!folio) return;
+                  const w = window.open('', '_blank');
+                  if (!w) return;
+                  const guestName = stay?.guestName ?? statement?.guestName ?? '';
+                  const checkIn = stay?.checkInDateTime ?? '';
+                  const expectedCO = stay?.expectedCheckOutDateTime ?? statement?.expectedCheckOutDateTime ?? '';
+                  const txRows = folio.transactions
+                    .map(
+                      (tx) =>
+                        `<tr class="${tx.isVoided ? 'voided' : ''}"><td>${new Date(tx.transactionDate).toLocaleString()}</td><td>${tx.chargeTypeName || getTransactionTypeLabel(tx.transactionType)}</td><td>${tx.description || '-'}${tx.isVoided ? ' <em>(Voided)</em>' : ''}</td><td class="right">${formatMoney(tx.netAmount)}</td></tr>`,
+                    )
+                    .join('');
+                  const pmtRows = folio.payments
+                    .map(
+                      (p) =>
+                        `<tr><td>${new Date(p.paidDate).toLocaleDateString()}</td><td>${p.paymentMethodName || '-'}</td><td>${p.referenceNo || '-'}</td><td class="right">${formatMoney(p.amount)}</td></tr>`,
+                    )
+                    .join('');
+                  w.document.write(`<!DOCTYPE html><html><head><title>Folio ${folio.folioNo}</title><style>body{font-family:system-ui,sans-serif;margin:2rem;color:#111}table{width:100%;border-collapse:collapse;margin:1rem 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #ddd;font-size:13px}th{background:#f3f4f6;font-weight:600}.right{text-align:right}.voided{opacity:.5;text-decoration:line-through}.header{display:flex;justify-content:space-between;align-items:flex-start}h1{margin:0;font-size:1.4rem}h2{margin:1.5rem 0 .5rem;font-size:1rem;border-bottom:2px solid #111;padding-bottom:4px}.summary{font-size:1.1rem;font-weight:600;text-align:right;margin-top:.5rem}@media print{body{margin:.5rem}}</style></head><body><div class="header"><div><h1>Folio Statement</h1><p>Folio #: ${folio.folioNo}</p><p>Guest: ${guestName}</p></div><div style="text-align:right"><p>Check-In: ${checkIn ? new Date(checkIn).toLocaleDateString() : '-'}</p><p>Expected C/O: ${expectedCO ? new Date(expectedCO).toLocaleDateString() : '-'}</p><p>Printed: ${new Date().toLocaleString()}</p></div></div><h2>Charges &amp; Transactions</h2><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="right">Amount</th></tr></thead><tbody>${txRows || '<tr><td colspan="4">No transactions</td></tr>'}</tbody></table><h2>Payments</h2><table><thead><tr><th>Date</th><th>Method</th><th>Reference</th><th class="right">Amount</th></tr></thead><tbody>${pmtRows || '<tr><td colspan="4">No payments</td></tr>'}</tbody></table><p class="summary">Balance: ${formatMoney(folio.balance)}</p><script>window.print();<\/script></body></html>`);
+                  w.document.close();
+                }}
+              >
+                Print Folio
+              </button>
             </div>
           </div>
           {isFetchingFolio || !folio ? (
@@ -504,7 +530,11 @@ export const StayDetailPage = () => {
                       </tr>
                     ) : (
                       folio.transactions.map((transaction) => (
-                        <tr className={`border-b dark:border-gray-700 ${transaction.isVoided ? 'opacity-50' : ''}`} key={transaction.id}>
+                        <tr
+                          className={`border-b dark:border-gray-700 cursor-pointer transition hover:bg-gray-50 dark:hover:bg-gray-700 ${transaction.isVoided ? 'opacity-50' : ''}`}
+                          key={transaction.id}
+                          onClick={() => setSelectedTransaction(transaction)}
+                        >
                           <td className="p-2">{toDateTime(transaction.transactionDate)}</td>
                           <td className="p-2">{transaction.chargeTypeName || getTransactionTypeLabel(transaction.transactionType)}</td>
                           <td className="p-2">{transaction.description || '-'}{transaction.isVoided && <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">Voided</span>}</td>
@@ -514,7 +544,7 @@ export const StayDetailPage = () => {
                               <button
                                 type="button"
                                 className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
-                                onClick={() => { setVoidTarget(transaction); setVoidReason(''); }}
+                                onClick={(e) => { e.stopPropagation(); setVoidTarget(transaction); setVoidReason(''); }}
                               >
                                 Void
                               </button>
@@ -684,6 +714,12 @@ export const StayDetailPage = () => {
           setSelectedRoomForTransfer(null);
         }}
         onSave={(values) => transferRoomMutation.mutate(values)}
+      />
+
+      <TransactionDetailDialog
+        open={!!selectedTransaction}
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
       />
 
       {/* Void Transaction Dialog */}

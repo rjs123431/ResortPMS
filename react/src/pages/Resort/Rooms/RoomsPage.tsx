@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { resortService } from '@services/resort.service';
-import { HousekeepingStatus } from '@/types/resort.types';
+import { HousekeepingStatus } from '@/types/room.types';
 import type { RoomDto } from '@/types/resort.types';
 import { RoomDialogForm } from './RoomDialogForm';
 

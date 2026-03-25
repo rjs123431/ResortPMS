@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { RoomChargeType, type ChargeTypeDto } from '@/types/resort.types';
+import { RoomChargeType, type ChargeTypeDto } from '@/types/charge-type.types';
 
 type ChargeTypeDialogFormProps = {
   isOpen: boolean;

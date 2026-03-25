@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { GuestRequestType } from '@/types/resort.types';
+import { GuestRequestType } from '@/types/stay.types';
 
 export const GUEST_REQUEST_TYPE_OPTIONS: Array<{ value: GuestRequestType; label: string }> = [
   { value: GuestRequestType.PickupCleaning, label: 'Pickup Cleaning' },

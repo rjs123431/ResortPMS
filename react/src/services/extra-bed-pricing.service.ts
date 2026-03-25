@@ -1,11 +1,11 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
+import type { ApiResponse } from '@/types/common.types'
+import type {
   CreateExtraBedPriceDto,
   ExtraBedCurrentPriceDto,
   ExtraBedPriceDto,
   UpdateExtraBedPriceDto,
-} from '@/types/resort.types';
+} from '@/types/extra-bed-pricing.types';
 
 export const extraBedPricingService = {
   /** Returns date-effective pricing history for one extra-bed type. */

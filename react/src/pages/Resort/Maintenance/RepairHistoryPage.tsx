@@ -6,7 +6,7 @@ import {
   MaintenanceCategory,
   RoomMaintenancePriority,
   RoomMaintenanceStatus,
-} from '@/types/resort.types';
+} from '@/types/room-maintenance.types';
 
 const PRIORITY_LABEL: Record<RoomMaintenancePriority, string> = {
   [RoomMaintenancePriority.Low]: 'Low',

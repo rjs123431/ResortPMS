@@ -1,13 +1,13 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
+import type { ApiResponse } from '@/types/common.types'
+import type {
   CheckOutRecordDto,
   CheckOutResultDto,
   CheckOutStatementDto,
   ClearStayRoomDto,
   ReceiptDto,
   StayRoomRecordDto,
-} from '@/types/resort.types';
+} from '@/types/check-out.types';
 
 export const checkOutService = {
   getCheckoutStatement: async (stayId: string) => {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogPanel } from '@headlessui/react';
-import { ReservationStatus } from '@/types/resort.types';
+import { ReservationStatus } from '@/types/reservation.types';
 import { ChannelAvatar } from '@/lib/channelIcons';
 
 export type BookingsDialogItem =

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
-import { PreCheckInStatus } from '@/types/resort.types';
+import { PreCheckInStatus } from '@/types/pre-check-in.types';
 import { formatDate, formatMoney } from '@utils/helpers';
 
 const STATUS_TABS: { label: string; value: PreCheckInStatus | undefined }[] = [

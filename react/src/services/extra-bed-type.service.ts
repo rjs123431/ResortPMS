@@ -1,11 +1,6 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
-  CreateExtraBedTypeDto,
-  ExtraBedTypeDto,
-  ExtraBedTypeListDto,
-  PagedResultDto,
-} from '@/types/resort.types';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type { CreateExtraBedTypeDto, ExtraBedTypeDto, ExtraBedTypeListDto } from '@/types/extra-bed-type.types';
 
 export const extraBedTypeService = {
   getExtraBedTypes: async () => {

@@ -1,11 +1,6 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
-  ChargeTypeDto,
-  ChargeTypeListDto,
-  CreateChargeTypeDto,
-  PagedResultDto,
-} from '@/types/resort.types';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type { ChargeTypeDto, ChargeTypeListDto, CreateChargeTypeDto } from '@/types/charge-type.types';
 
 export const chargeTypeService = {
   getChargeTypes: async () => {

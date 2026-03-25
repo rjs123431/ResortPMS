@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
 import {
-  CreateIncidentDto,
+  type CreateIncidentDto,
   IncidentSeverity,
   IncidentStatus,
   type IncidentListDto,
-} from '@/types/resort.types';
+} from '@/types/incident.types';
 import { formatDate } from '@utils/helpers';
 
 // ── Badge configs ──────────────────────────────────────────────────────────────

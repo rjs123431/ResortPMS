@@ -1,12 +1,11 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type {
   CreateRoomRatePlanDto,
-  PagedResultDto,
   RoomRatePlanDto,
   RoomRatePlanListDto,
   UpdateRoomRatePlanDto,
-} from '@/types/resort.types';
+} from '@/types/room-rate-plan.types';
 
 export const roomRatePlanService = {
   getRoomRatePlansPaged: async (params?: {

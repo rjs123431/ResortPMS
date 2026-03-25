@@ -1,11 +1,6 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
-  ChannelDto,
-  ChannelListDto,
-  CreateChannelDto,
-  PagedResultDto,
-} from '@/types/resort.types';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type { ChannelDto, ChannelListDto, CreateChannelDto } from '@/types/channel.types';
 
 export const channelService = {
   getChannels: async () => {

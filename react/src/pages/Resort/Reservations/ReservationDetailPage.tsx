@@ -12,7 +12,7 @@ import {
   type ReservationDetailDto,
   type ReservationDepositDto,
   type ReservationRoomDetailDto,
-} from '@/types/resort.types';
+} from '@/types/reservation.types';
 import { confirmAction, notifySuccess } from '@/utils/alerts';
 import { AssignRoomDialog } from '../Shared/AssignRoomDialog';
 import { AddExtraBedDialog } from '../Shared/AddExtraBedDialog';

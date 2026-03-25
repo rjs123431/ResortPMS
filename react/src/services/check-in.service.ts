@@ -1,5 +1,6 @@
 import { api } from './api.service';
-import { ApiResponse, CheckInResultDto } from '@/types/resort.types';
+import type { ApiResponse } from '@/types/common.types'
+import type { CheckInResultDto } from '@/types/check-in.types';
 
 export const checkInService = {
   checkInFromReservation: async (

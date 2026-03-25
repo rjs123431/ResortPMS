@@ -12,9 +12,9 @@ import {
   MaintenanceCategory,
   RoomMaintenancePriority,
   RoomMaintenanceStatus,
-  type RoomListDto,
   type CreateRoomMaintenanceRequestDto,
-} from '@/types/resort.types';
+} from '@/types/room-maintenance.types'
+import type { RoomListDto } from '@/types/room.types';
 import { confirmAction } from '@/utils/alerts';
 import { CancelOrderDialog } from './WorkOrderActionDialogs';
 

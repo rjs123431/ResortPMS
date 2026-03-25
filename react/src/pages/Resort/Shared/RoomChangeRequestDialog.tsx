@@ -2,11 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useQuery } from '@tanstack/react-query';
 import { resortService } from '@services/resort.service';
-import {
-  RoomChangeSource,
-  RoomChangeReason,
-  HousekeepingStatus,
-} from '@/types/resort.types';
+import { RoomChangeSource, RoomChangeReason } from '@/types/room-change.types'
+import { HousekeepingStatus } from '@/types/room.types';
 import { formatMoney } from '@utils/helpers';
 
 export const ROOM_CHANGE_SOURCE_OPTIONS: Array<{ value: RoomChangeSource; label: string }> = [

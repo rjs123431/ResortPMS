@@ -3,7 +3,7 @@ import { confirmAction } from '@/utils/alerts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { HousekeepingLayout } from '@components/layout/HousekeepingLayout';
 import type { StaffListDto } from '@/types/resort.types';
-import { HousekeepingTaskStatus, HousekeepingTaskType } from '@/types/resort.types';
+import { HousekeepingTaskStatus, HousekeepingTaskType } from '@/types/housekeeping.types';
 import { resortService } from '@services/resort.service';
 import { SearchStaffDialog } from '../Shared/SearchStaffDialog';
 import DatePicker from 'react-datepicker';

@@ -1,6 +1,6 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
+import type { ApiResponse } from '@/types/common.types'
+import type {
   ApproveRoomChangeRequestDto,
   AvailableRoomForChangeDto,
   CancelRoomChangeRequestDto,
@@ -9,7 +9,7 @@ import {
   RejectRoomChangeRequestDto,
   RoomChangeRequestDto,
   RoomChangeRequestListDto,
-} from '@/types/resort.types';
+} from '@/types/room-change.types';
 
 export const roomChangeService = {
   createRoomChangeRequest: async (input: CreateRoomChangeRequestDto) => {

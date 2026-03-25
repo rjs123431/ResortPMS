@@ -1,15 +1,14 @@
 import { api } from './api.service';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
 import {
-  ApiResponse,
-  CleaningBoardRoomDto,
-  CreateHousekeepingTaskDto,
-  HousekeepingLogDto,
-  HousekeepingTaskDto,
+  type CleaningBoardRoomDto,
+  type CreateHousekeepingTaskDto,
+  type HousekeepingLogDto,
+  type HousekeepingTaskDto,
   HousekeepingTaskStatus,
   HousekeepingTaskType,
-  PagedResultDto,
-  UpdateHousekeepingTaskStatusDto,
-} from '@/types/resort.types';
+  type UpdateHousekeepingTaskStatusDto,
+} from '@/types/housekeeping.types';
 
 export const housekeepingService = {
   getCleaningBoard: async (date?: string) => {

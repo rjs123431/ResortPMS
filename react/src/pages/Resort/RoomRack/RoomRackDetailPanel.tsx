@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { resortService } from '@services/resort.service';
-import { ReservationStatus } from '@/types/resort.types';
+import { ReservationStatus } from '@/types/reservation.types';
 import { LogoSpinner } from '@components/common/LogoSpinner';
 import { ChannelAvatar } from '@/lib/channelIcons';
 import { formatMoney } from '@utils/helpers';

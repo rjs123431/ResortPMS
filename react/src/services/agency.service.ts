@@ -1,11 +1,6 @@
 import { api } from './api.service';
-import {
-  ApiResponse,
-  CreateLookupDto,
-  LookupDto,
-  LookupListDto,
-  PagedResultDto,
-} from '@/types/resort.types';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
+import type { CreateLookupDto, LookupDto, LookupListDto } from '@/types/lookup.types';
 
 export const agencyService = {
   getAgencies: async () => {

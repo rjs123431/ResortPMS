@@ -1,13 +1,12 @@
 import { api } from './api.service';
+import type { ApiResponse, PagedResultDto } from '@/types/common.types'
 import {
-  ApiResponse,
-  CreateQuotationDto,
-  PagedResultDto,
-  QuotationDto,
-  QuotationListDto,
+  type CreateQuotationDto,
+  type QuotationDto,
+  type QuotationListDto,
   QuotationStatus,
-  UpdateQuotationDto,
-} from '@/types/resort.types';
+  type UpdateQuotationDto,
+} from '@/types/quotation.types';
 
 export const quotationService = {
   getQuotations: async (params?: {

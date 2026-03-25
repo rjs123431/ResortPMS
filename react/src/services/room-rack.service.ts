@@ -1,5 +1,6 @@
 import { api } from './api.service';
-import { ApiResponse, GetRoomRackResultDto, RoomRackSettingsDto } from '@/types/resort.types';
+import type { ApiResponse } from '@/types/common.types'
+import type { GetRoomRackResultDto, RoomRackSettingsDto } from '@/types/room-rack.types';
 
 export const roomRackService = {
   getRoomRackInfo: async (startDate: string, endDate: string) => {

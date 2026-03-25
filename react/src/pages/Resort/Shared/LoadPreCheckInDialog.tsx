@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { resortService } from '@services/resort.service';
-import { PreCheckInStatus } from '@/types/resort.types';
+import { PreCheckInStatus } from '@/types/pre-check-in.types';
 import { formatMoney } from '@utils/helpers';
 
 type LoadPreCheckInDialogProps = {
