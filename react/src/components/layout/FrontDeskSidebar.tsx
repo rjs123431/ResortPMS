@@ -25,7 +25,6 @@ const navItems = [
   { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon, permission: PermissionNames.Pages_CheckOut },
   { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon, permission: PermissionNames.Pages_Guests },
   { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_CheckIn },
-  { to: '/front-desk/room-change-requests', label: 'Room Changes', title: 'Review pending room change requests', Icon: ArrowsRightLeftIcon, permission: PermissionNames.Pages_Stays },
   { to: '/front-desk/incidents', label: 'Incidents', title: 'Log and track incidents', Icon: ExclamationTriangleIcon, permission: PermissionNames.Pages_Incidents },
 ];
 
