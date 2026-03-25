@@ -222,7 +222,7 @@ const App: React.FC = () => {
             </AuthProvider>
           </BrowserRouter>
           <UpdateNotification />
-          <ReactQueryDevtools initialIsOpen={false} />
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition='bottom-left'/>
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>

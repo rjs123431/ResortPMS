@@ -79,7 +79,7 @@ public interface IStaffAppService : IApplicationService
     Task UpdateAsync(StaffDto input);
 }
 
-[AbpAuthorize(PermissionNames.Pages_ChargeTypes)]
+[AbpAuthorize]
 public class ChargeTypeAppService(
     IRepository<ChargeType, Guid> chargeTypeRepository,
     IMemoryCache memoryCache
@@ -112,7 +112,7 @@ public class ChargeTypeAppService(
         });
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ChargeTypes_Create)]
+    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateChargeTypeDto input)
     {
         var name = input.Name?.Trim() ?? string.Empty;
@@ -152,7 +152,7 @@ public class ChargeTypeAppService(
         return id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ChargeTypes_Edit)]
+    [AbpAuthorize]
     public async Task UpdateAsync(ChargeTypeDto input)
     {
         var entity = await chargeTypeRepository.GetAsync(input.Id);
@@ -188,7 +188,7 @@ public class ChargeTypeAppService(
     }
 }
 
-[AbpAuthorize(PermissionNames.Pages_PaymentMethods)]
+[AbpAuthorize]
 public class PaymentMethodAppService(
     IRepository<PaymentMethod, Guid> paymentMethodRepository,
     IMemoryCache memoryCache
@@ -221,7 +221,7 @@ public class PaymentMethodAppService(
         });
     }
 
-    [AbpAuthorize(PermissionNames.Pages_PaymentMethods_Create)]
+    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreatePaymentMethodDto input)
     {
         var exists = await paymentMethodRepository.GetAll().AnyAsync(x => x.Name == input.Name.Trim());
@@ -236,7 +236,7 @@ public class PaymentMethodAppService(
         return id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_PaymentMethods_Edit)]
+    [AbpAuthorize]
     public async Task UpdateAsync(PaymentMethodDto input)
     {
         var entity = await paymentMethodRepository.GetAsync(input.Id);
@@ -247,7 +247,7 @@ public class PaymentMethodAppService(
     }
 }
 
-[AbpAuthorize(PermissionNames.Pages_Channels)]
+[AbpAuthorize]
 public class ChannelAppService(
     IRepository<Channel, Guid> channelRepository,
     IMemoryCache memoryCache
@@ -280,7 +280,7 @@ public class ChannelAppService(
         });
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Channels_Create)]
+    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateChannelDto input)
     {
         var name = input.Name?.Trim() ?? string.Empty;
@@ -301,7 +301,7 @@ public class ChannelAppService(
         return id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Channels_Edit)]
+    [AbpAuthorize]
     public async Task UpdateAsync(ChannelDto input)
     {
         var entity = await channelRepository.GetAsync(input.Id);
@@ -321,7 +321,7 @@ public class ChannelAppService(
     }
 }
 
-[AbpAuthorize(PermissionNames.Pages_Agencies)]
+[AbpAuthorize]
 public class AgencyAppService(
     IRepository<Agency, Guid> agencyRepository,
     IMemoryCache memoryCache
@@ -354,7 +354,7 @@ public class AgencyAppService(
         });
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Agencies_Create)]
+    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateAgencyDto input)
     {
         var name = input.Name?.Trim() ?? string.Empty;
@@ -372,7 +372,7 @@ public class AgencyAppService(
         return id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Agencies_Edit)]
+    [AbpAuthorize]
     public async Task UpdateAsync(AgencyDto input)
     {
         var entity = await agencyRepository.GetAsync(input.Id);
@@ -389,7 +389,7 @@ public class AgencyAppService(
     }
 }
 
-[AbpAuthorize(PermissionNames.Pages_ExtraBedTypes)]
+[AbpAuthorize]
 public class ExtraBedTypeAppService(
     IRepository<ExtraBedType, Guid> extraBedTypeRepository,
     IMemoryCache memoryCache
@@ -422,7 +422,7 @@ public class ExtraBedTypeAppService(
         });
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ExtraBedTypes_Create)]
+    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateExtraBedTypeDto input)
     {
         var exists = await extraBedTypeRepository.GetAll().AnyAsync(x => x.Name == input.Name.Trim());
@@ -437,7 +437,7 @@ public class ExtraBedTypeAppService(
         return id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ExtraBedTypes_Edit)]
+    [AbpAuthorize]
     public async Task UpdateAsync(ExtraBedTypeDto input)
     {
         var entity = await extraBedTypeRepository.GetAsync(input.Id);
@@ -448,7 +448,7 @@ public class ExtraBedTypeAppService(
     }
 }
 
-[AbpAuthorize(PermissionNames.Pages_Staff)]
+[AbpAuthorize]
 public class StaffAppService(
     IRepository<Staff, Guid> staffRepository,
     IMemoryCache memoryCache
@@ -481,7 +481,7 @@ public class StaffAppService(
         });
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Staff_Create)]
+    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateStaffDto input)
     {
         var code = input.StaffCode?.Trim().ToUpper() ?? string.Empty;
@@ -503,7 +503,7 @@ public class StaffAppService(
         return id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Staff_Edit)]
+    [AbpAuthorize]
     public async Task UpdateAsync(StaffDto input)
     {
         var entity = await staffRepository.GetAsync(input.Id);

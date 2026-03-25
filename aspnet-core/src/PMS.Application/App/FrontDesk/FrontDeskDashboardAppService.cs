@@ -19,12 +19,7 @@ public interface IFrontDeskDashboardAppService : IApplicationService
     Task<FrontDeskDepartureRowDto[]> GetDeparturesTodayAsync();
 }
 
-[AbpAuthorize(
-    PermissionNames.Pages_Rooms,
-    PermissionNames.Pages_CheckIn,
-    PermissionNames.Pages_Stays,
-    PermissionNames.Pages_CheckOut
-)]
+[AbpAuthorize]
 public class FrontDeskDashboardAppService(
     IReportingAppService reportingAppService,
     IRepository<Reservation, Guid> reservationRepository,

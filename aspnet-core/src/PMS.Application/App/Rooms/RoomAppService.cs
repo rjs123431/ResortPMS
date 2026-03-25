@@ -22,7 +22,7 @@ public interface IRoomTypeAppService : IApplicationService
     Task<PagedResultDto<RoomTypeListDto>> GetAllAsync(GetRoomTypesInput input);
     Task<Guid> CreateAsync(CreateRoomTypeDto input);
     Task UpdateAsync(RoomTypeDto input);
-    Task<System.Collections.Generic.List<RoomTypeListDto>> GetAllActiveAsync();
+    Task<List<RoomTypeListDto>> GetAllActiveAsync();
 }
 
 public interface IRoomAppService : IApplicationService
@@ -34,7 +34,7 @@ public interface IRoomAppService : IApplicationService
     Task UpdateHousekeepingStatusAsync(UpdateHousekeepingStatusDto input);
 }
 
-[AbpAuthorize(PermissionNames.Pages_RoomTypes)]
+[AbpAuthorize]
 public class RoomTypeAppService(
     IRepository<RoomType, Guid> roomTypeRepository
 ) : PMSAppServiceBase, IRoomTypeAppService
@@ -55,7 +55,7 @@ public class RoomTypeAppService(
         return ObjectMapper.Map<RoomTypeDto>(entity);
     }
 
-    public async Task<System.Collections.Generic.List<RoomTypeListDto>> GetAllActiveAsync()
+    public async Task<List<RoomTypeListDto>> GetAllActiveAsync()
     {
         var list = await roomTypeRepository.GetAll()
             .Where(r => r.IsActive)
@@ -105,7 +105,7 @@ public class RoomTypeAppService(
     }
 }
 
-[AbpAuthorize(PermissionNames.Pages_Rooms)]
+[AbpAuthorize]
 public class RoomAppService(
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomStatusLog, Guid> roomStatusLogRepository,

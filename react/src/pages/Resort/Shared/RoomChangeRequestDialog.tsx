@@ -5,6 +5,7 @@ import { resortService } from '@services/resort.service';
 import { RoomChangeSource, RoomChangeReason } from '@/types/room-change.types'
 import { HousekeepingStatus } from '@/types/room.types';
 import { formatMoney } from '@utils/helpers';
+import { confirmAction } from '@/utils/alerts';
 
 export const ROOM_CHANGE_SOURCE_OPTIONS: Array<{ value: RoomChangeSource; label: string }> = [
   { value: RoomChangeSource.GuestRequest, label: 'Guest Request' },
@@ -248,6 +249,31 @@ export const RoomChangeRequestDialog = ({
 
   const canSave = form.toRoomId && form.source && form.reason;
 
+  const handleSave = async () => {
+    if (!canSave || isSaving) {
+      return;
+    }
+
+    const confirmation = await confirmAction(
+      `Transfer from Room ${currentRoomNumber ?? '-'} to Room ${selectedTargetRoom?.roomNumber ?? '-'}?`,
+      {
+        title: 'Confirm Room Transfer',
+        confirmButtonText: 'Transfer Room',
+        cancelButtonText: 'No',
+      },
+    );
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    onSave({
+      ...form,
+      rateDifferencePerNight: selectedRateDifference,
+      toRoomNumber: selectedTargetRoom?.roomNumber,
+    });
+  };
+
   const handleRoomSelect = (roomId: string) => {
     setForm((prev) => ({ ...prev, toRoomId: roomId }));
   };
@@ -267,7 +293,7 @@ export const RoomChangeRequestDialog = ({
   return (
     <Dialog open={open} onClose={() => {}} className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/50 pointer-events-none" aria-hidden />
-      <div className="relative flex min-h-screen items-top justify-center p-4 pointer-events-none">
+      <div className="relative flex min-h-xl items-top justify-center p-4 pointer-events-none">
         <DialogPanel className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800 pointer-events-auto">
           <DialogTitle as="h3" className="text-lg font-semibold text-gray-900 dark:text-white">
             Room Transfer
@@ -478,13 +504,9 @@ export const RoomChangeRequestDialog = ({
             </button>
             <button
               type="button"
-              onClick={() =>
-                onSave({
-                  ...form,
-                  rateDifferencePerNight: selectedRateDifference,
-                  toRoomNumber: selectedTargetRoom?.roomNumber,
-                })
-              }
+              onClick={() => {
+                void handleSave();
+              }}
               disabled={isSaving || !canSave}
               className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
             >

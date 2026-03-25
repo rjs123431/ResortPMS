@@ -175,7 +175,7 @@ const App: React.FC = () => {
                         path="room-rack"
                         element={
                           <PageTitle title="Room Rack">
-                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Rooms]}>
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_FrontDesk]}>
                               <RoomRackPage />
                             </ProtectedRoute>
                           </PageTitle>
@@ -713,7 +713,7 @@ const App: React.FC = () => {
             </AuthProvider>
           </BrowserRouter>
           <UpdateNotification />
-          <ReactQueryDevtools initialIsOpen={false} />
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition='bottom-left'/>
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>

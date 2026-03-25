@@ -20,7 +20,7 @@ public interface IExtraBedPricingAppService : IApplicationService
     Task UpdateAsync(UpdateExtraBedPriceDto input);
 }
 
-[AbpAuthorize(PermissionNames.Pages_ExtraBedPricings)]
+[AbpAuthorize]
 public class ExtraBedPricingAppService(
     IRepository<ExtraBedPrice, Guid> extraBedPriceRepository,
     IRepository<ExtraBedType, Guid> extraBedTypeRepository

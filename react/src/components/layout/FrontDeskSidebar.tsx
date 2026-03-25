@@ -17,7 +17,7 @@ import { PermissionNames } from '@/config/permissionNames';
 
 const navItems = [
   { to: '/front-desk', label: 'Dashboard', title: 'Front desk dashboard', Icon: HomeIcon, tourId: 'nav-frontdesk-dashboard' },
-  { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon, permission: PermissionNames.Pages_Rooms, tourId: 'nav-frontdesk-room-rack' },
+  { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon, permission: PermissionNames.Pages_FrontDesk, tourId: 'nav-frontdesk-room-rack' },
   { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon, permission: PermissionNames.Pages_Reservations, tourId: 'nav-frontdesk-reservations' },
   { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon, permission: PermissionNames.Pages_CheckIn, tourId: 'nav-frontdesk-check-in' },
   { to: '/front-desk/walk-in', label: 'Walk-In', title: 'Create walk-in check-ins', Icon: UsersIcon, permission: PermissionNames.Pages_CheckIn },
