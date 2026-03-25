@@ -146,6 +146,8 @@ public class DefaultRolesAndUsersCreator
     [
         // Root
         PermissionNames.Applications_Web,
+        PermissionNames.Pages_FrontDesk,
+        PermissionNames.Pages_Housekeeping,
 
         // Setup (all)
         PermissionNames.Pages_Setup,
@@ -234,15 +236,13 @@ public class DefaultRolesAndUsersCreator
     private static List<string> FrontDeskPermissions() =>
     [
         PermissionNames.Applications_Web,
+        PermissionNames.Pages_FrontDesk,
         PermissionNames.Pages_Transactions,
 
         // Guests (view + create + edit)
         PermissionNames.Pages_Guests,
         PermissionNames.Pages_Guests_Create,
         PermissionNames.Pages_Guests_Edit,
-
-        // Rooms (view only)
-        PermissionNames.Pages_Rooms,
 
         // Reservations (full)
         PermissionNames.Pages_Reservations,
@@ -279,6 +279,7 @@ public class DefaultRolesAndUsersCreator
     private static List<string> HousekeepingPermissions() =>
     [
         PermissionNames.Applications_Web,
+        PermissionNames.Pages_Housekeeping,
 
         // Rooms (view only — needed for housekeeping status)
         PermissionNames.Pages_Setup,

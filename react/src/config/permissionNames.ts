@@ -1,6 +1,7 @@
 export const PermissionNames = {
   // ── Hierarchy parents ────────────────────────────────────────────────
   Applications_Web: 'WebApp',
+  Pages_FrontDesk: 'Pages.FrontDesk',
   Pages_Setup: 'Pages.Setup',
   Pages_Transactions: 'Pages.Transactions',
   Pages_Admin: 'Pages.Admin',
@@ -95,6 +96,9 @@ export const PermissionNames = {
   Pages_CheckOut_Process: 'Pages.CheckOut.Process',
   Pages_CheckOut_WriteOff: 'Pages.CheckOut.WriteOff',
   Pages_CheckOut_Print: 'Pages.CheckOut.Print',
+
+  // ── Housekeeping ─────────────────────────────────────────────────────
+  Pages_Housekeeping: 'Pages.Housekeeping',
 
   // ── Maintenance ─────────────────────────────────────────────────────
   Pages_Maintenance: 'Pages.Maintenance',

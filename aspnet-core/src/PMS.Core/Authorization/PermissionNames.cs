@@ -11,6 +11,10 @@ namespace PMS.Authorization
 
         public const string Applications_Web = "WebApp";
 
+        // MODULES
+        public const string Pages_FrontDesk = "Pages.FrontDesk";
+        public const string Pages_Housekeeping = "Pages.Housekeeping";
+
         // SETUP
         public const string Pages_Setup = "Pages.Setup";
 

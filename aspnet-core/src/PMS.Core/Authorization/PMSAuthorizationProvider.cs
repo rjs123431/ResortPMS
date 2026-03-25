@@ -15,11 +15,15 @@ public class PMSAuthorizationProvider : AuthorizationProvider
 
         var webApp = context.CreatePermission(PermissionNames.Applications_Web, L("Web"));
 
+        // MODULES (aligns with primary sidebars)
+        var frontDesk = webApp.CreateChildPermission(PermissionNames.Pages_FrontDesk, L("FrontDesk"), multiTenancySides: MultiTenancySides.Tenant);
+        webApp.CreateChildPermission(PermissionNames.Pages_Housekeeping, L("Housekeeping"), multiTenancySides: MultiTenancySides.Tenant);
+
         // SETUP
         var setup = webApp.CreateChildPermission(PermissionNames.Pages_Setup, L("Setup"), multiTenancySides: MultiTenancySides.Tenant);
 
         // TRANSACTIONS (hotel workflow)
-        var transactions = webApp.CreateChildPermission(PermissionNames.Pages_Transactions, L("Transactions"), multiTenancySides: MultiTenancySides.Tenant);
+        var transactions = frontDesk.CreateChildPermission(PermissionNames.Pages_Transactions, L("Transactions"), multiTenancySides: MultiTenancySides.Tenant);
 
         // Administration
         var administration = webApp.CreateChildPermission(PermissionNames.Pages_Admin, L("Administration"), multiTenancySides: MultiTenancySides.Tenant);
@@ -39,8 +43,8 @@ public class PMSAuthorizationProvider : AuthorizationProvider
 
         // ── PMS HOTEL WORKFLOW ─────────────────────────────────────────────────
 
-        // SETUP — Guests
-        var guests = setup.CreateChildPermission(PermissionNames.Pages_Guests, L("Guests"), multiTenancySides: MultiTenancySides.Tenant);
+        // FRONT DESK — Guests
+        var guests = frontDesk.CreateChildPermission(PermissionNames.Pages_Guests, L("Guests"), multiTenancySides: MultiTenancySides.Tenant);
         guests.CreateChildPermission(PermissionNames.Pages_Guests_Create, L("Create"));
         guests.CreateChildPermission(PermissionNames.Pages_Guests_Edit, L("Edit"));
 
@@ -54,8 +58,8 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         roomRatePlans.CreateChildPermission(PermissionNames.Pages_RoomRatePlans_Create, L("Create"));
         roomRatePlans.CreateChildPermission(PermissionNames.Pages_RoomRatePlans_Edit, L("Edit"));
 
-        // SETUP — Rooms
-        var rooms = setup.CreateChildPermission(PermissionNames.Pages_Rooms, L("Rooms"), multiTenancySides: MultiTenancySides.Tenant);
+        // FRONT DESK — Rooms
+        var rooms = frontDesk.CreateChildPermission(PermissionNames.Pages_Rooms, L("Rooms"), multiTenancySides: MultiTenancySides.Tenant);
         rooms.CreateChildPermission(PermissionNames.Pages_Rooms_Create, L("Create"));
         rooms.CreateChildPermission(PermissionNames.Pages_Rooms_Edit, L("Edit"));
 
@@ -120,8 +124,8 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         checkOut.CreateChildPermission(PermissionNames.Pages_CheckOut_WriteOff, L("WriteOff"));
         checkOut.CreateChildPermission(PermissionNames.Pages_CheckOut_Print, L("Print"));
 
-        // MAINTENANCE
-        var maintenance = transactions.CreateChildPermission(PermissionNames.Pages_Maintenance, L("Maintenance"), multiTenancySides: MultiTenancySides.Tenant);
+        // MAINTENANCE MODULE
+        var maintenance = webApp.CreateChildPermission(PermissionNames.Pages_Maintenance, L("Maintenance"), multiTenancySides: MultiTenancySides.Tenant);
         maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Create, L("Create"));
         maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Assign, L("Assign"));
         maintenance.CreateChildPermission(PermissionNames.Pages_Maintenance_Edit, L("Edit"));

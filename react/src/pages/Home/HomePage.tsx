@@ -36,11 +36,10 @@ export const HomePage: React.FC = () => {
   const displayName = [user?.name].filter(Boolean).join(' ').trim() || 'User';
 
   const showFrontDesk = true;
-  const showHousekeeping = isGranted(PermissionNames.Pages_Rooms);
+  const showHousekeeping = isGranted(PermissionNames.Pages_Housekeeping);
   const showMaintenance = isGranted(PermissionNames.Pages_Maintenance);
   const showReports = isGranted(PermissionNames.Pages_Reports);
   const showAdmin =
-    isGranted(PermissionNames.Pages_Guests) ||
     isGranted(PermissionNames.Pages_Rooms) ||
     isGranted(PermissionNames.Pages_Admin_Users) ||
     isGranted(PermissionNames.Pages_Reports);

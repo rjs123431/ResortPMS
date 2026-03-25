@@ -237,7 +237,7 @@ export function AdminDashboardPage() {
       {visibleSystemLinks.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            System Administration
+            Administration
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleSystemLinks.map((link) => (
