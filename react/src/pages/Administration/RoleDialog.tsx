@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import type { FlatPermissionDto } from '@services/role.service';
 
@@ -30,13 +30,28 @@ type RoleDialogProps = {
   onSave: () => void;
 };
 
-function buildTree(flat: FlatPermissionDto[]): PermissionNode[] {
-  if (!flat.length) return [];
+const HIDDEN_PERMISSION_NAMES = new Set([
+  'Pages.HangfireDasboard',
+  'Pages.HangfireDashboard',
+]);
 
-  const nameSet = new Set(flat.map((p) => p.name));
+function shouldHidePermission(permission: FlatPermissionDto): boolean {
+  if (HIDDEN_PERMISSION_NAMES.has(permission.name)) {
+    return true;
+  }
+
+  const label = (permission.displayName ?? '').toLowerCase();
+  return label.includes('background jobs') || label.includes('hangfire');
+}
+
+function buildTree(flat: FlatPermissionDto[]): PermissionNode[] {
+  const visibleFlat = flat.filter((permission) => !shouldHidePermission(permission));
+  if (!visibleFlat.length) return [];
+
+  const nameSet = new Set(visibleFlat.map((p) => p.name));
   const byParent = new Map<string | null, FlatPermissionDto[]>();
 
-  for (const p of flat) {
+  for (const p of visibleFlat) {
     const parent = p.parentName ?? null;
     const isRoot =
       !parent ||
@@ -77,18 +92,36 @@ function buildDescendantMap(nodes: PermissionNode[]): Map<string, Set<string>> {
   return map;
 }
 
+function collectParentNodeNames(nodes: PermissionNode[]): string[] {
+  const names: string[] = [];
+  function walk(list: PermissionNode[]) {
+    for (const node of list) {
+      if (node.children.length > 0) {
+        names.push(node.name);
+        walk(node.children);
+      }
+    }
+  }
+  walk(nodes);
+  return names;
+}
+
 function PermissionTree({
   nodes,
   level,
   grantedSet,
   descendantMap,
   onToggleCascade,
+  expandedSet,
+  onToggleExpand,
 }: {
   nodes: PermissionNode[];
   level: number;
   grantedSet: Set<string>;
   descendantMap: Map<string, Set<string>>;
   onToggleCascade: (names: Set<string>, checked: boolean) => void;
+  expandedSet: Set<string>;
+  onToggleExpand: (nodeName: string) => void;
 }) {
   return (
     <ul className={level > 0 ? 'ml-4 border-l border-gray-200 pl-2 dark:border-gray-600' : ''}>
@@ -99,10 +132,32 @@ function PermissionTree({
         const checked = totalCount > 0 && grantedCount === totalCount;
         const indeterminate = grantedCount > 0 && grantedCount < totalCount;
         const hasChildren = node.children.length > 0;
+        const isExpanded = hasChildren ? expandedSet.has(node.name) : false;
 
         return (
           <li key={node.name} className="py-0.5">
-            <label className="flex cursor-pointer items-start gap-2 text-sm">
+            <div className="flex items-start gap-2 text-sm">
+              {hasChildren ? (
+                <button
+                  type="button"
+                  aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
+                  className="mt-0.5 rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                  onClick={() => onToggleExpand(node.name)}
+                >
+                  <svg
+                    className={`h-3.5 w-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ) : (
+                <span className="mt-0.5 inline-block h-4 w-4" />
+              )}
+
+              <label className="flex cursor-pointer items-start gap-2 text-sm">
               <input
                 type="checkbox"
                 ref={(el) => {
@@ -115,14 +170,17 @@ function PermissionTree({
               <span className="text-gray-700 dark:text-gray-300">
                 {node.displayName || node.name}
               </span>
-            </label>
-            {hasChildren ? (
+              </label>
+            </div>
+            {hasChildren && isExpanded ? (
               <PermissionTree
                 nodes={node.children}
                 level={level + 1}
                 grantedSet={grantedSet}
                 descendantMap={descendantMap}
                 onToggleCascade={onToggleCascade}
+                expandedSet={expandedSet}
+                onToggleExpand={onToggleExpand}
               />
             ) : null}
           </li>
@@ -147,10 +205,16 @@ export const RoleDialog = ({
 }: RoleDialogProps) => {
   const tree = useMemo(() => buildTree(permissions), [permissions]);
   const descendantMap = useMemo(() => buildDescendantMap(tree), [tree]);
+  const parentNodeNames = useMemo(() => collectParentNodeNames(tree), [tree]);
   const grantedSet = useMemo(
     () => new Set(form.grantedPermissions ?? []),
     [form.grantedPermissions]
   );
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setExpandedNodes(new Set(parentNodeNames));
+  }, [parentNodeNames, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -172,6 +236,18 @@ export const RoleDialog = ({
       names.forEach((n) => current.delete(n));
     }
     onFormChange((s) => ({ ...s, grantedPermissions: [...current] }));
+  };
+
+  const onToggleExpand = (nodeName: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeName)) {
+        next.delete(nodeName);
+      } else {
+        next.add(nodeName);
+      }
+      return next;
+    });
   };
 
   const canSave = isEdit ? canEdit : canCreate;
@@ -261,6 +337,8 @@ export const RoleDialog = ({
                   grantedSet={grantedSet}
                   descendantMap={descendantMap}
                   onToggleCascade={onToggleCascade}
+                  expandedSet={expandedNodes}
+                  onToggleExpand={onToggleExpand}
                 />
               )}
             </div>
