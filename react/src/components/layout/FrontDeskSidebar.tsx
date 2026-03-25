@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   ArrowLeftEndOnRectangleIcon,
@@ -12,23 +12,31 @@ import {
   UserGroupIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline';
+import { useAuth } from '@contexts/AuthContext';
+import { PermissionNames } from '@/config/permissionNames';
 
 const navItems = [
   { to: '/front-desk', label: 'Dashboard', title: 'Front desk dashboard', Icon: HomeIcon },
-  { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon },
-  { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon },
-  { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon },
-  { to: '/front-desk/walk-in', label: 'Walk-In', title: 'Create walk-in check-ins', Icon: UsersIcon },
-  { to: '/front-desk/stays', label: 'In House', title: 'Manage in-house stays', Icon: HomeIcon },
-  { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon },
-  { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon },
-  { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon },
-  { to: '/front-desk/room-change-requests', label: 'Room Changes', title: 'Review pending room change requests', Icon: ArrowsRightLeftIcon },
-  { to: '/front-desk/incidents', label: 'Incidents', title: 'Log and track incidents', Icon: ExclamationTriangleIcon },
-] as const;
+  { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon, permission: PermissionNames.Pages_Rooms },
+  { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon, permission: PermissionNames.Pages_Reservations },
+  { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon, permission: PermissionNames.Pages_CheckIn },
+  { to: '/front-desk/walk-in', label: 'Walk-In', title: 'Create walk-in check-ins', Icon: UsersIcon, permission: PermissionNames.Pages_CheckIn },
+  { to: '/front-desk/stays', label: 'In House', title: 'Manage in-house stays', Icon: HomeIcon, permission: PermissionNames.Pages_Stays },
+  { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon, permission: PermissionNames.Pages_CheckOut },
+  { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon, permission: PermissionNames.Pages_Guests },
+  { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_CheckIn },
+  { to: '/front-desk/room-change-requests', label: 'Room Changes', title: 'Review pending room change requests', Icon: ArrowsRightLeftIcon, permission: PermissionNames.Pages_Stays },
+  { to: '/front-desk/incidents', label: 'Incidents', title: 'Log and track incidents', Icon: ExclamationTriangleIcon, permission: PermissionNames.Pages_Incidents },
+];
 
 export const FrontDeskSidebar: React.FC = () => {
   const location = useLocation();
+  const { isGranted } = useAuth();
+
+  const visibleItems = useMemo(
+    () => navItems.filter((item) => !item.permission || isGranted(item.permission)),
+    [isGranted],
+  );
 
   const isActiveFor = (to: string) => {
     if (to === '/front-desk') return location.pathname === '/front-desk' || location.pathname === '/front-desk/';
@@ -43,7 +51,7 @@ export const FrontDeskSidebar: React.FC = () => {
     <aside className="shrink-0 h-full">
       <nav className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:border-r">
         <ul className="flex flex-col gap-0.5 py-2 pr-2 pl-2 sm:pr-3 sm:min-w-[200px]">
-          {navItems.map(({ to, label, title, Icon }) => {
+          {visibleItems.map(({ to, label, title, Icon }) => {
             const isActive = isActiveFor(to);
 
             return (

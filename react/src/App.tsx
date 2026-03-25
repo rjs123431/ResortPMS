@@ -72,6 +72,7 @@ const UsersPage = lazy(() => import('@pages/Administration/UsersPage').then((m) 
 const RolesPage = lazy(() => import('@pages/Administration/RolesPage').then((m) => ({ default: m.RolesPage })));
 const AuditTrailPage = lazy(() => import('@pages/Administration/AuditTrailPage').then((m) => ({ default: m.AuditTrailPage })));
 const RoomRackSettingsPage = lazy(() => import('@pages/Administration/RoomRackSettingsPage').then((m) => ({ default: m.RoomRackSettingsPage })));
+const AdminDashboardPage = lazy(() => import('@pages/Administration/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -499,7 +500,14 @@ const App: React.FC = () => {
                         </ProtectedRoute>
                       }
                     >
-                      <Route index element={<Navigate to="/admin/guests" replace />} />
+                      <Route
+                        index
+                        element={
+                          <PageTitle title="Administration">
+                            <AdminDashboardPage />
+                          </PageTitle>
+                        }
+                      />
                       <Route
                         path="guests"
                         element={
