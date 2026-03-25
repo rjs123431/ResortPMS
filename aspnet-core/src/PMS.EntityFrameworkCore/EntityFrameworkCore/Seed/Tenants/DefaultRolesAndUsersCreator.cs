@@ -36,11 +36,11 @@ public class DefaultRolesAndUsersCreator
 
         // ── Users ──────────────────────────────────────────────────
 
-        CreateUserIfNotExists("manager", "Manager", "User", "manager@resortpms.com", managerRole.Id);
-        CreateUserIfNotExists("frontdesk1", "FrontDesk", "One", "frontdesk1@resortpms.com", frontDeskRole.Id);
-        CreateUserIfNotExists("frontdesk2", "FrontDesk", "Two", "frontdesk2@resortpms.com", frontDeskRole.Id);
-        CreateUserIfNotExists("housekeeping1", "Housekeeping", "One", "housekeeping1@resortpms.com", housekeepingRole.Id);
-        CreateUserIfNotExists("housekeeping2", "Housekeeping", "Two", "housekeeping2@resortpms.com", housekeepingRole.Id);
+        CreateUserIfNotExists("manager", "Manager", "User", "manager@resortpms.com", managerRole.Id, "manager123");
+        CreateUserIfNotExists("frontdesk1", "FrontDesk", "One", "frontdesk1@resortpms.com", frontDeskRole.Id, "frontdesk123");
+        CreateUserIfNotExists("frontdesk2", "FrontDesk", "Two", "frontdesk2@resortpms.com", frontDeskRole.Id, "frontdesk123");
+        CreateUserIfNotExists("housekeeping1", "Housekeeping", "One", "housekeeping1@resortpms.com", housekeepingRole.Id, "housekeeping123");
+        CreateUserIfNotExists("housekeeping2", "Housekeeping", "Two", "housekeeping2@resortpms.com", housekeepingRole.Id, "housekeeping123");
     }
 
     // ── Role helper ──────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ public class DefaultRolesAndUsersCreator
 
     // ── User helper ──────────────────────────────────────────────────────
 
-    private void CreateUserIfNotExists(string userName, string name, string surname, string email, int roleId)
+    private void CreateUserIfNotExists(string userName, string name, string surname, string email, int roleId, string password = User.DefaultPassword)
     {
         if (_context.Users.IgnoreQueryFilters().Any(u => u.TenantId == _tenantId && u.UserName == userName))
             return;
@@ -100,7 +100,7 @@ public class DefaultRolesAndUsersCreator
 
         user.Password = new PasswordHasher<User>(
             new OptionsWrapper<PasswordHasherOptions>(new PasswordHasherOptions()))
-            .HashPassword(user, User.DefaultPassword);
+            .HashPassword(user, password);
         user.SetNormalizedNames();
 
         _context.Users.Add(user);
