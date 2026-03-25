@@ -30,6 +30,9 @@ namespace PMS.EntityFrameworkCore.Seed
 
             // Default records
             new DefaultTenantSettingsCreator(context, 1).Create();
+
+            // Seed roles (Manager, FrontDesk, Housekeeping) and demo users
+            new DefaultRolesAndUsersCreator(context, 1).Create();
            
         }
 
