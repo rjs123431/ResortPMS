@@ -106,6 +106,43 @@
     <text name="RoleDeleteWarningMessage">A função {0} será excluída e desassociada de todos os usuários pertencentes a ela.</text>
     <text name="TenantDeleteWarningMessage">O Tenant {0} será excluído.</text>
     <text name="SearchWithThreeDot">Pesquisar...</text>
+    <text name="FrontDesk">Front Desk</text>
+    <text name="Housekeeping">Housekeeping</text>
+    <text name="AuditTrail">Audit Trail</text>
+    <text name="Guests">Guests</text>
+    <text name="Rooms">Rooms</text>
+    <text name="RoomTypes">Room Types</text>
+    <text name="RoomRatePlans">Room Rate Plans</text>
+    <text name="ChargeTypes">Charge Types</text>
+    <text name="PaymentMethods">Payment Methods</text>
+    <text name="Channels">Channels</text>
+    <text name="Agencies">Agencies</text>
+    <text name="ExtraBedTypes">Extra Bed Types</text>
+    <text name="ExtraBedPricings">Extra Bed Pricings</text>
+    <text name="Staff">Staff</text>
+    <text name="Reservations">Reservations</text>
+    <text name="CheckIn">Check-In</text>
+    <text name="FromReservation">From Reservation</text>
+    <text name="WalkIn">Walk-In</text>
+    <text name="Stays">Stays</text>
+    <text name="PostCharge">Post Charge</text>
+    <text name="PostPayment">Post Payment</text>
+    <text name="Transfer">Transfer</text>
+    <text name="Extend">Extend</text>
+    <text name="VoidTransaction">Void Transaction</text>
+    <text name="CheckOut">Check-Out</text>
+    <text name="Process">Process</text>
+    <text name="WriteOff">Write Off</text>
+    <text name="Deposit">Deposit</text>
+    <text name="Maintenance">Maintenance</text>
+    <text name="Assign">Assign</text>
+    <text name="Incidents">Incidents</text>
+    <text name="Resolve">Resolve</text>
+    <text name="POS">POS</text>
+    <text name="Orders">Orders</text>
+    <text name="RoomCharge">Room Charge</text>
+    <text name="Outlets">Outlets</text>
+    <text name="Menu">Menu</text>
   </texts>
 </localizationDictionary>
 
