@@ -52,7 +52,7 @@ public class DefaultRolesAndUsersCreator
 
         if (role == null)
         {
-            role = _context.Roles.Add(new Role(_tenantId, roleName, roleName) { IsStatic = true }).Entity;
+            role = _context.Roles.Add(new Role(_tenantId, roleName, roleName) { IsStatic = false }).Entity;
             _context.SaveChanges();
         }
 

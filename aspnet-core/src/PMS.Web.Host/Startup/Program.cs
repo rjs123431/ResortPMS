@@ -29,15 +29,6 @@ namespace PMS.Web.Host.Startup
 
             try
             {
-                if (args.Contains("--seed"))
-                {
-                    Log.Information("Running database seed...");
-                    PMSWebHostModule.RunSeedOnStartup = true;
-                    var host = BuildWebHost(args.Where(a => a != "--seed").ToArray());
-                    Log.Information("Database seed completed successfully.");
-                    return;
-                }
-
                 BuildWebHost(args).Run();
             }
             catch (Exception ex)

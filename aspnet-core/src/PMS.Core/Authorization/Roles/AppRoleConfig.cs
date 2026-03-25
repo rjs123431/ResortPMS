@@ -24,27 +24,6 @@ namespace PMS.Authorization.Roles
                     MultiTenancySides.Tenant
                 )
             );
-
-            roleManagementConfig.StaticRoles.Add(
-                new StaticRoleDefinition(
-                    StaticRoleNames.Tenants.Manager,
-                    MultiTenancySides.Tenant
-                )
-            );
-
-            roleManagementConfig.StaticRoles.Add(
-                new StaticRoleDefinition(
-                    StaticRoleNames.Tenants.FrontDesk,
-                    MultiTenancySides.Tenant
-                )
-            );
-
-            roleManagementConfig.StaticRoles.Add(
-                new StaticRoleDefinition(
-                    StaticRoleNames.Tenants.Housekeeping,
-                    MultiTenancySides.Tenant
-                )
-            );
         }
     }
 }

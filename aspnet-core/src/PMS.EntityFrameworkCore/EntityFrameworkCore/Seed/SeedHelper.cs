@@ -33,7 +33,6 @@ namespace PMS.EntityFrameworkCore.Seed
 
             // Seed roles (Manager, FrontDesk, Housekeeping) and demo users
             new DefaultRolesAndUsersCreator(context, 1).Create();
-           
         }
 
         private static void WithDbContext<TDbContext>(IIocResolver iocResolver, Action<TDbContext> contextAction)

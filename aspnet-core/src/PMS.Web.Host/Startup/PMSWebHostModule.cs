@@ -20,15 +20,8 @@ public class PMSWebHostModule : AbpModule
 {
     private readonly IConfigurationRoot _appConfiguration;
 
-    /// <summary>
-    /// When true, allows the EF module to run seed on startup.
-    /// Set via <c>--seed</c> CLI flag in Program.cs.
-    /// </summary>
-    public static bool RunSeedOnStartup { get; set; }
-
     public PMSWebHostModule(IWebHostEnvironment env, PMSEntityFrameworkModule efModule)
     {
-        efModule.SkipDbSeed = !RunSeedOnStartup;
         _appConfiguration = env.GetAppConfiguration();
     }
 
