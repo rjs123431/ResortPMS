@@ -1,4 +1,4 @@
-# ResortPMS – Agent Reference Guide
+# PMS – Agent Reference Guide
 
 > **For AI agents**: Read this file completely before writing any code. It covers the entire project — no need to scan source files for architecture, routes, entities, or conventions. Use `docs/frontend-architecture.md` and `docs/backend-architecture.md` for deeper patterns.
 
@@ -6,13 +6,13 @@
 
 ## 1. Project Overview
 
-**ResortPMS** is a full-stack Property Management System (PMS) for resorts.
+**PMS** is a full-stack Property Management System (PMS) for resorts.
 
 - **Backend**: .NET 9, ASP.NET Boilerplate (ABP Zero), EF Core, SQL Server
 - **Frontend**: React 19, TypeScript, Tailwind CSS, Vite, PWA
 - **Architecture**: Modular Monolith (ABP multi-tenant)
 - **Real-time**: SignalR (`@microsoft/signalr`)
-- **Repo root**: `/Users/reymundosua/Projects/PMS/ResortPMS`
+- **Repo root**: `/Users/reymundosua/Projects/PMS/PMS`
 
 ---
 
@@ -88,7 +88,7 @@
 
 ## 4. Development Commands
 
-All run from **repo root** (`/Users/reymundosua/Projects/PMS/ResortPMS`):
+All run from **repo root** (`/Users/reymundosua/Projects/PMS/PMS`):
 
 ```bash
 # Backend database

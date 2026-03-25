@@ -16,11 +16,7 @@ export const TopNav: React.FC = () => {
   const isFrontDeskActive = location.pathname === '/front-desk' || location.pathname.startsWith('/front-desk/');
 
   const showReports = isGranted(PermissionNames.Pages_Reports);
-  const showAdmin =
-    isGranted(PermissionNames.Pages_Guests) ||
-    isGranted(PermissionNames.Pages_Rooms) ||
-    isGranted(PermissionNames.Pages_Admin_Users) ||
-    isGranted(PermissionNames.Pages_Reports);
+  const showAdmin = isGranted(PermissionNames.Pages_Admin);
 
   return (
     <nav className="flex items-center gap-1" aria-label="Main navigation">

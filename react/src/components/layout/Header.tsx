@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen = fal
                     className="h-8 sm:h-10 w-auto object-contain max-h-full"
                   />
                 </div>
-                <h1 className="text-base sm:text-xl font-bold text-white truncate">ResortPMS</h1>
+                <h1 className="text-base sm:text-xl font-bold text-white truncate">PMS</h1>
               </Link>
               {onMenuClick != null && (
                 <button

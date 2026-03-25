@@ -16,14 +16,14 @@ import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@/config/permissionNames';
 
 const navItems = [
-  { to: '/front-desk', label: 'Dashboard', title: 'Front desk dashboard', Icon: HomeIcon },
-  { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon, permission: PermissionNames.Pages_Rooms },
-  { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon, permission: PermissionNames.Pages_Reservations },
-  { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon, permission: PermissionNames.Pages_CheckIn },
+  { to: '/front-desk', label: 'Dashboard', title: 'Front desk dashboard', Icon: HomeIcon, tourId: 'nav-frontdesk-dashboard' },
+  { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon, permission: PermissionNames.Pages_Rooms, tourId: 'nav-frontdesk-room-rack' },
+  { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon, permission: PermissionNames.Pages_Reservations, tourId: 'nav-frontdesk-reservations' },
+  { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon, permission: PermissionNames.Pages_CheckIn, tourId: 'nav-frontdesk-check-in' },
   { to: '/front-desk/walk-in', label: 'Walk-In', title: 'Create walk-in check-ins', Icon: UsersIcon, permission: PermissionNames.Pages_CheckIn },
   { to: '/front-desk/stays', label: 'In House', title: 'Manage in-house stays', Icon: HomeIcon, permission: PermissionNames.Pages_Stays },
   { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon, permission: PermissionNames.Pages_CheckOut },
-  { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon, permission: PermissionNames.Pages_Guests },
+  { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon, permission: PermissionNames.Pages_Guests, tourId: 'nav-frontdesk-guests' },
   { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_CheckIn },
   { to: '/front-desk/incidents', label: 'Incidents', title: 'Log and track incidents', Icon: ExclamationTriangleIcon, permission: PermissionNames.Pages_Incidents },
 ];
@@ -50,7 +50,7 @@ export const FrontDeskSidebar: React.FC = () => {
     <aside className="shrink-0 h-full">
       <nav className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:border-r">
         <ul className="flex flex-col gap-0.5 py-2 pr-2 pl-2 sm:pr-3 sm:min-w-[200px]">
-          {visibleItems.map(({ to, label, title, Icon }) => {
+          {visibleItems.map(({ to, label, title, Icon, tourId }) => {
             const isActive = isActiveFor(to);
 
             return (
@@ -58,6 +58,7 @@ export const FrontDeskSidebar: React.FC = () => {
                 <NavLink
                   to={to}
                   title={title}
+                  data-tour-id={tourId}
                   className={() =>
                     `flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-lg px-0 py-2 justify-center w-14 text-xs sm:text-sm sm:w-full sm:px-4 sm:justify-start transition active:scale-[0.98] ${
                       isActive

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MainLayout } from '@components/layout/MainLayout';
+import { FIRST_LOGIN_TOUR_RERUN_EVENT } from '@components/common/FirstLoginTour';
 import { useAuth } from '@contexts/AuthContext';
 import { PermissionNames } from '@config/permissionNames';
 import { userSessionService, UserSessionDto } from '@services/userSession.service';
@@ -104,9 +105,18 @@ export const MyAccountPage: React.FC = () => {
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Security & sign-in</h2>
           <div className="mb-4">
-            <Link to="/change-password" className="text-blue-600 hover:underline font-medium">
-              Change password
-            </Link>
+            <div className="flex flex-wrap items-center gap-4">
+              <Link to="/change-password" className="text-blue-600 hover:underline font-medium">
+                Change password
+              </Link>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event(FIRST_LOGIN_TOUR_RERUN_EVENT))}
+                className="text-blue-600 hover:underline font-medium"
+              >
+                Take product tour again
+              </button>
+            </div>
           </div>
           <div>
             <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Device sessions</h3>

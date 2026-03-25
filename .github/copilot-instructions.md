@@ -1,4 +1,4 @@
-# ResortPMS – GitHub Copilot Instructions
+# PMS – GitHub Copilot Instructions
 
 > This file provides persistent context for GitHub Copilot across all files in this repository.
 > Always read `Agents.MD` in the repo root for the complete project reference.
@@ -7,7 +7,7 @@
 
 ## Project Identity
 
-- **Name**: ResortPMS — a full-stack Property Management System for resorts
+- **Name**: PMS — a full-stack Property Management System for resorts
 - **Backend**: .NET 9, ASP.NET Boilerplate (ABP Zero), EF Core, SQL Server
 - **Frontend**: React 19, TypeScript, Tailwind CSS, Vite, PWA
 - **Architecture**: Modular Monolith, multi-tenant

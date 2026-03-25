@@ -1,4 +1,4 @@
-# ResortPMS – Frontend Architecture Deep Reference
+# PMS – Frontend Architecture Deep Reference
 
 > **For AI agents**: This document covers patterns, conventions, and implementation details for the React frontend. Read `Agents.MD` first for the project overview — this file goes deeper on frontend specifics.
 

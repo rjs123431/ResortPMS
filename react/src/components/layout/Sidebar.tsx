@@ -9,6 +9,7 @@ interface MenuItem {
   label: string;
   icon: React.ReactNode;
   children?: MenuItem[];
+  tourId?: string;
   /** User needs all of these permissions (default). */
   permissions?: string[];
   /** If true, user only needs one of the permissions. Use when parent permission may not be granted but child permissions are. */
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {
         path: '/',
         label: 'Dashboard',
+        tourId: 'nav-frontdesk-dashboard',
         icon: (
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -47,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {
             path: '/front-desk/room-rack',
             label: 'Room Rack',
+            tourId: 'nav-frontdesk-room-rack',
             permissions: [PermissionNames.Pages_Rooms],
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {
             path: '/front-desk/reservations',
             label: 'Reservations',
+            tourId: 'nav-frontdesk-reservations',
             permissions: [PermissionNames.Pages_Reservations],
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {
             path: '/front-desk/check-in',
             label: 'Check-In',
+            tourId: 'nav-frontdesk-check-in',
             permissions: [PermissionNames.Pages_CheckIn],
             icon: (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,6 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <Link
                   key={child.path}
                   to={child.path || '#'}
+                  data-tour-id={child.tourId}
                   onClick={onClose}
                   className={`
                     flex items-center space-x-2 px-4 py-2.5 min-h-[2.5rem] rounded-lg touch-manipulation
@@ -258,6 +264,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <Link
         key={item.path}
         to={item.path || '#'}
+        data-tour-id={item.tourId}
         onClick={onClose}
         className={`
           flex items-center space-x-2 px-4 py-3 min-h-[2.75rem] rounded-lg touch-manipulation

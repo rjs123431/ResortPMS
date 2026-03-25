@@ -34,13 +34,40 @@ public class DefaultRolesAndUsersCreator
         var frontDeskRole = CreateRoleIfNotExists(StaticRoleNames.Tenants.FrontDesk, FrontDeskPermissions());
         var housekeepingRole = CreateRoleIfNotExists(StaticRoleNames.Tenants.Housekeeping, HousekeepingPermissions());
 
+        RevokeRolePermissions(frontDeskRole.Id,
+        [
+            PermissionNames.Pages_Setup,
+            PermissionNames.Pages_Admin,
+            PermissionNames.Pages_Admin_Users,
+            PermissionNames.Pages_Admin_Roles,
+            PermissionNames.Pages_Admin_AuditTrail,
+            PermissionNames.Pages_Admin_Settings
+        ]);
+
         // ── Users ──────────────────────────────────────────────────
 
-        CreateUserIfNotExists("manager", "Manager", "User", "manager@resortpms.com", managerRole.Id, "manager123");
-        CreateUserIfNotExists("frontdesk1", "FrontDesk", "One", "frontdesk1@resortpms.com", frontDeskRole.Id, "frontdesk123");
-        CreateUserIfNotExists("frontdesk2", "FrontDesk", "Two", "frontdesk2@resortpms.com", frontDeskRole.Id, "frontdesk123");
-        CreateUserIfNotExists("housekeeping1", "Housekeeping", "One", "housekeeping1@resortpms.com", housekeepingRole.Id, "housekeeping123");
-        CreateUserIfNotExists("housekeeping2", "Housekeeping", "Two", "housekeeping2@resortpms.com", housekeepingRole.Id, "housekeeping123");
+        CreateUserIfNotExists("manager", "Manager", "User", "manager@PMS.com", managerRole.Id, "manager123");
+        CreateUserIfNotExists("frontdesk1", "FrontDesk", "One", "frontdesk1@PMS.com", frontDeskRole.Id, "frontdesk123");
+        CreateUserIfNotExists("frontdesk2", "FrontDesk", "Two", "frontdesk2@PMS.com", frontDeskRole.Id, "frontdesk123");
+        CreateUserIfNotExists("housekeeping1", "Housekeeping", "One", "housekeeping1@PMS.com", housekeepingRole.Id, "housekeeping123");
+        CreateUserIfNotExists("housekeeping2", "Housekeeping", "Two", "housekeeping2@PMS.com", housekeepingRole.Id, "housekeeping123");
+    }
+
+    private void RevokeRolePermissions(int roleId, List<string> permissionNames)
+    {
+        if (permissionNames.Count == 0)
+            return;
+
+        var grantedToRemove = _context.Permissions.IgnoreQueryFilters()
+            .OfType<RolePermissionSetting>()
+            .Where(p => p.TenantId == _tenantId && p.RoleId == roleId && permissionNames.Contains(p.Name))
+            .ToList();
+
+        if (grantedToRemove.Count == 0)
+            return;
+
+        _context.Permissions.RemoveRange(grantedToRemove);
+        _context.SaveChanges();
     }
 
     // ── Role helper ──────────────────────────────────────────────────────
@@ -210,7 +237,6 @@ public class DefaultRolesAndUsersCreator
         PermissionNames.Pages_Transactions,
 
         // Guests (view + create + edit)
-        PermissionNames.Pages_Setup,
         PermissionNames.Pages_Guests,
         PermissionNames.Pages_Guests_Create,
         PermissionNames.Pages_Guests_Edit,

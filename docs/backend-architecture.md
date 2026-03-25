@@ -1,4 +1,4 @@
-# ResortPMS – Backend Architecture Deep Reference
+# PMS – Backend Architecture Deep Reference
 
 > **For AI agents**: This document covers patterns, conventions, and implementation details for the .NET backend. Read `Agents.MD` first for the project overview — this file goes deeper on backend specifics.
 

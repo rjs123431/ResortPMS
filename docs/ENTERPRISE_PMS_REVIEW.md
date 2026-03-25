@@ -1,4 +1,4 @@
-# ResortPMS + POS — Enterprise-Grade Review & Recommendations
+# PMS + POS — Enterprise-Grade Review & Recommendations
 
 **Version:** 1.0  
 **Scope:** Full application (ASP.NET Core backend, React SPA, POS, multi-tenant)  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-ResortPMS delivers a solid **Reservation → Check-In → Stay → Check-Out** workflow with integrated POS, housekeeping, and multi-tenant administration. The codebase is modular, permission-aware, and uses date-based room inventory. To reach **enterprise-grade production** readiness, the system needs: (1) **full audit and compliance**, (2) **reporting and analytics**, (3) **hardened availability and concurrency**, (4) **workflow and approvals**, (5) **POS reporting and operational completeness**, (6) **operational resilience** (health checks, API versioning, secrets, feature flags), and (7) **optional growth vectors** (channel manager, rate strategy, notifications).
+PMS delivers a solid **Reservation → Check-In → Stay → Check-Out** workflow with integrated POS, housekeeping, and multi-tenant administration. The codebase is modular, permission-aware, and uses date-based room inventory. To reach **enterprise-grade production** readiness, the system needs: (1) **full audit and compliance**, (2) **reporting and analytics**, (3) **hardened availability and concurrency**, (4) **workflow and approvals**, (5) **POS reporting and operational completeness**, (6) **operational resilience** (health checks, API versioning, secrets, feature flags), and (7) **optional growth vectors** (channel manager, rate strategy, notifications).
 
 ---
 

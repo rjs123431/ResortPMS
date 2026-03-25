@@ -10,6 +10,7 @@ import { AdminLayout } from '@components/layout/AdminLayout';
 import { FrontDeskLayout } from '@components/layout/FrontDeskLayout';
 import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { LogoSpinner } from '@components/common/LogoSpinner';
+import { FirstLoginTour } from '@components/common/FirstLoginTour';
 import UpdateNotification from '@components/common/UpdateNotification';
 import { NotificationToast } from '@components/common/NotificationToast';
 import { initAbpEvents } from '@/utils/abp-events';
@@ -114,6 +115,7 @@ const App: React.FC = () => {
           <BrowserRouter>
             <AuthProvider>
               <SignalRProvider>
+                <FirstLoginTour />
                 <Suspense fallback={<LoadingScreen />}>
                   <Routes>
                     <Route
@@ -493,7 +495,7 @@ const App: React.FC = () => {
                     <Route
                       path="/admin"
                       element={
-                        <ProtectedRoute>
+                        <ProtectedRoute requiredPermissions={[PermissionNames.Pages_Admin]}>
                           <AdminLayout>
                             <Outlet />
                           </AdminLayout>
