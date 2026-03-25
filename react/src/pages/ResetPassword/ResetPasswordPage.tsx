@@ -59,7 +59,7 @@ const ResetPasswordPage: React.FC = () => {
                             <span className="text-3xl font-bold text-white">PMS</span>
                         </div>
                         <p className="text-blue-200 text-center text-lg">
-                            Payroll solutions at your fingertips.
+                            Smart solutions at your fingertips.
                         </p>
                     </div>
                 </div>
@@ -120,7 +120,7 @@ const ResetPasswordPage: React.FC = () => {
                         <span className="text-3xl font-bold text-white">PMS</span>
                     </div>
                     <p className="text-blue-200 text-center text-lg">
-                        Payroll solutions at your fingertips.
+                        Smart solutions at your fingertips.
                     </p>
                 </div>
             </div>

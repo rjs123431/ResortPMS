@@ -7,6 +7,7 @@ using PMS.Authentication.External;
 using PMS.Authentication.External.Google;
 using PMS.Common;
 using PMS.Configuration;
+using PMS.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
@@ -19,8 +20,15 @@ public class PMSWebHostModule : AbpModule
 {
     private readonly IConfigurationRoot _appConfiguration;
 
-    public PMSWebHostModule(IWebHostEnvironment env)
+    /// <summary>
+    /// When true, allows the EF module to run seed on startup.
+    /// Set via <c>--seed</c> CLI flag in Program.cs.
+    /// </summary>
+    public static bool RunSeedOnStartup { get; set; }
+
+    public PMSWebHostModule(IWebHostEnvironment env, PMSEntityFrameworkModule efModule)
     {
+        efModule.SkipDbSeed = !RunSeedOnStartup;
         _appConfiguration = env.GetAppConfiguration();
     }
 

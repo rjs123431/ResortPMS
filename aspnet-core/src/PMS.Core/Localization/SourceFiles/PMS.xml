@@ -196,7 +196,7 @@
 		<text name="ForgotCompanyEmail_SubTitle">This email is sent you to list companies you have joined.</text>
 		<text name="WelcomeTenantEmail_Subject">Welcome to PMS</text>
 		<text name="WelcomeTenantEmail_Title">Welcome to PMS</text>
-		<text name="WelcomeTenantEmail_SubTitle">Payroll Solutions at your fingertips.</text>
+		<text name="WelcomeTenantEmail_SubTitle">Smart solutions at your fingertips.</text>
 		<text name="InvalidSubdomainName">{0} is an invalid subdomain name.</text>
 		<text name="InvalidLastnameOrSssNumber">Last name or SSS Number not found.</text>
 		<text name="EmployeeAccountExist">

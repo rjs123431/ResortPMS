@@ -98,16 +98,16 @@ public class ResortSetupDataCreator
     {
         var rooms = new List<(string Number, string Type, string Floor)>
         {
-            ("101", "Native Room", "1"), ("102", "Native Room", "1"), ("103", "Native Room", "1"), ("104", "Native Room", "1"), ("105", "Native Room", "1"),
-            ("106", "Garden View (Easy Access)", "1"), ("107", "Garden View (Easy Access)", "1"), ("108", "Garden View (Easy Access)", "1"), ("109", "Garden View (Easy Access)", "1"), ("110", "Garden View (Easy Access)", "1"),
-            ("201", "Sea View (Ground Floor)", "2"), ("202", "Sea View (Ground Floor)", "2"), ("203", "Sea View (Ground Floor)", "2"), ("204", "Sea View (Ground Floor)", "2"), ("205", "Sea View (Ground Floor)", "2"),
-            ("206", "Saint Room", "2"), ("207", "Saint Room", "2"),
-            ("208", "Sea View (Upper Floor)", "2"), ("209", "Sea View (Upper Floor)", "2"),
-            ("210", "Seaside View", "2"), ("211", "Seaside View", "2"),
-            ("212", "Garden View (6 pax)", "2"), ("213", "Garden View (6 pax)", "2"),
-            ("214", "Garden View (8 pax)", "2"), ("215", "Garden View (8 pax)", "2"),
-            ("216", "Barkada Room", "2"),
-            ("217", "Villa", "2"),
+            ("NR-101", "Native Room", "1"), ("NR-102", "Native Room", "1"), ("NR-103", "Native Room", "1"), ("NR-104", "Native Room", "1"), ("NR-105", "Native Room", "1"),
+            ("GV-101", "Garden View (Easy Access)", "1"), ("GV-102", "Garden View (Easy Access)", "1"), ("GV-103", "Garden View (Easy Access)", "1"), ("GV-104", "Garden View (Easy Access)", "1"), ("GV-105", "Garden View (Easy Access)", "1"),
+            ("SG-201", "Sea View (Ground Floor)", "2"), ("SG-202", "Sea View (Ground Floor)", "2"), ("SG-203", "Sea View (Ground Floor)", "2"), ("SG-204", "Sea View (Ground Floor)", "2"), ("SG-205", "Sea View (Ground Floor)", "2"),
+            ("ST-201", "Saint Room", "2"), ("ST-202", "Saint Room", "2"),
+            ("SU-201", "Sea View (Upper Floor)", "2"), ("SU-202", "Sea View (Upper Floor)", "2"),
+            ("SS-201", "Seaside View", "2"), ("SS-202", "Seaside View", "2"),
+            ("G6-201", "Garden View (6 pax)", "2"), ("G6-202", "Garden View (6 pax)", "2"),
+            ("G8-201", "Garden View (8 pax)", "2"), ("G8-202", "Garden View (8 pax)", "2"),
+            ("BR-201", "Barkada Room", "2"),
+            ("VL-201", "Villa", "2"),
         };
 
         foreach (var room in rooms)

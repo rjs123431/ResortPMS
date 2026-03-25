@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Helper script for Entity Framework Core migrations
+# Helper script for Entity Framework Core migrations and database management
 # Usage:
 #   ./app migration add "MigrationName"
 #   ./app migration remove
 #   ./app db update
 #   ./app db drop
+#   ./app db seed
 
 PROJECT_DIR="aspnet-core/src/PMS.EntityFrameworkCore"
 STARTUP_PROJECT="aspnet-core/src/PMS.Web.Host"
@@ -64,11 +65,17 @@ case "$1" in
                 dotnet ef database drop --startup-project "../PMS.Web.Host" --force
                 dotnet ef database update --startup-project "../PMS.Web.Host"
                 ;;
+            seed)
+                echo "Running database seed..."
+                cd "$STARTUP_PROJECT"
+                dotnet run --no-launch-profile -- --seed
+                ;;
             *)
                 echo "Usage:"
                 echo "  ./app db update"
                 echo "  ./app db drop"
                 echo "  ./app db reset"
+                echo "  ./app db seed"
                 exit 1
                 ;;
         esac
@@ -126,6 +133,7 @@ case "$1" in
                 ;;
         esac
         ;;
+
     *)
         echo "PMS Management CLI"
         echo ""
@@ -137,6 +145,7 @@ case "$1" in
         echo "  ./app db update                       - Update database"
         echo "  ./app db drop                         - Drop database"
         echo "  ./app db reset                        - Drop and recreate database"
+        echo "  ./app db seed                         - Run database seed (host + default tenant)"
         echo "  ./app start                           - Start Angular development server"
         echo "  ./app sp update                       - Update service proxies (NSwag)"
         echo "  ./app build prod                      - Build for production"
