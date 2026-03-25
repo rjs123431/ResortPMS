@@ -116,6 +116,8 @@ public class GetAvailableRoomsInput
     public Guid? ReservationId { get; set; }
     public bool ExcludeReservedWithoutAssignedRoom { get; set; }
     public bool CheckInReadyOnly { get; set; }
+    /// <summary>When set, rooms assigned to this non-checked-in PreCheckIn are not excluded from results.</summary>
+    public Guid? PreCheckInId { get; set; }
 }
 
 public class UpdateHousekeepingStatusDto

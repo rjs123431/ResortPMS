@@ -41,7 +41,8 @@ public class RoomAvailabilityAppService(
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<RoomDailyInventory, Guid> roomDailyInventoryRepository,
     IRoomDailyInventoryService roomDailyInventoryService,
-    IRoomPricingManager roomPricingManager
+    IRoomPricingManager roomPricingManager,
+    IRepository<PreCheckInRoom, Guid> preCheckInRoomRepository
 ) : PMSAppServiceBase, IRoomAvailabilityAppService
 {
     public async Task<List<RoomListDto>> GetAvailableRoomsAsync(GetAvailableRoomsInput input)
@@ -49,6 +50,20 @@ public class RoomAvailabilityAppService(
         var hasDateRange = input.ArrivalDate.HasValue && input.DepartureDate.HasValue;
         var excludeReservedWithoutAssignedRoom = hasDateRange && input.ExcludeReservedWithoutAssignedRoom;
         var checkInReadyOnly = input.CheckInReadyOnly;
+
+        // Rooms assigned to a non-checked-in PreCheckIn should never be excluded from availability.
+        var preCheckInRoomIds = new List<Guid>();
+        if (input.PreCheckInId.HasValue)
+        {
+            preCheckInRoomIds = await preCheckInRoomRepository.GetAll()
+                .AsNoTracking()
+                .Where(r => r.PreCheckInId == input.PreCheckInId.Value
+                    && r.RoomId.HasValue
+                    && r.PreCheckIn.Status != PreCheckInStatus.CheckedIn
+                    && r.PreCheckIn.Status != PreCheckInStatus.Cancelled)
+                .Select(r => r.RoomId!.Value)
+                .ToListAsync();
+        }
 
         if (input.ArrivalDate.HasValue != input.DepartureDate.HasValue)
             throw new UserFriendlyException(L("InvalidArrivalDepartureDate"));
@@ -71,6 +86,21 @@ public class RoomAvailabilityAppService(
                 .Where(sr => sr.ArrivalDate <= today && sr.DepartureDate > today)
                 .Select(sr => sr.RoomId)
                 .ToListAsync();
+
+            // Rooms assigned to other active PreCheckIns that cover today are also occupied.
+            var preCheckInOccupiedRoomIds = await preCheckInRoomRepository.GetAll()
+                .AsNoTracking()
+                .Where(r => r.RoomId.HasValue
+                    && (r.PreCheckIn.Status == PreCheckInStatus.Pending || r.PreCheckIn.Status == PreCheckInStatus.ReadyForCheckIn)
+                    && r.PreCheckIn.ArrivalDate.Date <= today && r.PreCheckIn.DepartureDate.Date > today)
+                .WhereIf(input.PreCheckInId.HasValue, r => r.PreCheckInId != input.PreCheckInId!.Value)
+                .Select(r => r.RoomId!.Value)
+                .ToListAsync();
+
+            occupiedRoomIds = occupiedRoomIds
+                .Union(preCheckInOccupiedRoomIds)
+                .Except(preCheckInRoomIds)
+                .ToList();
             query = query.Where(r => !occupiedRoomIds.Contains(r.Id));
         }
 
@@ -94,6 +124,22 @@ public class RoomAvailabilityAppService(
                     .Select(i => i.RoomId)
                     .Distinct()
                     .ToListAsync();
+
+                // Rooms assigned to other active PreCheckIns that overlap the date range are also blocked.
+                var preCheckInBlockedRoomIds = await preCheckInRoomRepository.GetAll()
+                    .AsNoTracking()
+                    .Where(r => r.RoomId.HasValue
+                        && (r.PreCheckIn.Status == PreCheckInStatus.Pending || r.PreCheckIn.Status == PreCheckInStatus.ReadyForCheckIn)
+                        && r.PreCheckIn.ArrivalDate.Date < departureDate && r.PreCheckIn.DepartureDate.Date > arrivalDate)
+                    .WhereIf(input.PreCheckInId.HasValue, r => r.PreCheckInId != input.PreCheckInId!.Value)
+                    .Select(r => r.RoomId!.Value)
+                    .Distinct()
+                    .ToListAsync();
+
+                blockedRoomIds = blockedRoomIds
+                    .Union(preCheckInBlockedRoomIds)
+                    .Except(preCheckInRoomIds)
+                    .ToList();
 
                 if (blockedRoomIds.Count > 0)
                     query = query.Where(r => !blockedRoomIds.Contains(r.Id));

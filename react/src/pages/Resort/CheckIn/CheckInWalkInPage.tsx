@@ -713,6 +713,7 @@ export const CheckInWalkInPage = () => {
             false,
             true,
             criteria.channelId,
+            preCheckInId,
           )
         )
       );

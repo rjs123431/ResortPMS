@@ -10,6 +10,7 @@ export const roomAvailabilityService = {
     excludeReservedWithoutAssignedRoom?: boolean,
     checkInReadyOnly?: boolean,
     channelId?: string,
+    preCheckInId?: string,
   ) => {
     const params: Record<string, string> = {};
     if (roomTypeId) params.RoomTypeId = roomTypeId;
@@ -23,6 +24,7 @@ export const roomAvailabilityService = {
       params.CheckInReadyOnly = String(checkInReadyOnly);
     }
     if (channelId) params.ChannelId = channelId;
+    if (preCheckInId) params.PreCheckInId = preCheckInId;
 
     const response = await api.get<ApiResponse<RoomListDto[]>>(
       '/api/services/app/RoomAvailability/GetAvailableRooms',
