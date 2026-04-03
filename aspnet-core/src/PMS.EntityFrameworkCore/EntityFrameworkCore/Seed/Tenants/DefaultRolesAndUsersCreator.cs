@@ -189,6 +189,15 @@ public class DefaultRolesAndUsersCreator
         PermissionNames.Pages_Staff,
         PermissionNames.Pages_Staff_Create,
         PermissionNames.Pages_Staff_Edit,
+        PermissionNames.Pages_ConferenceVenues,
+        PermissionNames.Pages_ConferenceVenues_Create,
+        PermissionNames.Pages_ConferenceVenues_Edit,
+        PermissionNames.Pages_ConferenceCompanies,
+        PermissionNames.Pages_ConferenceCompanies_Create,
+        PermissionNames.Pages_ConferenceCompanies_Edit,
+        PermissionNames.Pages_ConferenceExtras,
+        PermissionNames.Pages_ConferenceExtras_Create,
+        PermissionNames.Pages_ConferenceExtras_Edit,
 
         // Transactions (all)
         PermissionNames.Pages_Transactions,
@@ -197,6 +206,11 @@ public class DefaultRolesAndUsersCreator
         PermissionNames.Pages_Reservations_Edit,
         PermissionNames.Pages_Reservations_Cancel,
         PermissionNames.Pages_Reservations_Deposit,
+        PermissionNames.Pages_ConferenceBookings,
+        PermissionNames.Pages_ConferenceBookings_Create,
+        PermissionNames.Pages_ConferenceBookings_Edit,
+        PermissionNames.Pages_ConferenceBookings_Cancel,
+        PermissionNames.Pages_ConferenceBookings_Deposit,
         PermissionNames.Pages_CheckIn,
         PermissionNames.Pages_CheckIn_FromReservation,
         PermissionNames.Pages_CheckIn_WalkIn,
@@ -251,12 +265,23 @@ public class DefaultRolesAndUsersCreator
         PermissionNames.Pages_Guests_Create,
         PermissionNames.Pages_Guests_Edit,
 
+        // Conference booking lookup access
+        PermissionNames.Pages_ConferenceVenues,
+        PermissionNames.Pages_ConferenceCompanies,
+
         // Reservations (full)
         PermissionNames.Pages_Reservations,
         PermissionNames.Pages_Reservations_Create,
         PermissionNames.Pages_Reservations_Edit,
         PermissionNames.Pages_Reservations_Cancel,
         PermissionNames.Pages_Reservations_Deposit,
+
+        // Conference bookings (full operational access)
+        PermissionNames.Pages_ConferenceBookings,
+        PermissionNames.Pages_ConferenceBookings_Create,
+        PermissionNames.Pages_ConferenceBookings_Edit,
+        PermissionNames.Pages_ConferenceBookings_Cancel,
+        PermissionNames.Pages_ConferenceBookings_Deposit,
 
         // Check-In (full)
         PermissionNames.Pages_CheckIn,
