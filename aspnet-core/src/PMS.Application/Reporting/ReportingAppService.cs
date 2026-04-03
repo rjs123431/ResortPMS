@@ -27,6 +27,168 @@ public class ReportingAppService(
     IRepository<PosOrder, Guid> posOrderRepository
 ) : ApplicationService, IReportingAppService
 {
+    public async Task<AccountsReceivableReportDto> GetAccountsReceivableReportAsync(DateTime? asOfDate = null)
+    {
+        var reportDate = (asOfDate ?? Clock.Now).Date;
+        var nextDay = reportDate.AddDays(1);
+
+        var reservations = await reservationRepository.GetAll()
+            .Include(r => r.Rooms)
+            .Include(r => r.ExtraBeds)
+            .Where(r => r.Status == ReservationStatus.Confirmed)
+            .Where(r => r.ReservationDate < nextDay)
+            .ToListAsync();
+
+        var reservationRows = reservations
+            .Select(r =>
+            {
+                var roomAmount = r.Rooms.Sum(room => room.NetAmount > 0 ? room.NetAmount : room.Amount);
+                var extrasAmount = r.ExtraBeds.Sum(extra => extra.NetAmount > 0 ? extra.NetAmount : extra.Amount);
+                var totalAmount = roomAmount + extrasAmount;
+                if (totalAmount <= 0)
+                {
+                    totalAmount = r.TotalAmount;
+                }
+
+                var depositPaid = Math.Max(0m, r.DepositPaid);
+                var roomDepositApplied = 0m;
+                var extrasDepositApplied = 0m;
+
+                if (depositPaid > 0 && totalAmount > 0)
+                {
+                    roomDepositApplied = Math.Min(
+                        roomAmount,
+                        Math.Round(depositPaid * (roomAmount / totalAmount), 2, MidpointRounding.AwayFromZero));
+                    extrasDepositApplied = Math.Min(extrasAmount, depositPaid - roomDepositApplied);
+
+                    var unappliedDeposit = depositPaid - roomDepositApplied - extrasDepositApplied;
+                    if (unappliedDeposit > 0)
+                    {
+                        if (roomAmount - roomDepositApplied >= extrasAmount - extrasDepositApplied)
+                        {
+                            roomDepositApplied = Math.Min(roomAmount, roomDepositApplied + unappliedDeposit);
+                        }
+                        else
+                        {
+                            extrasDepositApplied = Math.Min(extrasAmount, extrasDepositApplied + unappliedDeposit);
+                        }
+                    }
+                }
+
+                var roomBalance = Math.Max(0m, roomAmount - roomDepositApplied);
+                var extrasBalance = Math.Max(0m, extrasAmount - extrasDepositApplied);
+                var balance = Math.Max(0m, totalAmount - depositPaid);
+
+                return new AccountsReceivableReservationRowDto
+                {
+                    ReservationNo = r.ReservationNo,
+                    ArrivalDate = r.ArrivalDate,
+                    GuestName = r.GuestName,
+                    RoomAmount = roomAmount,
+                    ExtrasAmount = extrasAmount,
+                    TotalAmount = totalAmount,
+                    DepositPaid = depositPaid,
+                    RoomBalance = roomBalance,
+                    ExtrasBalance = extrasBalance,
+                    Balance = balance,
+                };
+            })
+            .Where(r => r.Balance > 0)
+            .OrderBy(r => r.ArrivalDate)
+            .ThenBy(r => r.ReservationNo)
+            .ToList();
+
+        var inHouseFolios = await folioRepository.GetAll()
+            .Include(f => f.Stay)
+                .ThenInclude(s => s.Rooms)
+                    .ThenInclude(sr => sr.Room)
+            .Where(f => f.Stay != null)
+            .Where(f => f.Stay!.Status == StayStatus.CheckedIn || f.Stay.Status == StayStatus.InHouse)
+            .ToListAsync();
+
+        var inHouseFolioIds = inHouseFolios.Select(f => f.Id).ToList();
+        var inHouseCharges = await folioTransactionRepository.GetAll()
+            .Include(t => t.ChargeType)
+            .Where(t => !t.IsVoided && t.TransactionType == FolioTransactionType.Charge)
+            .Where(t => inHouseFolioIds.Contains(t.FolioId))
+            .Where(t => t.TransactionDate < nextDay)
+            .ToListAsync();
+
+        var chargesByFolioId = inHouseCharges
+            .GroupBy(t => t.FolioId)
+            .ToDictionary(g => g.Key, g => g.Sum(t => t.NetAmount));
+
+        var stayRows = inHouseFolios
+            .Select(folio =>
+            {
+                var roomNumbers = folio.Stay != null
+                    ? string.Join(", ", folio.Stay.Rooms.Where(sr => sr.Room != null && sr.ReleasedAt == null).Select(sr => sr.Room!.RoomNumber))
+                    : string.Empty;
+
+                return new AccountsReceivableStayRowDto
+                {
+                    StayNo = folio.Stay?.StayNo ?? string.Empty,
+                    CheckInDateTime = folio.Stay?.CheckInDateTime ?? reportDate,
+                    GuestName = folio.Stay?.GuestName ?? string.Empty,
+                    RoomNumber = roomNumbers,
+                    Charges = chargesByFolioId.TryGetValue(folio.Id, out var charges) ? charges : 0m,
+                    Balance = folio.Balance,
+                };
+            })
+            .Where(r => r.Balance > 0 || r.Charges > 0)
+            .OrderBy(r => r.GuestName)
+            .ThenBy(r => r.StayNo)
+            .ToList();
+
+        var byChargeType = new List<AccountsReceivableByChargeTypeDto>();
+        var reservationBalanceTotal = reservationRows.Sum(r => r.Balance);
+        var reservationRoomBalanceTotal = reservationRows.Sum(r => r.RoomBalance);
+        var reservationExtrasBalanceTotal = reservationRows.Sum(r => r.ExtrasBalance);
+        if (reservationRoomBalanceTotal > 0)
+        {
+            byChargeType.Add(new AccountsReceivableByChargeTypeDto
+            {
+                ChargeTypeName = "Reservation Room Outstanding",
+                Amount = reservationRoomBalanceTotal,
+            });
+        }
+        if (reservationExtrasBalanceTotal > 0)
+        {
+            byChargeType.Add(new AccountsReceivableByChargeTypeDto
+            {
+                ChargeTypeName = "Reservation Extras Outstanding",
+                Amount = reservationExtrasBalanceTotal,
+            });
+        }
+
+        byChargeType.AddRange(inHouseCharges
+            .GroupBy(t => t.ChargeType?.Name ?? "Unassigned")
+            .Select(g => new AccountsReceivableByChargeTypeDto
+            {
+                ChargeTypeName = g.Key,
+                Amount = g.Sum(t => t.NetAmount),
+            })
+            .OrderByDescending(x => x.Amount)
+            .ThenBy(x => x.ChargeTypeName));
+
+        var inHouseBalanceTotal = stayRows.Sum(r => r.Balance);
+        var inHouseChargesTotal = stayRows.Sum(r => r.Charges);
+
+        return new AccountsReceivableReportDto
+        {
+            AsOfDate = reportDate,
+            TotalReceivables = reservationBalanceTotal + inHouseBalanceTotal,
+            ReservationBalanceTotal = reservationBalanceTotal,
+            ReservationRoomBalanceTotal = reservationRoomBalanceTotal,
+            ReservationExtrasBalanceTotal = reservationExtrasBalanceTotal,
+            InHouseBalanceTotal = inHouseBalanceTotal,
+            InHouseChargesTotal = inHouseChargesTotal,
+            ByChargeType = byChargeType,
+            Reservations = reservationRows,
+            InHouseStays = stayRows,
+        };
+    }
+
     public async Task<DashboardKpisDto> GetDashboardKpisAsync(DateTime? asOfDate = null)
     {
         var date = (asOfDate ?? Clock.Now).Date;

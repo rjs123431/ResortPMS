@@ -8,6 +8,7 @@ namespace PMS.Reporting;
 public interface IReportingAppService : IApplicationService
 {
     Task<DashboardKpisDto> GetDashboardKpisAsync(DateTime? asOfDate = null);
+    Task<AccountsReceivableReportDto> GetAccountsReceivableReportAsync(DateTime? asOfDate = null);
     Task<OccupancyReportDto> GetOccupancyReportAsync(DateTime fromDate, DateTime toDate);
     Task<RevenueReportDto> GetRevenueReportAsync(DateTime fromDate, DateTime toDate);
     Task<SalesReportDto> GetSalesReportAsync(DateTime fromDate, DateTime toDate);

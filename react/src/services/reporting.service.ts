@@ -18,6 +18,46 @@ export interface DashboardKpisDto {
   paymentsToday: number;
 }
 
+export interface AccountsReceivableReportDto {
+  asOfDate: string;
+  totalReceivables: number;
+  reservationBalanceTotal: number;
+  reservationRoomBalanceTotal: number;
+  reservationExtrasBalanceTotal: number;
+  inHouseBalanceTotal: number;
+  inHouseChargesTotal: number;
+  byChargeType: AccountsReceivableByChargeTypeDto[];
+  reservations: AccountsReceivableReservationRowDto[];
+  inHouseStays: AccountsReceivableStayRowDto[];
+}
+
+export interface AccountsReceivableByChargeTypeDto {
+  chargeTypeName: string;
+  amount: number;
+}
+
+export interface AccountsReceivableReservationRowDto {
+  reservationNo: string;
+  arrivalDate: string;
+  guestName: string;
+  roomAmount: number;
+  extrasAmount: number;
+  totalAmount: number;
+  depositPaid: number;
+  roomBalance: number;
+  extrasBalance: number;
+  balance: number;
+}
+
+export interface AccountsReceivableStayRowDto {
+  stayNo: string;
+  checkInDateTime: string;
+  guestName: string;
+  roomNumber: string;
+  charges: number;
+  balance: number;
+}
+
 export interface OccupancyReportDto {
   fromDate: string;
   toDate: string;
@@ -156,6 +196,15 @@ export const reportingService = {
     const params = asOfDate ? { AsOfDate: asOfDate } : {};
     const res = await api.get<{ result: DashboardKpisDto }>(
       '/api/services/app/ReportsDashboard/GetSummary',
+      { params }
+    );
+    return res.data.result;
+  },
+
+  getAccountsReceivableReport: async (asOfDate?: string): Promise<AccountsReceivableReportDto> => {
+    const params = asOfDate ? { AsOfDate: asOfDate } : {};
+    const res = await api.get<{ result: AccountsReceivableReportDto }>(
+      '/api/services/app/Reporting/GetAccountsReceivableReport',
       { params }
     );
     return res.data.result;
