@@ -17,6 +17,7 @@ export * from './lookup.types';
 export * from './channel.types';
 export * from './staff.types';
 export * from './charge-type.types';
+export * from './day-use.types';
 export * from './quotation.types';
 export * from './pre-check-in.types';
 export * from './room-change.types';

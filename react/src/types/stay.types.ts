@@ -36,6 +36,7 @@ export interface StayRoomDto {
 export interface StayListDto {
   id: string;
   stayNo: string;
+  guestId: string;
   guestName: string;
   checkInDateTime: string;
   expectedCheckOutDateTime: string;

@@ -28,6 +28,7 @@ public class StayDto : EntityDto<Guid>
 public class StayListDto : EntityDto<Guid>
 {
     public string StayNo { get; set; }
+    public Guid GuestId { get; set; }
     public string GuestName { get; set; }
     public DateTime CheckInDateTime { get; set; }
     public DateTime ExpectedCheckOutDateTime { get; set; }

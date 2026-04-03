@@ -62,6 +62,13 @@ namespace PMS.Authorization
         public const string Pages_ChargeTypes_Create = "Pages.ChargeTypes.Create";
         public const string Pages_ChargeTypes_Edit = "Pages.ChargeTypes.Edit";
 
+        // SETUP / TRANSACTIONS — Day Use
+        public const string Pages_DayUse = "Pages.DayUse";
+        public const string Pages_DayUse_Create = "Pages.DayUse.Create";
+        public const string Pages_DayUse_Edit = "Pages.DayUse.Edit";
+        public const string Pages_DayUse_Sell = "Pages.DayUse.Sell";
+        public const string Pages_DayUse_Admin = "Pages.DayUse.Admin";
+
         // SETUP — Payment Methods
         public const string Pages_PaymentMethods = "Pages.PaymentMethods";
         public const string Pages_PaymentMethods_Create = "Pages.PaymentMethods.Create";

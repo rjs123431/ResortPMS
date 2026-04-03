@@ -42,6 +42,12 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<RoomRatePlanDay> RoomRatePlanDays { get; set; }
     public DbSet<RatePlanDateOverride> RatePlanDateOverrides { get; set; }
 
+    // Day Use
+    public DbSet<DayUseOffer> DayUseOffers { get; set; }
+    public DbSet<DayUseVisit> DayUseVisits { get; set; }
+    public DbSet<DayUseVisitLine> DayUseVisitLines { get; set; }
+    public DbSet<DayUsePayment> DayUsePayments { get; set; }
+
     // Lookup tables
     public DbSet<ChargeType> ChargeTypes { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
@@ -144,6 +150,12 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new RoomRatePlanConfiguration());
         modelBuilder.ApplyConfiguration(new RoomRatePlanDayConfiguration());
         modelBuilder.ApplyConfiguration(new RatePlanDateOverrideConfiguration());
+
+        // Day Use
+        modelBuilder.ApplyConfiguration(new DayUseOfferConfiguration());
+        modelBuilder.ApplyConfiguration(new DayUseVisitConfiguration());
+        modelBuilder.ApplyConfiguration(new DayUseVisitLineConfiguration());
+        modelBuilder.ApplyConfiguration(new DayUsePaymentConfiguration());
 
         // Lookups
         modelBuilder.ApplyConfiguration(new ChargeTypeConfiguration());

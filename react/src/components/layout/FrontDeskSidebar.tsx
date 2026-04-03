@@ -3,7 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   ArrowLeftEndOnRectangleIcon,
   ArrowRightStartOnRectangleIcon,
-  ArrowsRightLeftIcon,
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
   ExclamationTriangleIcon,
@@ -21,6 +20,7 @@ const navItems = [
   { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon, permission: PermissionNames.Pages_Reservations, tourId: 'nav-frontdesk-reservations' },
   { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon, permission: PermissionNames.Pages_CheckIn, tourId: 'nav-frontdesk-check-in' },
   { to: '/front-desk/walk-in', label: 'Walk-In', title: 'Create walk-in check-ins', Icon: UsersIcon, permission: PermissionNames.Pages_CheckIn },
+  { to: '/front-desk/day-use', label: 'Day Use', title: 'Sell entrance fees and activities', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_DayUse },
   { to: '/front-desk/stays', label: 'In House', title: 'Manage in-house stays', Icon: HomeIcon, permission: PermissionNames.Pages_Stays },
   { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon, permission: PermissionNames.Pages_CheckOut },
   { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon, permission: PermissionNames.Pages_Guests, tourId: 'nav-frontdesk-guests' },

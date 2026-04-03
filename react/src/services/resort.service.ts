@@ -3,6 +3,7 @@
 import { agencyService } from './agency.service';
 import { channelService } from './channel.service';
 import { chargeTypeService } from './charge-type.service';
+import { dayUseService } from './day-use.service';
 import { checkInService } from './check-in.service';
 import { checkOutService } from './check-out.service';
 import { extraBedPricingService } from './extra-bed-pricing.service';
@@ -29,6 +30,7 @@ export const resortService = {
   ...agencyService,
   ...channelService,
   ...chargeTypeService,
+  ...dayUseService,
   ...checkInService,
   ...checkOutService,
   ...extraBedPricingService,

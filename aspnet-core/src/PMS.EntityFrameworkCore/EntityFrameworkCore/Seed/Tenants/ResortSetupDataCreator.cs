@@ -35,6 +35,8 @@ public class ResortSetupDataCreator
         // Always ensure newly introduced lookup data for existing tenants
         EnsureChannels();
         EnsureAgencies();
+        EnsureDayUseChargeTypes();
+        EnsureDayUseOffers();
 
         // Always ensure default extra-bed price rows for existing tenants
         EnsureExtraBedPrices();
@@ -159,6 +161,131 @@ public class ResortSetupDataCreator
         foreach (var name in names)
         {
             _context.PaymentMethods.Add(new PaymentMethod { Name = name, IsActive = true });
+        }
+
+        _context.SaveChanges();
+    }
+
+    private void EnsureDayUseChargeTypes()
+    {
+        var definitions = new[]
+        {
+            new { Name = "Day Use Entrance", Category = "Day Use", Sort = 20 },
+            new { Name = "Jetski", Category = "Day Use", Sort = 21 },
+            new { Name = "Kayaking", Category = "Day Use", Sort = 22 },
+            new { Name = "Paddle Boarding", Category = "Day Use", Sort = 23 },
+            new { Name = "Seabike", Category = "Day Use", Sort = 24 },
+        };
+
+        foreach (var definition in definitions)
+        {
+            var existing = _context.ChargeTypes.FirstOrDefault(x => x.Name == definition.Name);
+            if (existing != null)
+            {
+                existing.Category = definition.Category;
+                existing.Sort = definition.Sort;
+                existing.IsActive = true;
+                continue;
+            }
+
+            _context.ChargeTypes.Add(new ChargeType
+            {
+                Name = definition.Name,
+                Category = definition.Category,
+                IsRoomCharge = false,
+                RoomChargeType = RoomChargeType.None,
+                Sort = definition.Sort,
+                IsActive = true,
+            });
+        }
+
+        _context.SaveChanges();
+    }
+
+    private void EnsureDayUseOffers()
+    {
+        var chargeTypes = _context.ChargeTypes
+            .Where(x => x.Category == "Day Use")
+            .ToDictionary(x => x.Name, x => x.Id);
+
+        if (chargeTypes.Count == 0)
+        {
+            return;
+        }
+
+        var definitions = new[]
+        {
+            new DayUseOfferDefinition("ENT-WALK-ADULT", "Entrance Fee", string.Empty, DayUseOfferType.EntranceFee, DayUseGuestContext.WalkIn, DayUseGuestCategory.Adult, null, "Day Use Entrance", 150m, 0),
+            new DayUseOfferDefinition("ENT-WALK-KID", "Entrance Fee", string.Empty, DayUseOfferType.EntranceFee, DayUseGuestContext.WalkIn, DayUseGuestCategory.Kid, null, "Day Use Entrance", 75m, 1),
+            new DayUseOfferDefinition("ENT-WALK-SENIOR", "Entrance Fee", string.Empty, DayUseOfferType.EntranceFee, DayUseGuestContext.WalkIn, DayUseGuestCategory.SeniorPwd, null, "Day Use Entrance", 120m, 2),
+            new DayUseOfferDefinition("ENT-WALK-FREE", "Entrance Fee", string.Empty, DayUseOfferType.EntranceFee, DayUseGuestContext.WalkIn, DayUseGuestCategory.ChildBelowFour, null, "Day Use Entrance", 0m, 3),
+
+            new DayUseOfferDefinition("JETSKI-SM-15-WI", "Jetski", "Small", DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 15, "Jetski", 1125m, 10),
+            new DayUseOfferDefinition("JETSKI-SM-30-WI", "Jetski", "Small", DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 30, "Jetski", 2250m, 11),
+            new DayUseOfferDefinition("JETSKI-SM-60-WI", "Jetski", "Small", DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 60, "Jetski", 4500m, 12),
+            new DayUseOfferDefinition("JETSKI-BG-15-WI", "Jetski", "Big", DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 15, "Jetski", 1375m, 13),
+            new DayUseOfferDefinition("JETSKI-BG-30-WI", "Jetski", "Big", DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 30, "Jetski", 2750m, 14),
+            new DayUseOfferDefinition("JETSKI-BG-60-WI", "Jetski", "Big", DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 60, "Jetski", 5500m, 15),
+
+            new DayUseOfferDefinition("KAYAK-15-WI", "Kayaking", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 15, "Kayaking", 190m, 20),
+            new DayUseOfferDefinition("KAYAK-30-WI", "Kayaking", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 30, "Kayaking", 450m, 21),
+            new DayUseOfferDefinition("KAYAK-60-WI", "Kayaking", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 60, "Kayaking", 745m, 22),
+            new DayUseOfferDefinition("KAYAK-15-IH", "Kayaking", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 15, "Kayaking", 150m, 23),
+            new DayUseOfferDefinition("KAYAK-30-IH", "Kayaking", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 30, "Kayaking", 380m, 24),
+            new DayUseOfferDefinition("KAYAK-60-IH", "Kayaking", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 60, "Kayaking", 600m, 25),
+
+            new DayUseOfferDefinition("PADDLE-15-WI", "Paddle Boarding", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 15, "Paddle Boarding", 150m, 30),
+            new DayUseOfferDefinition("PADDLE-30-WI", "Paddle Boarding", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 30, "Paddle Boarding", 300m, 31),
+            new DayUseOfferDefinition("PADDLE-60-WI", "Paddle Boarding", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 60, "Paddle Boarding", 450m, 32),
+            new DayUseOfferDefinition("PADDLE-15-IH", "Paddle Boarding", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 15, "Paddle Boarding", 125m, 33),
+            new DayUseOfferDefinition("PADDLE-30-IH", "Paddle Boarding", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 30, "Paddle Boarding", 225m, 34),
+            new DayUseOfferDefinition("PADDLE-60-IH", "Paddle Boarding", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 60, "Paddle Boarding", 375m, 35),
+
+            new DayUseOfferDefinition("SEABIKE-15-WI", "Seabike", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 15, "Seabike", 190m, 40),
+            new DayUseOfferDefinition("SEABIKE-30-WI", "Seabike", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 30, "Seabike", 450m, 41),
+            new DayUseOfferDefinition("SEABIKE-60-WI", "Seabike", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.WalkIn, null, 60, "Seabike", 745m, 42),
+            new DayUseOfferDefinition("SEABIKE-15-IH", "Seabike", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 15, "Seabike", 150m, 43),
+            new DayUseOfferDefinition("SEABIKE-30-IH", "Seabike", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 30, "Seabike", 380m, 44),
+            new DayUseOfferDefinition("SEABIKE-60-IH", "Seabike", string.Empty, DayUseOfferType.Activity, DayUseGuestContext.InHouse, null, 60, "Seabike", 600m, 45),
+        };
+
+        foreach (var definition in definitions)
+        {
+            if (!chargeTypes.TryGetValue(definition.ChargeTypeName, out var chargeTypeId))
+            {
+                continue;
+            }
+
+            var existing = _context.DayUseOffers.FirstOrDefault(x => x.Code == definition.Code);
+            if (existing != null)
+            {
+                existing.Name = definition.Name;
+                existing.VariantName = definition.VariantName;
+                existing.OfferType = definition.OfferType;
+                existing.GuestContext = definition.GuestContext;
+                existing.GuestCategory = definition.GuestCategory;
+                existing.DurationMinutes = definition.DurationMinutes;
+                existing.ChargeTypeId = chargeTypeId;
+                existing.Amount = definition.Amount;
+                existing.SortOrder = definition.SortOrder;
+                existing.IsActive = true;
+                continue;
+            }
+
+            _context.DayUseOffers.Add(new DayUseOffer
+            {
+                Code = definition.Code,
+                Name = definition.Name,
+                VariantName = definition.VariantName,
+                OfferType = definition.OfferType,
+                GuestContext = definition.GuestContext,
+                GuestCategory = definition.GuestCategory,
+                DurationMinutes = definition.DurationMinutes,
+                ChargeTypeId = chargeTypeId,
+                Amount = definition.Amount,
+                SortOrder = definition.SortOrder,
+                IsActive = true,
+            });
         }
 
         _context.SaveChanges();
@@ -395,6 +522,18 @@ public class ResortSetupDataCreator
         _context.Staffs.AddRange(definitions);
         _context.SaveChanges();
     }
+
+    private sealed record DayUseOfferDefinition(
+        string Code,
+        string Name,
+        string VariantName,
+        DayUseOfferType OfferType,
+        DayUseGuestContext GuestContext,
+        DayUseGuestCategory? GuestCategory,
+        int? DurationMinutes,
+        string ChargeTypeName,
+        decimal Amount,
+        int SortOrder);
 
     private void EnsureGuests()
     {

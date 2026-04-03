@@ -34,6 +34,7 @@ const RoomTypeListPage = lazy(() => import('@pages/Resort/RoomTypes/RoomTypesPag
 const RoomRatePlansPage = lazy(() => import('@pages/Resort/RoomRatePlans/RoomRatePlansPage').then((m) => ({ default: m.RoomRatePlansPage })));
 const RoomRatePlanGroupEditorPage = lazy(() => import('@pages/Resort/RoomRatePlans/RoomRatePlanGroupEditorPage').then((m) => ({ default: m.RoomRatePlanGroupEditorPage })));
 const ChargeTypeListPage = lazy(() => import('@pages/Resort/ChargeTypes/ChargeTypesPage').then((m) => ({ default: m.ChargeTypeListPage })));
+const DayUseOffersPage = lazy(() => import('@pages/Resort/DayUse/DayUseOffersPage').then((m) => ({ default: m.DayUseOffersPage })));
 const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/PaymentMethodsPage').then((m) => ({ default: m.PaymentMethodListPage })));
 const ChannelListPage = lazy(() => import('@pages/Resort/Channels/ChannelsPage').then((m) => ({ default: m.ChannelListPage })));
 const AgencyListPage = lazy(() => import('@pages/Resort/Agencies/AgenciesPage').then((m) => ({ default: m.AgencyListPage })));
@@ -45,6 +46,8 @@ const ReservationDetailPage = lazy(() => import('@pages/Resort/Reservations/Rese
 const ReservationPage = lazy(() => import('@pages/Resort/Reservations/ReservationPage').then((m) => ({ default: m.ReservationPage })));
 const CheckInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInPage').then((m) => ({ default: m.CheckInPage })));
 const CheckInWalkInPage = lazy(() => import('@pages/Resort/CheckIn/CheckInWalkInPage').then((m) => ({ default: m.CheckInWalkInPage })));
+const DayUseSalesPage = lazy(() => import('@pages/Resort/DayUse/DayUseSalesPage').then((m) => ({ default: m.DayUseSalesPage })));
+const DayUseListPage = lazy(() => import('@pages/Resort/DayUse/DayUseListPage').then((m) => ({ default: m.DayUseListPage })));
 const CheckInReservationPage = lazy(() => import('./pages/Resort/CheckIn/CheckInReservationPage').then((m) => ({ default: m.CheckInReservationPage })));
 const CheckInConfirmationPage = lazy(() => import('@pages/Resort/CheckIn/CheckInConfirmationPage').then((m) => ({ default: m.CheckInConfirmationPage })));
 const StaysPage = lazy(() => import('@pages/Resort/Stays/StaysPage').then((m) => ({ default: m.StaysPage })));
@@ -52,7 +55,6 @@ const StayDetailPage = lazy(() => import('@pages/Resort/Stays/StayDetailPage').t
 const CheckOutListPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutListPage').then((m) => ({ default: m.CheckOutListPage })));
 const CheckOutPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutPage').then((m) => ({ default: m.CheckOutPage })));
 const CheckOutConfirmationPage = lazy(() => import('@pages/Resort/CheckOut/CheckOutConfirmationPage').then((m) => ({ default: m.CheckOutConfirmationPage })));
-const QuotationsPage = lazy(() => import('@pages/Resort/Quotations/QuotationsPage').then((m) => ({ default: m.QuotationsPage })));
 const PreCheckInsPage = lazy(() => import('@pages/Resort/PreCheckIns/PreCheckInsPage').then((m) => ({ default: m.PreCheckInsPage })));
 const IncidentsPage = lazy(() => import('@pages/Resort/Incidents/IncidentsPage').then((m) => ({ default: m.IncidentsPage })));
 const RoomChangeRequestsPage = lazy(() => import('@pages/Resort/FrontDesk/RoomChangeRequestsPage').then((m) => ({ default: m.RoomChangeRequestsPage })));
@@ -241,6 +243,27 @@ const App: React.FC = () => {
                           </PageTitle>
                         }
                       />
+                      <Route
+                        path="day-use"
+                        element={
+                          <PageTitle title="Day-Use Visits">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_DayUse_Sell]}>
+                              <DayUseListPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="day-use/new"
+                        element={
+                          <PageTitle title="Day Use">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_DayUse_Sell]}>
+                              <DayUseSalesPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route path="day-use/list" element={<Navigate to="/front-desk/day-use" replace />} />
                       <Route
                         path="check-in/confirmation"
                         element={
@@ -571,6 +594,16 @@ const App: React.FC = () => {
                         }
                       />
                       <Route
+                        path="day-use-offers"
+                        element={
+                          <PageTitle title="Day Use Offers">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_DayUse_Admin]}>
+                              <DayUseOffersPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
                         path="charge-types"
                         element={
                           <PageTitle title="Charge Types">
@@ -684,6 +717,10 @@ const App: React.FC = () => {
                     <Route path="/rooms" element={<Navigate to="/admin/rooms" replace />} />
                     <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
                     <Route path="/room-rate-plans" element={<Navigate to="/admin/room-rate-plans" replace />} />
+                    <Route path="/day-use" element={<Navigate to="/front-desk/day-use" replace />} />
+                    <Route path="/day-use/new" element={<Navigate to="/front-desk/day-use/new" replace />} />
+                    <Route path="/day-use/list" element={<Navigate to="/front-desk/day-use" replace />} />
+                    <Route path="/day-use-offers" element={<Navigate to="/admin/day-use-offers" replace />} />
                     <Route path="/charge-types" element={<Navigate to="/admin/charge-types" replace />} />
                     <Route path="/payment-methods" element={<Navigate to="/admin/payment-methods" replace />} />
                     <Route path="/channels" element={<Navigate to="/admin/channels" replace />} />

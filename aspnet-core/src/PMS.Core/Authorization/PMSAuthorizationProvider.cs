@@ -68,6 +68,12 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         chargeTypes.CreateChildPermission(PermissionNames.Pages_ChargeTypes_Create, L("Create"));
         chargeTypes.CreateChildPermission(PermissionNames.Pages_ChargeTypes_Edit, L("Edit"));
 
+        var dayUse = transactions.CreateChildPermission(PermissionNames.Pages_DayUse, L("DayUse"), multiTenancySides: MultiTenancySides.Tenant);
+        dayUse.CreateChildPermission(PermissionNames.Pages_DayUse_Create, L("Create"));
+        dayUse.CreateChildPermission(PermissionNames.Pages_DayUse_Edit, L("Edit"));
+        dayUse.CreateChildPermission(PermissionNames.Pages_DayUse_Sell, L("Sell"));
+        dayUse.CreateChildPermission(PermissionNames.Pages_DayUse_Admin, L("Admin"));
+
         // SETUP — Payment Methods
         var paymentMethods = setup.CreateChildPermission(PermissionNames.Pages_PaymentMethods, L("PaymentMethods"), multiTenancySides: MultiTenancySides.Tenant);
         paymentMethods.CreateChildPermission(PermissionNames.Pages_PaymentMethods_Create, L("Create"));

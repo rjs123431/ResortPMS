@@ -41,6 +41,12 @@ export const PermissionNames = {
   Pages_ChargeTypes_Create: 'Pages.ChargeTypes.Create',
   Pages_ChargeTypes_Edit: 'Pages.ChargeTypes.Edit',
 
+  Pages_DayUse: 'Pages.DayUse',
+  Pages_DayUse_Create: 'Pages.DayUse.Create',
+  Pages_DayUse_Edit: 'Pages.DayUse.Edit',
+  Pages_DayUse_Sell: 'Pages.DayUse.Sell',
+  Pages_DayUse_Admin: 'Pages.DayUse.Admin',
+
   // ── Setup — Payment Methods ─────────────────────────────────────────
   Pages_PaymentMethods: 'Pages.PaymentMethods',
   Pages_PaymentMethods_Create: 'Pages.PaymentMethods.Create',
