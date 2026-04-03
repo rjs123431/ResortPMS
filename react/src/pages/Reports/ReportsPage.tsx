@@ -257,6 +257,8 @@ const renderPrintWindow = (title: string, bodyMarkup: string) => {
 const openAccountsReceivablePrintWindow = (report: AccountsReceivableReportDto, asOfDate: string) => {
   const reservationTotal = report.reservations.reduce((sum, row) => sum + row.totalAmount, 0);
   const reservationDeposits = report.reservations.reduce((sum, row) => sum + row.depositPaid, 0);
+  const conferenceTotal = report.conferenceBookings.reduce((sum, row) => sum + row.totalAmount, 0);
+  const conferenceDeposits = report.conferenceBookings.reduce((sum, row) => sum + row.depositPaid, 0);
 
   const chargeTypeRows = report.byChargeType.length > 0
     ? report.byChargeType.map((row) => `
@@ -327,6 +329,24 @@ const openAccountsReceivablePrintWindow = (report: AccountsReceivableReportDto, 
         </tr>
       `;
 
+  const conferenceRows = report.conferenceBookings.length > 0
+    ? report.conferenceBookings.map((row) => `
+        <tr>
+          <td>${escapeHtml(row.bookingNo)}</td>
+          <td>${escapeHtml(printDateTime(row.startDateTime))}</td>
+          <td>${escapeHtml(row.organizerName || '-')}</td>
+          <td>${escapeHtml(row.venueName || '-')}</td>
+          <td class="text-right">${escapeHtml(formatCurrency(row.totalAmount))}</td>
+          <td class="text-right">${escapeHtml(formatCurrency(row.depositPaid))}</td>
+          <td class="text-right">${escapeHtml(formatCurrency(row.balance))}</td>
+        </tr>
+      `).join('')
+    : `
+        <tr>
+          <td colspan="7">No event booking receivables.</td>
+        </tr>
+      `;
+
   renderPrintWindow(
     `Accounts Receivable ${asOfDate}`,
     `
@@ -342,13 +362,14 @@ const openAccountsReceivablePrintWindow = (report: AccountsReceivableReportDto, 
         <div class="summary-card"><div class="summary-label">Reservation Balance</div><div class="summary-value">${escapeHtml(formatCurrency(report.reservationBalanceTotal))}</div></div>
         <div class="summary-card"><div class="summary-label">Reservation Room Balance</div><div class="summary-value">${escapeHtml(formatCurrency(report.reservationRoomBalanceTotal))}</div></div>
         <div class="summary-card"><div class="summary-label">Reservation Extras Balance</div><div class="summary-value">${escapeHtml(formatCurrency(report.reservationExtrasBalanceTotal))}</div></div>
+        <div class="summary-card"><div class="summary-label">Event Booking Balance</div><div class="summary-value">${escapeHtml(formatCurrency(report.conferenceBalanceTotal))}</div></div>
         <div class="summary-card"><div class="summary-label">In-House Balance</div><div class="summary-value">${escapeHtml(formatCurrency(report.inHouseBalanceTotal))}</div></div>
         <div class="summary-card"><div class="summary-label">In-House Charges</div><div class="summary-value">${escapeHtml(formatCurrency(report.inHouseChargesTotal))}</div></div>
       </div>
 
       <div class="section">
         <h2>By Charge Type</h2>
-        <p class="section-note">Reservation room and extras balances are derived from stored reservation room and extra-bed net amounts, with deposits allocated proportionally across both buckets.</p>
+        <p class="section-note">Reservation room and extras balances are derived from stored reservation room and extra-bed net amounts, with deposits allocated proportionally across both buckets. Event booking balances use total booked amount less recorded event payments.</p>
         <table>
           <thead>
             <tr>
@@ -412,6 +433,34 @@ const openAccountsReceivablePrintWindow = (report: AccountsReceivableReportDto, 
           ` : ''}
         </table>
       </div>
+
+      <div class="section">
+        <h2>Event Bookings</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Booking</th>
+              <th>Event Start</th>
+              <th>Organizer</th>
+              <th>Venue</th>
+              <th class="text-right">Total</th>
+              <th class="text-right">Paid</th>
+              <th class="text-right">Balance</th>
+            </tr>
+          </thead>
+          <tbody>${conferenceRows}</tbody>
+          ${report.conferenceBookings.length > 0 ? `
+            <tfoot>
+              <tr>
+                <td colspan="4" class="text-right">Subtotal</td>
+                <td class="text-right">${escapeHtml(formatCurrency(conferenceTotal))}</td>
+                <td class="text-right">${escapeHtml(formatCurrency(conferenceDeposits))}</td>
+                <td class="text-right">${escapeHtml(formatCurrency(report.conferenceBalanceTotal))}</td>
+              </tr>
+            </tfoot>
+          ` : ''}
+        </table>
+      </div>
     `
   );
 };
@@ -466,7 +515,7 @@ const openSalesPrintWindow = (report: SalesReportDto, from: string, to: string) 
 
       <div class="section">
         <h2>By Payment Method</h2>
-        <p class="section-note">Includes collections from reservation deposits, check-in and arrival folio payments, and day-use payments.</p>
+        <p class="section-note">Includes collections from reservation deposits, check-in and arrival folio payments, day-use payments, and event bookings.</p>
         <table>
           <thead>
             <tr>
@@ -606,6 +655,20 @@ function AccountsReceivableTab() {
           extrasBalance: row.extrasBalance,
           balance: row.balance,
         })),
+        ...report.conferenceBookings.map((row) => ({
+          bucket: 'Event Booking',
+          documentNo: row.bookingNo,
+          date: row.startDateTime,
+          guestName: row.organizerName,
+          roomNumber: row.venueName,
+          roomAmount: '',
+          extrasAmount: '',
+          charges: row.totalAmount,
+          depositPaid: row.depositPaid,
+          roomBalance: '',
+          extrasBalance: '',
+          balance: row.balance,
+        })),
         ...report.inHouseStays.map((row) => ({
           bucket: 'In House',
           documentNo: row.stayNo,
@@ -667,7 +730,7 @@ function AccountsReceivableTab() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <div className="rounded border border-gray-200 p-3 dark:border-gray-600 dark:bg-gray-800">
           <p className="text-xs text-gray-500 dark:text-gray-400">Total receivables</p>
           <p className="text-lg font-semibold">{formatCurrency(report.totalReceivables)}</p>
@@ -685,6 +748,10 @@ function AccountsReceivableTab() {
           <p className="text-lg font-semibold">{formatCurrency(report.reservationExtrasBalanceTotal)}</p>
         </div>
         <div className="rounded border border-gray-200 p-3 dark:border-gray-600 dark:bg-gray-800">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Event booking balance</p>
+          <p className="text-lg font-semibold">{formatCurrency(report.conferenceBalanceTotal)}</p>
+        </div>
+        <div className="rounded border border-gray-200 p-3 dark:border-gray-600 dark:bg-gray-800">
           <p className="text-xs text-gray-500 dark:text-gray-400">In-house balance</p>
           <p className="text-lg font-semibold">{formatCurrency(report.inHouseBalanceTotal)}</p>
         </div>
@@ -695,7 +762,7 @@ function AccountsReceivableTab() {
       </div>
 
       <p className="text-sm text-gray-600 dark:text-gray-300">
-        Reservation room and extras balances are derived from stored reservation room and extra-bed net amounts, with deposits allocated proportionally across both buckets.
+        Reservation room and extras balances are derived from stored reservation room and extra-bed net amounts, with deposits allocated proportionally across both buckets. Event booking balances use total booked amount less recorded event payments.
       </p>
 
       <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-600">
@@ -829,6 +896,55 @@ function AccountsReceivableTab() {
                   <td className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(report.reservations.reduce((sum, row) => sum + row.totalAmount, 0))}</td>
                   <td className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(report.reservations.reduce((sum, row) => sum + row.depositPaid, 0))}</td>
                   <td className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(report.reservationBalanceTotal)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Event Bookings</h3>
+        <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-600">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Booking</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Event Start</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Organizer</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Venue</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Total</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Paid</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Balance</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+              {report.conferenceBookings.map((row) => (
+                <tr key={row.bookingNo}>
+                  <td className="px-3 py-2">{row.bookingNo}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{new Date(row.startDateTime).toLocaleString()}</td>
+                  <td className="px-3 py-2">{row.organizerName}</td>
+                  <td className="px-3 py-2">{row.venueName || '-'}</td>
+                  <td className="px-3 py-2 text-right">{formatCurrency(row.totalAmount)}</td>
+                  <td className="px-3 py-2 text-right">{formatCurrency(row.depositPaid)}</td>
+                  <td className="px-3 py-2 text-right font-medium">{formatCurrency(row.balance)}</td>
+                </tr>
+              ))}
+              {report.conferenceBookings.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
+                    No event booking receivables.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {report.conferenceBookings.length > 0 && (
+              <tfoot className="print-subtle bg-gray-50 dark:bg-gray-700/60">
+                <tr>
+                  <td colSpan={4} className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Subtotal</td>
+                  <td className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(report.conferenceBookings.reduce((sum, row) => sum + row.totalAmount, 0))}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(report.conferenceBookings.reduce((sum, row) => sum + row.depositPaid, 0))}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(report.conferenceBalanceTotal)}</td>
                 </tr>
               </tfoot>
             )}
@@ -1059,6 +1175,19 @@ function RevenueTab() {
           Total charges: <strong>{formatCurrency(report.totalCharges)}</strong> · Total payments: <strong>{formatCurrency(report.totalPayments)}</strong> · Discounts: <strong>{formatCurrency(report.totalDiscounts)}</strong>
         </p>
       </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded border border-gray-200 p-3 dark:border-gray-600 dark:bg-gray-800">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Event booking charges</p>
+          <p className="text-lg font-semibold">{formatCurrency(report.conferenceChargesTotal)}</p>
+        </div>
+        <div className="rounded border border-gray-200 p-3 dark:border-gray-600 dark:bg-gray-800">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Event booking payments</p>
+          <p className="text-lg font-semibold">{formatCurrency(report.conferencePaymentsTotal)}</p>
+        </div>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-300">
+        Includes hotel folio activity plus event booking charges by event date and event booking payments by paid date.
+      </p>
       {chartData.length > 0 && (
         <div className="h-64 w-full rounded border border-gray-200 dark:border-gray-600 p-2">
           <ResponsiveContainer width="100%" height="100%">
@@ -1311,7 +1440,7 @@ function SalesTab() {
       </div>
 
       <p className="text-sm text-gray-600 dark:text-gray-300">
-        Includes collections from reservation deposits, check-in and arrival folio payments, and day-use payments.
+        Includes collections from reservation deposits, check-in and arrival folio payments, day-use payments, and event bookings.
       </p>
 
       <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-600">

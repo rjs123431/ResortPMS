@@ -16,7 +16,7 @@ import type {
   ConferenceBookingAddOnDto,
   ConferenceCompanyListDto,
   ConferenceBookingDto,
-  ConferenceBookingStatus,
+  ConferenceBookingPaymentDto,
   ConferencePricingType,
   CreateConferenceBookingDto,
   EventTypeDto,
@@ -26,6 +26,11 @@ import { ConferenceOrganizerType as OrganizerTypeEnum, ConferencePricingType as 
 import { formatDate, formatMoney } from '@utils/helpers';
 
 type BookingFormState = CreateConferenceBookingDto;
+type StagedConferenceBookingPayment = Omit<RecordConferenceBookingPaymentDto, 'conferenceBookingId'> & {
+  id: string;
+  paymentMethodName: string;
+  isPendingSave: boolean;
+};
 
 const createEmptyBooking = (): BookingFormState => {
   const start = new Date();
@@ -72,6 +77,7 @@ export function ConferenceBookingPage() {
   const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const [addOnDialogOpen, setAddOnDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [stagedPayments, setStagedPayments] = useState<StagedConferenceBookingPayment[]>([]);
 
   const bookingQuery = useQuery({
     queryKey: ['conference-booking', id],
@@ -102,7 +108,6 @@ export function ConferenceBookingPage() {
   const paymentMethodsQuery = useQuery({
     queryKey: ['payment-methods-active'],
     queryFn: paymentMethodService.getPaymentMethods,
-    enabled: isEdit,
   });
 
   const selectedGuestQuery = useQuery({
@@ -146,31 +151,50 @@ export function ConferenceBookingPage() {
         unitPrice: addOn.unitPrice,
       })),
     });
+    setStagedPayments([]);
   }, [bookingQuery.data]);
 
   const saveMutation = useMutation({
     mutationFn: async (input: BookingFormState) => {
+      const pendingPayments = [...stagedPayments];
+      let savedId: string;
+
       if (isEdit && id) {
         await conferenceBookingService.updateConferenceBooking({ id, ...serializeBooking(input) });
-        return id;
+        savedId = id;
+      } else {
+        savedId = await conferenceBookingService.createConferenceBooking(serializeBooking(input));
       }
 
-      return conferenceBookingService.createConferenceBooking(serializeBooking(input));
+      for (const payment of pendingPayments) {
+        await conferenceBookingService.recordConferenceBookingPayment({
+          conferenceBookingId: savedId,
+          paymentMethodId: payment.paymentMethodId,
+          amount: payment.amount,
+          paidDate: payment.paidDate,
+          referenceNo: payment.referenceNo,
+        });
+      }
+
+      return savedId;
     },
-    onSuccess: (savedId) => {
+    onSuccess: async (savedId) => {
+      const queuedPaymentCount = stagedPayments.length;
+      setPaymentDialogOpen(false);
+      setStagedPayments([]);
       void queryClient.invalidateQueries({ queryKey: ['conference-bookings'] });
       void queryClient.invalidateQueries({ queryKey: ['conference-booking'] });
-      void navigate(`/front-desk/conference-bookings/${savedId}`);
-    },
-  });
 
-  const paymentMutation = useMutation({
-    mutationFn: (input: RecordConferenceBookingPaymentDto) => conferenceBookingService.recordConferenceBookingPayment(input),
-    onSuccess: () => {
-      if (!id) return;
-      setPaymentDialogOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ['conference-booking', id] });
-      void queryClient.invalidateQueries({ queryKey: ['conference-bookings'] });
+      await Swal.fire({
+        icon: 'success',
+        title: isEdit ? 'Booking updated' : 'Booking saved',
+        text: queuedPaymentCount > 0
+          ? `${queuedPaymentCount} payment${queuedPaymentCount === 1 ? '' : 's'} recorded successfully.`
+          : 'Event booking saved successfully.',
+        confirmButtonText: 'OK',
+      });
+
+      void navigate(`/front-desk/conference-bookings/${savedId}`);
     },
   });
 
@@ -240,6 +264,24 @@ export function ConferenceBookingPage() {
   });
 
   const currentBooking = bookingQuery.data;
+  const isTerminalBooking = currentBooking?.status === StatusEnum.Cancelled || currentBooking?.status === StatusEnum.Completed;
+  const paymentMethodLookup = useMemo(
+    () => new Map((paymentMethodsQuery.data ?? []).map((method) => [method.id, method.name])),
+    [paymentMethodsQuery.data],
+  );
+  const displayedPayments = useMemo<ConferenceBookingPaymentDto[]>(() => {
+    const savedPayments = currentBooking?.payments ?? [];
+    const pendingPayments = stagedPayments.map((payment) => ({
+      id: payment.id,
+      paymentMethodId: payment.paymentMethodId,
+      paymentMethodName: payment.paymentMethodName,
+      amount: payment.amount,
+      paidDate: payment.paidDate,
+      referenceNo: payment.referenceNo ?? '',
+    }));
+
+    return [...savedPayments, ...pendingPayments];
+  }, [currentBooking?.payments, stagedPayments]);
   const selectedVenue = useMemo(
     () => (venuesQuery.data ?? []).find((venue) => venue.id === form.venueId) ?? null,
     [form.venueId, venuesQuery.data],
@@ -342,7 +384,7 @@ export function ConferenceBookingPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{isEdit ? currentBooking?.bookingNo ?? 'Conference Booking' : 'New Conference Booking'}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{isEdit ? currentBooking?.bookingNo ?? 'Event Booking' : 'New Event Booking'}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Create flexible time-based bookings for weddings, meetings, and company events.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -374,30 +416,36 @@ export function ConferenceBookingPage() {
               />
               <div className="block text-sm text-gray-700 dark:text-gray-300 md:col-span-2">
                 <span className="mb-1 block">Organizer Type</span>
-                <div className="flex w-full overflow-hidden rounded border border-gray-300 dark:border-gray-600">
-                  {[
-                    { value: OrganizerTypeEnum.Individual, label: 'Individual' },
-                    { value: OrganizerTypeEnum.Company, label: 'Company' },
-                  ].map((option) => {
-                    const isActive = form.organizerType === option.value;
+                {isTerminalBooking ? (
+                  <div className="rounded border border-gray-300 bg-gray-50 px-4 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                    {form.organizerType === OrganizerTypeEnum.Company ? 'Company' : 'Individual'}
+                  </div>
+                ) : (
+                  <div className="flex w-full overflow-hidden rounded border border-gray-300 dark:border-gray-600">
+                    {[
+                      { value: OrganizerTypeEnum.Individual, label: 'Individual' },
+                      { value: OrganizerTypeEnum.Company, label: 'Company' },
+                    ].map((option) => {
+                      const isActive = form.organizerType === option.value;
 
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'}`}
-                        onClick={() => setForm((current) => ({
-                          ...current,
-                          organizerType: option.value,
-                          conferenceCompanyId: option.value === OrganizerTypeEnum.Company ? current.conferenceCompanyId : null,
-                          companyName: option.value === OrganizerTypeEnum.Company ? current.companyName : '',
-                        }))}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'}`}
+                          onClick={() => setForm((current) => ({
+                            ...current,
+                            organizerType: option.value,
+                            conferenceCompanyId: option.value === OrganizerTypeEnum.Company ? current.conferenceCompanyId : null,
+                            companyName: option.value === OrganizerTypeEnum.Company ? current.companyName : '',
+                          }))}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               {form.organizerType === OrganizerTypeEnum.Individual ? (
                 <div className="md:col-span-2 rounded-lg border border-dashed border-gray-300 p-3 dark:border-gray-600">
@@ -406,26 +454,28 @@ export function ConferenceBookingPage() {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">Guest Organizer</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Select an existing guest to populate organizer details.</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700"
-                        onClick={() => setGuestDialogOpen(true)}
-                      >
-                        Search Guest
-                      </button>
-                      {form.guestId ? (
+                    {!isTerminalBooking ? (
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                          onClick={() => {
-                            setForm((current) => ({ ...current, guestId: null }));
-                          }}
+                          className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700"
+                          onClick={() => setGuestDialogOpen(true)}
                         >
-                          Clear Guest
+                          Search Guest
                         </button>
-                      ) : null}
-                    </div>
+                        {form.guestId ? (
+                          <button
+                            type="button"
+                            className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                            onClick={() => {
+                              setForm((current) => ({ ...current, guestId: null }));
+                            }}
+                          >
+                            Clear Guest
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   {selectedGuest ? (
                     <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900/20">
@@ -523,16 +573,12 @@ export function ConferenceBookingPage() {
               {form.pricingType === PricingTypeEnum.Custom ? (
                 <NumberField label="Custom Base Amount" value={form.customBaseAmount ?? 0} onChange={(value) => setForm((current) => ({ ...current, customBaseAmount: value }))} min={0} step="0.01" />
               ) : null}
-              <SelectField
-                label="Initial Status"
-                value={String(form.status)}
-                onChange={(value) => setForm((current) => ({ ...current, status: Number(value) as ConferenceBookingStatus }))}
-                options={[
-                  { value: String(StatusEnum.Inquiry), label: 'Inquiry' },
-                  { value: String(StatusEnum.Tentative), label: 'Tentative' },
-                  { value: String(StatusEnum.Confirmed), label: 'Confirmed' },
-                ]}
-              />
+              <label className="block text-sm text-gray-700 dark:text-gray-300">
+                Initial Status
+                <div className="mt-1 rounded border border-gray-300 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  {isEdit ? StatusEnum[form.status] : StatusEnum[StatusEnum.Inquiry]}
+                </div>
+              </label>
             </div>
 
             <label className="block text-sm text-gray-700 dark:text-gray-300">
@@ -562,6 +608,7 @@ export function ConferenceBookingPage() {
 
             <AddOnSection
               addOns={form.addOns}
+              isReadOnly={isTerminalBooking}
               onAdd={() => setAddOnDialogOpen(true)}
               onRemove={(index) => setForm((current) => ({
                 ...current,
@@ -570,25 +617,31 @@ export function ConferenceBookingPage() {
             />
 
             <PaymentsSection
-              booking={currentBooking}
-              isSaving={paymentMutation.isPending}
+              payments={displayedPayments}
+              isReadOnly={isTerminalBooking}
+              isSaving={saveMutation.isPending}
               onAddPayment={() => setPaymentDialogOpen(true)}
+              onRemovePendingPayment={(paymentId) => {
+                setStagedPayments((current) => current.filter((payment) => payment.id !== paymentId));
+              }}
             />
           </div>
         </div>
 
-        <div className="xl:col-span-2 border-t border-gray-200 pt-5 dark:border-gray-700">
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              type="button"
-              className="rounded bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
-              onClick={() => saveMutation.mutate(form)}
-              disabled={saveMutation.isPending || !form.venueId || !form.eventName.trim() || (form.organizerType === OrganizerTypeEnum.Company ? !(form.contactPerson ?? '').trim() : !form.guestId && !form.organizerName.trim())}
-            >
-              {saveMutation.isPending ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Booking'}
-            </button>
+        {!isTerminalBooking ? (
+          <div className="xl:col-span-2 border-t border-gray-200 pt-5 dark:border-gray-700">
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
+                onClick={() => saveMutation.mutate(form)}
+                disabled={saveMutation.isPending || !form.venueId || !form.eventName.trim() || (form.organizerType === OrganizerTypeEnum.Company ? !(form.contactPerson ?? '').trim() : !form.guestId && !form.organizerName.trim())}
+              >
+                {saveMutation.isPending ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Booking'}
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
       </section>
 
       <SearchGuestDialog
@@ -624,16 +677,19 @@ export function ConferenceBookingPage() {
       <ConferenceBookingPaymentDialog
         open={paymentDialogOpen}
         paymentMethods={paymentMethodsQuery.data ?? []}
-        isSaving={paymentMutation.isPending}
+        isSaving={saveMutation.isPending}
         onClose={() => setPaymentDialogOpen(false)}
         onSave={(payment) => {
-          if (!currentBooking) return;
-
-          paymentMutation.mutate({
-            ...payment,
-            conferenceBookingId: currentBooking.id,
+          setStagedPayments((current) => [...current, {
+            id: createTempPaymentId(),
+            paymentMethodId: payment.paymentMethodId,
+            paymentMethodName: paymentMethodLookup.get(payment.paymentMethodId) ?? 'Unknown Method',
+            amount: payment.amount,
             paidDate: serializeDateTime(payment.paidDate),
-          });
+            referenceNo: payment.referenceNo,
+            isPendingSave: true,
+          }]);
+          setPaymentDialogOpen(false);
         }}
       />
     </div>
@@ -642,10 +698,12 @@ export function ConferenceBookingPage() {
 
 function AddOnSection({
   addOns,
+  isReadOnly,
   onAdd,
   onRemove,
 }: {
   addOns: ConferenceBookingAddOnDto[];
+  isReadOnly: boolean;
   onAdd: () => void;
   onRemove: (index: number) => void;
 }) {
@@ -654,11 +712,8 @@ function AddOnSection({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Add-On Services</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Review the add-on services attached to this booking.</p>
         </div>
-        <button type="button" className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700" onClick={onAdd}>
-          Add Add-On
-        </button>
+        {!isReadOnly ? <button type="button" className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700" onClick={onAdd}>Add</button> : null}
       </div>
 
       <div className="mt-4 overflow-x-auto">
@@ -684,11 +739,7 @@ function AddOnSection({
                   <td className="p-2 text-right">{addOn.quantity}</td>
                   <td className="p-2 text-right">{formatMoney(addOn.unitPrice)}</td>
                   <td className="p-2 text-right">{formatMoney((Number(addOn.quantity) || 0) * (Number(addOn.unitPrice) || 0))}</td>
-                  <td className="p-2 text-right">
-                    <button type="button" className="rounded bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-700" onClick={() => onRemove(index)}>
-                      Remove
-                    </button>
-                  </td>
+                  <td className="p-2 text-right">{!isReadOnly ? <button type="button" className="rounded bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-700" onClick={() => onRemove(index)}>Remove</button> : '—'}</td>
                 </tr>
               ))
             )}
@@ -700,58 +751,67 @@ function AddOnSection({
 }
 
 function PaymentsSection({
-  booking,
+  payments,
+  isReadOnly,
   isSaving,
   onAddPayment,
+  onRemovePendingPayment,
 }: {
-  booking?: ConferenceBookingDto;
+  payments: ConferenceBookingPaymentDto[];
+  isReadOnly: boolean;
   isSaving: boolean;
   onAddPayment: () => void;
+  onRemovePendingPayment: (paymentId: string) => void;
 }) {
   return (
     <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Payments</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Record multiple payments against this booking.</p>
         </div>
-        <button type="button" className="rounded bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-50" onClick={onAddPayment} disabled={!booking || isSaving}>
-          Add Payment
-        </button>
+        {!isReadOnly ? <button type="button" className="rounded bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-50" onClick={onAddPayment} disabled={isSaving}>Add</button> : null}
       </div>
 
-      {!booking ? <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Save the booking first before recording payments.</p> : null}
-
-      {booking ? (
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b text-left dark:border-gray-700">
-                <th className="p-2">Date</th>
-                <th className="p-2">Method</th>
-                <th className="p-2">Reference</th>
-                <th className="p-2 text-right">Amount</th>
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b text-left dark:border-gray-700">
+              <th className="p-2">Date</th>
+              <th className="p-2">Method</th>
+              <th className="p-2">Reference</th>
+              <th className="p-2 text-right">Amount</th>
+              <th className="p-2 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payments.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="p-3 text-center text-gray-500">No payments added yet.</td>
               </tr>
-            </thead>
-            <tbody>
-              {booking.payments.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-3 text-center text-gray-500">No payments recorded yet.</td>
-                </tr>
-              ) : (
-                booking.payments.map((payment) => (
+            ) : (
+              payments.map((payment) => {
+                const isPendingPayment = isTempPaymentId(payment.id);
+
+                return (
                   <tr key={payment.id} className="border-b dark:border-gray-700">
-                    <td className="p-2">{formatDate(payment.paidDate)}</td>
+                    <td className="p-2">{formatDate(payment.paidDate)}{isPendingPayment ? ' (pending save)' : ''}</td>
                     <td className="p-2">{payment.paymentMethodName}</td>
                     <td className="p-2">{payment.referenceNo || '—'}</td>
                     <td className="p-2 text-right">{formatMoney(payment.amount)}</td>
+                    <td className="p-2 text-right">
+                      {isPendingPayment && !isReadOnly ? (
+                        <button type="button" className="rounded bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-700" onClick={() => onRemovePendingPayment(payment.id)} disabled={isSaving}>
+                          Remove
+                        </button>
+                      ) : '—'}
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -765,7 +825,7 @@ function StatusActionButtons({
   isPending: boolean;
   onAction: (action: 'tentative' | 'confirm' | 'start' | 'complete' | 'cancel') => void;
 }) {
-  if (!booking) return null;
+  if (!booking || booking.status === StatusEnum.Cancelled || booking.status === StatusEnum.Completed) return null;
 
   return (
     <>
@@ -773,7 +833,7 @@ function StatusActionButtons({
       {(booking.status === StatusEnum.Inquiry || booking.status === StatusEnum.Tentative) ? <button type="button" className="rounded bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700" onClick={() => onAction('confirm')} disabled={isPending}>Confirm</button> : null}
       {booking.status === StatusEnum.Confirmed ? <button type="button" className="rounded bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700" onClick={() => onAction('start')} disabled={isPending}>Start Event</button> : null}
       {(booking.status === StatusEnum.Confirmed || booking.status === StatusEnum.InProgress) ? <button type="button" className="rounded bg-slate-700 px-4 py-2 text-sm text-white hover:bg-slate-800" onClick={() => onAction('complete')} disabled={isPending}>Complete</button> : null}
-      {booking.status !== StatusEnum.Cancelled && booking.status !== StatusEnum.Completed ? <button type="button" className="rounded bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700" onClick={() => onAction('cancel')} disabled={isPending}>Cancel</button> : null}
+      <button type="button" className="rounded bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700" onClick={() => onAction('cancel')} disabled={isPending}>Cancel</button>
     </>
   );
 }
@@ -866,4 +926,12 @@ function toDateTimeLocalValue(value: string) {
   const date = new Date(value);
   const timezoneOffset = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function createTempPaymentId() {
+  return `pending-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isTempPaymentId(value: string) {
+  return value.startsWith('pending-');
 }

@@ -39,7 +39,7 @@ export function ConferenceBookingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Conference Bookings</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Event Bookings</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Manage event inquiries, confirmed functions, deposits, and venue allocation.</p>
         </div>
         <div className="flex flex-wrap gap-2">

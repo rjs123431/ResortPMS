@@ -91,15 +91,6 @@ export function ConferenceBookingAddOnDialog({
               </select>
             </label>
 
-            <label className="block text-sm text-gray-700 dark:text-gray-300">
-              Service Name
-              <input
-                className="mt-1 w-full rounded border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                value={form.name}
-                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-              />
-            </label>
-
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm text-gray-700 dark:text-gray-300">
                 Quantity
@@ -148,7 +139,7 @@ export function ConferenceBookingAddOnDialog({
                 unitPrice: Number(form.unitPrice) || 0,
               })}
             >
-              Add Add-On
+              Add
             </button>
           </div>
         </DialogPanel>

@@ -118,7 +118,7 @@ export const MyAccountPage: React.FC = () => {
               </button>
             </div>
           </div>
-          <div>
+          {/* <div>
             <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Device sessions</h3>
             {error && (
               <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm">
@@ -188,7 +188,7 @@ export const MyAccountPage: React.FC = () => {
             {!loading && sessions.length === 0 && !error && (
               <p className="text-gray-500 dark:text-gray-400 text-center py-8">No sessions found.</p>
             )}
-          </div>
+          </div> */}
         </section>
       </div>
     </MainLayout>

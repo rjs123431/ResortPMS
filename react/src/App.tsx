@@ -222,7 +222,7 @@ const App: React.FC = () => {
                       <Route
                         path="conference-bookings"
                         element={
-                          <PageTitle title="Conference Bookings">
+                          <PageTitle title="Event Bookings">
                             <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceBookings]}>
                               <ConferenceBookingsPage />
                             </ProtectedRoute>
@@ -242,7 +242,7 @@ const App: React.FC = () => {
                       <Route
                         path="conference-bookings/new"
                         element={
-                          <PageTitle title="New Conference Booking">
+                          <PageTitle title="New Event Booking">
                             <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceBookings_Create]}>
                               <ConferenceBookingPage />
                             </ProtectedRoute>
@@ -252,7 +252,7 @@ const App: React.FC = () => {
                       <Route
                         path="conference-bookings/:id"
                         element={
-                          <PageTitle title="Conference Booking">
+                          <PageTitle title="Event Booking">
                             <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceBookings]}>
                               <ConferenceBookingPage />
                             </ProtectedRoute>

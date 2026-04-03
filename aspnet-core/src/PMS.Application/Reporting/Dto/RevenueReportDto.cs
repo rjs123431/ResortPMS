@@ -10,6 +10,8 @@ public class RevenueReportDto
     public decimal TotalCharges { get; set; }
     public decimal TotalPayments { get; set; }
     public decimal TotalDiscounts { get; set; }
+    public decimal ConferenceChargesTotal { get; set; }
+    public decimal ConferencePaymentsTotal { get; set; }
     public List<RevenueByDayDto> ByDay { get; set; } = [];
     public List<RevenueByChargeTypeDto> ByChargeType { get; set; } = [];
 }

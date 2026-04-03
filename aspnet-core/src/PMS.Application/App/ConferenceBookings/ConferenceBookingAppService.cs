@@ -58,7 +58,7 @@ public class ConferenceBookingAppService(
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (booking == null)
-            throw new UserFriendlyException("Conference booking not found.");
+            throw new UserFriendlyException("Event booking not found.");
 
         return MapBooking(booking);
     }
@@ -193,7 +193,7 @@ public class ConferenceBookingAppService(
             .FirstOrDefaultAsync(x => x.Id == input.Id);
 
         if (booking == null)
-            throw new UserFriendlyException("Conference booking not found.");
+            throw new UserFriendlyException("Event booking not found.");
 
         if (booking.Status == ConferenceBookingStatus.Completed || booking.Status == ConferenceBookingStatus.Cancelled)
             throw new UserFriendlyException("Completed or cancelled bookings cannot be edited.");
@@ -284,7 +284,7 @@ public class ConferenceBookingAppService(
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (booking == null)
-            throw new UserFriendlyException("Conference booking not found.");
+            throw new UserFriendlyException("Event booking not found.");
 
         var availability = await CheckAvailabilityInternalAsync(
             booking.VenueId,
@@ -346,7 +346,7 @@ public class ConferenceBookingAppService(
             .FirstOrDefaultAsync(x => x.Id == input.ConferenceBookingId);
 
         if (booking == null)
-            throw new UserFriendlyException("Conference booking not found.");
+            throw new UserFriendlyException("Event booking not found.");
 
         var paymentMethodExists = await paymentMethodRepository.GetAll().AnyAsync(x => x.Id == input.PaymentMethodId);
         if (!paymentMethodExists)

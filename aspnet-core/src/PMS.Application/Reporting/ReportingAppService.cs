@@ -20,6 +20,8 @@ public class ReportingAppService(
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<Reservation, Guid> reservationRepository,
     IRepository<ReservationDeposit, Guid> reservationDepositRepository,
+    IRepository<ConferenceBooking, Guid> conferenceBookingRepository,
+    IRepository<ConferenceBookingPayment, Guid> conferenceBookingPaymentRepository,
     IRepository<Folio, Guid> folioRepository,
     IRepository<FolioTransaction, Guid> folioTransactionRepository,
     IRepository<FolioPayment, Guid> folioPaymentRepository,
@@ -98,6 +100,34 @@ public class ReportingAppService(
             .ThenBy(r => r.ReservationNo)
             .ToList();
 
+        var conferenceBookings = await conferenceBookingRepository.GetAll()
+            .Include(b => b.Venue)
+            .Where(b => b.Status != ConferenceBookingStatus.Cancelled && b.Status != ConferenceBookingStatus.Inquiry)
+            .Where(b => b.BookingDate < nextDay)
+            .ToListAsync();
+
+        var conferenceRows = conferenceBookings
+            .Select(b =>
+            {
+                var totalAmount = Math.Max(0m, b.TotalAmount);
+                var depositPaid = Math.Max(0m, b.DepositPaid);
+
+                return new AccountsReceivableConferenceBookingRowDto
+                {
+                    BookingNo = b.BookingNo,
+                    StartDateTime = b.StartDateTime,
+                    OrganizerName = !string.IsNullOrWhiteSpace(b.ContactPerson) ? b.ContactPerson : b.OrganizerName,
+                    VenueName = b.Venue?.Name ?? string.Empty,
+                    TotalAmount = totalAmount,
+                    DepositPaid = depositPaid,
+                    Balance = Math.Max(0m, totalAmount - depositPaid),
+                };
+            })
+            .Where(r => r.Balance > 0)
+            .OrderBy(r => r.StartDateTime)
+            .ThenBy(r => r.BookingNo)
+            .ToList();
+
         var inHouseFolios = await folioRepository.GetAll()
             .Include(f => f.Stay)
                 .ThenInclude(s => s.Rooms)
@@ -161,6 +191,16 @@ public class ReportingAppService(
             });
         }
 
+        var conferenceBalanceTotal = conferenceRows.Sum(r => r.Balance);
+        if (conferenceBalanceTotal > 0)
+        {
+            byChargeType.Add(new AccountsReceivableByChargeTypeDto
+            {
+                ChargeTypeName = "Event Booking Outstanding",
+                Amount = conferenceBalanceTotal,
+            });
+        }
+
         byChargeType.AddRange(inHouseCharges
             .GroupBy(t => t.ChargeType?.Name ?? "Unassigned")
             .Select(g => new AccountsReceivableByChargeTypeDto
@@ -177,14 +217,16 @@ public class ReportingAppService(
         return new AccountsReceivableReportDto
         {
             AsOfDate = reportDate,
-            TotalReceivables = reservationBalanceTotal + inHouseBalanceTotal,
+            TotalReceivables = reservationBalanceTotal + conferenceBalanceTotal + inHouseBalanceTotal,
             ReservationBalanceTotal = reservationBalanceTotal,
             ReservationRoomBalanceTotal = reservationRoomBalanceTotal,
             ReservationExtrasBalanceTotal = reservationExtrasBalanceTotal,
+            ConferenceBalanceTotal = conferenceBalanceTotal,
             InHouseBalanceTotal = inHouseBalanceTotal,
             InHouseChargesTotal = inHouseChargesTotal,
             ByChargeType = byChargeType,
             Reservations = reservationRows,
+            ConferenceBookings = conferenceRows,
             InHouseStays = stayRows,
         };
     }
@@ -349,26 +391,41 @@ public class ReportingAppService(
             .Where(p => !p.IsVoided)
             .Where(p => p.PaidDate >= from && p.PaidDate < to)
             .ToListAsync();
+        var conferenceCharges = await conferenceBookingRepository.GetAll()
+            .Where(b => b.Status != ConferenceBookingStatus.Cancelled && b.Status != ConferenceBookingStatus.Inquiry)
+            .Where(b => b.StartDateTime >= from && b.StartDateTime < to)
+            .ToListAsync();
+        var conferencePayments = await conferenceBookingPaymentRepository.GetAll()
+            .Include(p => p.ConferenceBooking)
+            .Where(p => p.PaidDate >= from && p.PaidDate < to)
+            .Where(p => p.ConferenceBooking.Status != ConferenceBookingStatus.Cancelled)
+            .ToListAsync();
         var discounts = await folioTransactionRepository.GetAll()
             .Where(t => !t.IsVoided && t.TransactionType == FolioTransactionType.Discount)
             .Where(t => t.TransactionDate >= from && t.TransactionDate < to)
             .SumAsync(t => t.Amount);
 
-        var totalCharges = charges.Sum(t => t.NetAmount);
-        var totalPayments = payments.Sum(p => p.Amount);
+        var conferenceChargesTotal = conferenceCharges.Sum(b => b.TotalAmount);
+        var conferencePaymentsTotal = conferencePayments.Sum(p => p.Amount);
+        var totalCharges = charges.Sum(t => t.NetAmount) + conferenceChargesTotal;
+        var totalPayments = payments.Sum(p => p.Amount) + conferencePaymentsTotal;
 
-        var byDay = charges
+        var dailyChargeBuckets = charges
             .GroupBy(t => t.TransactionDate.Date)
-            .Select(g => new RevenueByDayDto
-            {
-                Date = g.Key,
-                Charges = g.Sum(t => t.NetAmount),
-                Payments = payments.Where(p => p.PaidDate.Date == g.Key).Sum(p => p.Amount),
-            })
-            .Concat(payments
+            .Select(g => new RevenueByDayDto { Date = g.Key, Charges = g.Sum(t => t.NetAmount), Payments = 0m })
+            .Concat(conferenceCharges
+                .GroupBy(b => b.StartDateTime.Date)
+                .Select(g => new RevenueByDayDto { Date = g.Key, Charges = g.Sum(b => b.TotalAmount), Payments = 0m }));
+
+        var dailyPaymentBuckets = payments
+            .GroupBy(p => p.PaidDate.Date)
+            .Select(g => new RevenueByDayDto { Date = g.Key, Charges = 0m, Payments = g.Sum(p => p.Amount) })
+            .Concat(conferencePayments
                 .GroupBy(p => p.PaidDate.Date)
-                .Where(g => !charges.Any(c => c.TransactionDate.Date == g.Key))
-                .Select(g => new RevenueByDayDto { Date = g.Key, Charges = 0, Payments = g.Sum(p => p.Amount) }))
+                .Select(g => new RevenueByDayDto { Date = g.Key, Charges = 0m, Payments = g.Sum(p => p.Amount) }));
+
+        var byDay = dailyChargeBuckets
+            .Concat(dailyPaymentBuckets)
             .GroupBy(x => x.Date)
             .Select(g => new RevenueByDayDto
             {
@@ -387,6 +444,13 @@ public class ReportingAppService(
                 ChargeTypeName = g.First().ChargeType?.Name ?? "Unknown",
                 Amount = g.Sum(t => t.NetAmount),
             })
+            .Concat(conferenceChargesTotal > 0
+                ? [new RevenueByChargeTypeDto
+                {
+                    ChargeTypeName = "Event Bookings",
+                    Amount = conferenceChargesTotal,
+                }]
+                : [])
             .OrderByDescending(x => x.Amount)
             .ToList();
 
@@ -397,6 +461,8 @@ public class ReportingAppService(
             TotalCharges = totalCharges,
             TotalPayments = totalPayments,
             TotalDiscounts = discounts,
+            ConferenceChargesTotal = conferenceChargesTotal,
+            ConferencePaymentsTotal = conferencePaymentsTotal,
             ByDay = byDay,
             ByChargeType = byChargeType,
         };
@@ -427,6 +493,12 @@ public class ReportingAppService(
             .Include(p => p.DayUseVisit)
             .Where(p => p.PaidAt >= from && p.PaidAt < to)
             .Where(p => p.DayUseVisit.Status != DayUseStatus.Cancelled)
+            .ToListAsync();
+        var conferencePayments = await conferenceBookingPaymentRepository.GetAll()
+            .Include(p => p.PaymentMethod)
+            .Include(p => p.ConferenceBooking)
+            .Where(p => p.PaidDate >= from && p.PaidDate < to)
+            .Where(p => p.ConferenceBooking.Status != ConferenceBookingStatus.Cancelled)
             .ToListAsync();
 
         var payments = reservationDeposits
@@ -462,6 +534,19 @@ public class ReportingAppService(
                 SourceType = "Day Use",
                 DocumentNo = p.DayUseVisit?.VisitNo ?? string.Empty,
                 Description = p.DayUseVisit?.GuestName ?? string.Empty,
+                ReferenceNo = p.ReferenceNo,
+                Amount = p.Amount,
+            }))
+            .Concat(conferencePayments.Select(p => new SalesPaymentRowDto
+            {
+                ReceivedAt = p.PaidDate,
+                PaymentMethodId = p.PaymentMethodId,
+                PaymentMethodName = p.PaymentMethod?.Name ?? "Unknown",
+                SourceType = "Event Booking",
+                DocumentNo = p.ConferenceBooking?.BookingNo ?? string.Empty,
+                Description = p.ConferenceBooking != null
+                    ? $"{p.ConferenceBooking.EventName} · {(!string.IsNullOrWhiteSpace(p.ConferenceBooking.ContactPerson) ? p.ConferenceBooking.ContactPerson : p.ConferenceBooking.OrganizerName)}"
+                    : string.Empty,
                 ReferenceNo = p.ReferenceNo,
                 Amount = p.Amount,
             }))

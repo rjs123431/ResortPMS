@@ -10,10 +10,12 @@ public class AccountsReceivableReportDto
     public decimal ReservationBalanceTotal { get; set; }
     public decimal ReservationRoomBalanceTotal { get; set; }
     public decimal ReservationExtrasBalanceTotal { get; set; }
+    public decimal ConferenceBalanceTotal { get; set; }
     public decimal InHouseBalanceTotal { get; set; }
     public decimal InHouseChargesTotal { get; set; }
     public List<AccountsReceivableByChargeTypeDto> ByChargeType { get; set; } = [];
     public List<AccountsReceivableReservationRowDto> Reservations { get; set; } = [];
+    public List<AccountsReceivableConferenceBookingRowDto> ConferenceBookings { get; set; } = [];
     public List<AccountsReceivableStayRowDto> InHouseStays { get; set; } = [];
 }
 
@@ -34,6 +36,17 @@ public class AccountsReceivableReservationRowDto
     public decimal DepositPaid { get; set; }
     public decimal RoomBalance { get; set; }
     public decimal ExtrasBalance { get; set; }
+    public decimal Balance { get; set; }
+}
+
+public class AccountsReceivableConferenceBookingRowDto
+{
+    public string BookingNo { get; set; } = string.Empty;
+    public DateTime StartDateTime { get; set; }
+    public string OrganizerName { get; set; } = string.Empty;
+    public string VenueName { get; set; } = string.Empty;
+    public decimal TotalAmount { get; set; }
+    public decimal DepositPaid { get; set; }
     public decimal Balance { get; set; }
 }
 

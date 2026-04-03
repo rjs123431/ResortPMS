@@ -24,10 +24,12 @@ export interface AccountsReceivableReportDto {
   reservationBalanceTotal: number;
   reservationRoomBalanceTotal: number;
   reservationExtrasBalanceTotal: number;
+  conferenceBalanceTotal: number;
   inHouseBalanceTotal: number;
   inHouseChargesTotal: number;
   byChargeType: AccountsReceivableByChargeTypeDto[];
   reservations: AccountsReceivableReservationRowDto[];
+  conferenceBookings: AccountsReceivableConferenceBookingRowDto[];
   inHouseStays: AccountsReceivableStayRowDto[];
 }
 
@@ -46,6 +48,16 @@ export interface AccountsReceivableReservationRowDto {
   depositPaid: number;
   roomBalance: number;
   extrasBalance: number;
+  balance: number;
+}
+
+export interface AccountsReceivableConferenceBookingRowDto {
+  bookingNo: string;
+  startDateTime: string;
+  organizerName: string;
+  venueName: string;
+  totalAmount: number;
+  depositPaid: number;
   balance: number;
 }
 
@@ -81,6 +93,8 @@ export interface RevenueReportDto {
   totalCharges: number;
   totalPayments: number;
   totalDiscounts: number;
+  conferenceChargesTotal: number;
+  conferencePaymentsTotal: number;
   byDay: RevenueByDayDto[];
   byChargeType: RevenueByChargeTypeDto[];
 }

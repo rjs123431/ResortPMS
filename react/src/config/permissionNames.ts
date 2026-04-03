@@ -99,7 +99,7 @@ export const PermissionNames = {
   Pages_Reservations_Cancel: 'Pages.Reservations.Cancel',
   Pages_Reservations_Deposit: 'Pages.Reservations.Deposit',
 
-  // ── Conference Bookings ─────────────────────────────────────────────
+  // ── Event Bookings ─────────────────────────────────────────────
   Pages_ConferenceBookings: 'Pages.ConferenceBookings',
   Pages_ConferenceBookings_Create: 'Pages.ConferenceBookings.Create',
   Pages_ConferenceBookings_Edit: 'Pages.ConferenceBookings.Edit',
