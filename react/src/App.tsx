@@ -38,9 +38,15 @@ const DayUseOffersPage = lazy(() => import('@pages/Resort/DayUse/DayUseOffersPag
 const PaymentMethodListPage = lazy(() => import('@pages/Resort/PaymentMethods/PaymentMethodsPage').then((m) => ({ default: m.PaymentMethodListPage })));
 const ChannelListPage = lazy(() => import('@pages/Resort/Channels/ChannelsPage').then((m) => ({ default: m.ChannelListPage })));
 const AgencyListPage = lazy(() => import('@pages/Resort/Agencies/AgenciesPage').then((m) => ({ default: m.AgencyListPage })));
+const ConferenceCompaniesPage = lazy(() => import('@pages/Resort/ConferenceCompanies/ConferenceCompaniesPage').then((m) => ({ default: m.ConferenceCompaniesPage })));
+const ConferenceExtrasPage = lazy(() => import('@pages/Resort/ConferenceExtras/ConferenceExtrasPage').then((m) => ({ default: m.ConferenceExtrasPage })));
+const ConferenceVenuesPage = lazy(() => import('@pages/Resort/ConferenceVenues/ConferenceVenuesPage').then((m) => ({ default: m.ConferenceVenuesPage })));
 const ExtraBedTypeListPage = lazy(() => import('./pages/Resort/ExtraBedTypes/ExtraBedTypesPage').then((m) => ({ default: m.ExtraBedTypeListPage })));
 const ExtraBedPricingPage = lazy(() => import('./pages/Resort/ExtraBedPricing/ExtraBedPricingPage').then((m) => ({ default: m.ExtraBedPricingPage })));
 const StaffListPage = lazy(() => import('@pages/Resort/Staff/StaffPage').then((m) => ({ default: m.StaffListPage })));
+const ConferenceBookingsPage = lazy(() => import('@pages/Resort/ConferenceBookings/ConferenceBookingsPage').then((m) => ({ default: m.ConferenceBookingsPage })));
+const ConferenceBookingCalendarPage = lazy(() => import('@pages/Resort/ConferenceBookings/ConferenceBookingCalendarPage').then((m) => ({ default: m.ConferenceBookingCalendarPage })));
+const ConferenceBookingPage = lazy(() => import('@pages/Resort/ConferenceBookings/ConferenceBookingPage').then((m) => ({ default: m.ConferenceBookingPage })));
 const ReservationListPage = lazy(() => import('@pages/Resort/Reservations/ReservationsPage').then((m) => ({ default: m.ReservationListPage })));
 const ReservationDetailPage = lazy(() => import('@pages/Resort/Reservations/ReservationDetailPage').then((m) => ({ default: m.ReservationDetailPage })));
 const ReservationPage = lazy(() => import('@pages/Resort/Reservations/ReservationPage').then((m) => ({ default: m.ReservationPage })));
@@ -214,6 +220,46 @@ const App: React.FC = () => {
                         }
                       />
                       <Route
+                        path="conference-bookings"
+                        element={
+                          <PageTitle title="Conference Bookings">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceBookings]}>
+                              <ConferenceBookingsPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="conference-bookings/calendar"
+                        element={
+                          <PageTitle title="Event Calendar">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceBookings]}>
+                              <ConferenceBookingCalendarPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="conference-bookings/new"
+                        element={
+                          <PageTitle title="New Conference Booking">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceBookings_Create]}>
+                              <ConferenceBookingPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="conference-bookings/:id"
+                        element={
+                          <PageTitle title="Conference Booking">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceBookings]}>
+                              <ConferenceBookingPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
                         path="check-in"
                         element={
                           <PageTitle title="Check-In">
@@ -367,6 +413,7 @@ const App: React.FC = () => {
                     </Route>
                     <Route path="/room-rack" element={<RedirectToFrontDesk />} />
                     <Route path="/room-rack/*" element={<RedirectToFrontDesk />} />
+                    <Route path="/conference-bookings/*" element={<RedirectToFrontDesk />} />
                     <Route path="/reservations/*" element={<RedirectToFrontDesk />} />
                     <Route path="/new-reservation" element={<Navigate to="/front-desk/reservations/new" replace />} />
                     <Route path="/check-in/*" element={<RedirectToFrontDesk />} />
@@ -589,6 +636,36 @@ const App: React.FC = () => {
                           <PageTitle title="Edit Room Rate Plan">
                             <ProtectedRoute requiredPermissions={[PermissionNames.Pages_RoomRatePlans_Edit]}>
                               <RoomRatePlanGroupEditorPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="conference-companies"
+                        element={
+                          <PageTitle title="Conference Companies">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceCompanies]}>
+                              <ConferenceCompaniesPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="conference-extras"
+                        element={
+                          <PageTitle title="Add-On Services">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceExtras]}>
+                              <ConferenceExtrasPage />
+                            </ProtectedRoute>
+                          </PageTitle>
+                        }
+                      />
+                      <Route
+                        path="conference-venues"
+                        element={
+                          <PageTitle title="Conference Venues">
+                            <ProtectedRoute requiredPermissions={[PermissionNames.Pages_ConferenceVenues]}>
+                              <ConferenceVenuesPage />
                             </ProtectedRoute>
                           </PageTitle>
                         }

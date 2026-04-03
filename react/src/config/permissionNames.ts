@@ -77,12 +77,34 @@ export const PermissionNames = {
   Pages_Staff_Create: 'Pages.Staff.Create',
   Pages_Staff_Edit: 'Pages.Staff.Edit',
 
+  // ── Setup — Conference Venues ───────────────────────────────────────
+  Pages_ConferenceVenues: 'Pages.ConferenceVenues',
+  Pages_ConferenceVenues_Create: 'Pages.ConferenceVenues.Create',
+  Pages_ConferenceVenues_Edit: 'Pages.ConferenceVenues.Edit',
+
+  // ── Setup — Conference Companies ────────────────────────────────────
+  Pages_ConferenceCompanies: 'Pages.ConferenceCompanies',
+  Pages_ConferenceCompanies_Create: 'Pages.ConferenceCompanies.Create',
+  Pages_ConferenceCompanies_Edit: 'Pages.ConferenceCompanies.Edit',
+
+  // ── Setup — Conference Extras ───────────────────────────────────────
+  Pages_ConferenceExtras: 'Pages.ConferenceExtras',
+  Pages_ConferenceExtras_Create: 'Pages.ConferenceExtras.Create',
+  Pages_ConferenceExtras_Edit: 'Pages.ConferenceExtras.Edit',
+
   // ── Reservations ────────────────────────────────────────────────────
   Pages_Reservations: 'Pages.Reservations',
   Pages_Reservations_Create: 'Pages.Reservations.Create',
   Pages_Reservations_Edit: 'Pages.Reservations.Edit',
   Pages_Reservations_Cancel: 'Pages.Reservations.Cancel',
   Pages_Reservations_Deposit: 'Pages.Reservations.Deposit',
+
+  // ── Conference Bookings ─────────────────────────────────────────────
+  Pages_ConferenceBookings: 'Pages.ConferenceBookings',
+  Pages_ConferenceBookings_Create: 'Pages.ConferenceBookings.Create',
+  Pages_ConferenceBookings_Edit: 'Pages.ConferenceBookings.Edit',
+  Pages_ConferenceBookings_Cancel: 'Pages.ConferenceBookings.Cancel',
+  Pages_ConferenceBookings_Deposit: 'Pages.ConferenceBookings.Deposit',
 
   // ── Check-In ────────────────────────────────────────────────────────
   Pages_CheckIn: 'Pages.CheckIn',

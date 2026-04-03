@@ -53,6 +53,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) =
         ),
         children: [
           { path: `${base}/room-types`, label: 'Room Types', permissions: [PermissionNames.Pages_RoomTypes], icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 7V5a2 2 0 012-2h10a2 2 0 012 2v2m0 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7m4 6h6" /></svg> },
+          { path: `${base}/conference-venues`, label: 'Conference Venues', permissions: [PermissionNames.Pages_ConferenceVenues], icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M5 21V7l7-4 7 4v14M9 10h.01M9 14h.01M15 10h.01M15 14h.01" /></svg> },
+          { path: `${base}/conference-companies`, label: 'Conference Companies', permissions: [PermissionNames.Pages_ConferenceCompanies], icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V4H2v16h5m10 0v-4a3 3 0 00-3-3H10a3 3 0 00-3 3v4m10 0H7m10-9a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
+          { path: `${base}/conference-extras`, label: 'Add-On Services', permissions: [PermissionNames.Pages_ConferenceExtras], icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 .895-4 2s1.79 2 4 2 4 .895 4 2-1.79 2-4 2m0-8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
           { path: `${base}/extra-bed-types`, label: 'Extra Bed Types', permissions: [PermissionNames.Pages_ExtraBedTypes], icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 12h8M8 17h5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z" /></svg> },
           { path: `${base}/extra-bed-pricing`, label: 'Extra Bed Pricing', permissions: [PermissionNames.Pages_ExtraBedPricings], icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
           { path: `${base}/channels`, label: 'Channels', permissions: [PermissionNames.Pages_Channels], icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.904 9.904 0 01-4.255-.949L3 20l1.19-3.57A7.686 7.686 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg> },
@@ -122,6 +125,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) =
 
     if (parentLabel === 'Property Setup') {
       if (childPath === `${base}/room-types` || childPath === `${base}/extra-bed-types` || childPath === `${base}/extra-bed-pricing`) return 'Rooms';
+      if (childPath === `${base}/conference-venues` || childPath === `${base}/conference-companies` || childPath === `${base}/conference-extras`) return 'Events';
       if (childPath === `${base}/channels`) return 'Distribution';
       if (
         childPath === `${base}/room-rate-plans`

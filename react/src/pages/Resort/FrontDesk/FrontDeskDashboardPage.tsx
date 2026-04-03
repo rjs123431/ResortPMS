@@ -10,6 +10,7 @@ import {
   type FrontDeskDepartureRowDto,
 } from '@services/frontdesk.service';
 import { resortKeys } from '@/lib/resortQueries';
+import { formatMoney } from '@utils/helpers';
 
 export const FrontDeskDashboardPage: React.FC = () => {
   const { isGranted } = useAuth();
@@ -35,6 +36,7 @@ export const FrontDeskDashboardPage: React.FC = () => {
 
   const canCreateReservation = isGranted(PermissionNames.Pages_Reservations);
   const canCheckIn = isGranted(PermissionNames.Pages_CheckIn);
+  const canManageConferenceBookings = isGranted(PermissionNames.Pages_ConferenceBookings);
   const arrivalsWithPastDue = arrivals ?? [];
   const pastDueArrivalsCount = arrivalsWithPastDue.filter((row) => row.isPastDue).length;
   const arrivalsTodayCount = data?.arrivalsToday ?? Math.max(0, arrivalsWithPastDue.length - pastDueArrivalsCount);
@@ -65,6 +67,14 @@ export const FrontDeskDashboardPage: React.FC = () => {
                 className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
               >
                 + New Reservation
+              </Link>
+            )}
+            {canManageConferenceBookings && (
+              <Link
+                to="/front-desk/conference-bookings/new"
+                className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+              >
+                + New Event Booking
               </Link>
             )}
           </div>
@@ -130,6 +140,37 @@ export const FrontDeskDashboardPage: React.FC = () => {
             </p>
           </div>
         </section>
+
+        {canManageConferenceBookings ? (
+          <section aria-label="Conference event KPIs" className="grid gap-4 md:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => navigate('/front-desk/conference-bookings')}
+              className="flex flex-col justify-between rounded-lg bg-white p-4 text-left shadow-sm ring-1 ring-amber-200 transition hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-800 dark:ring-amber-900/40 dark:hover:bg-amber-900/10"
+            >
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Events Today</p>
+              <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{data?.eventsToday ?? 0}</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/front-desk/conference-bookings/calendar')}
+              className="flex flex-col justify-between rounded-lg bg-white p-4 text-left shadow-sm ring-1 ring-sky-200 transition hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:bg-gray-800 dark:ring-sky-900/40 dark:hover:bg-sky-900/10"
+            >
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Next 7 Days</p>
+              <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{data?.upcomingEventsNext7Days ?? 0}</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/front-desk/conference-bookings')}
+              className="flex flex-col justify-between rounded-lg bg-white p-4 text-left shadow-sm ring-1 ring-emerald-200 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-800 dark:ring-emerald-900/40 dark:hover:bg-emerald-900/10"
+            >
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Deposits Due</p>
+              <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{formatMoney(data?.conferenceDepositsDue ?? 0)}</p>
+            </button>
+          </section>
+        ) : null}
 
         <section className="grid gap-4 lg:grid-cols-2">
           {/* Arrivals grid */}

@@ -3,6 +3,12 @@
 import { agencyService } from './agency.service';
 import { channelService } from './channel.service';
 import { chargeTypeService } from './charge-type.service';
+import { conferenceBookingService } from './conference-booking.service';
+import { conferenceCompanyService } from './conference-company.service';
+import { conferenceExtraService } from './conference-extra.service';
+import { conferenceVenueService } from './conference-venue.service';
+import { conferenceVenueBlackoutService } from './conference-venue-blackout.service';
+import { eventTypeService } from './event-type.service';
 import { dayUseService } from './day-use.service';
 import { checkInService } from './check-in.service';
 import { checkOutService } from './check-out.service';
@@ -30,6 +36,12 @@ export const resortService = {
   ...agencyService,
   ...channelService,
   ...chargeTypeService,
+  ...conferenceBookingService,
+  ...conferenceCompanyService,
+  ...conferenceExtraService,
+  ...conferenceVenueService,
+  ...conferenceVenueBlackoutService,
+  ...eventTypeService,
   ...dayUseService,
   ...checkInService,
   ...checkOutService,

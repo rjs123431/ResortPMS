@@ -12,6 +12,12 @@ namespace PMS.Tests;
     typeof(PMSEntityFrameworkModule))]
 public class PMSTestModule : AbpModule
 {
+    public PMSTestModule(PMSEntityFrameworkModule entityFrameworkModule)
+    {
+        entityFrameworkModule.SkipDbContextRegistration = true;
+        entityFrameworkModule.SkipDbSeed = true;
+    }
+
     public override void PreInitialize()
     {
         // Override DbContext registration to use InMemory

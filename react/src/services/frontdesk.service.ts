@@ -8,6 +8,9 @@ export interface FrontDeskDashboardDto {
   vacantRooms: number;
   roomsDirty: number;
   roomsOutOfOrder: number;
+  eventsToday: number;
+  upcomingEventsNext7Days: number;
+  conferenceDepositsDue: number;
 }
 
 export interface FrontDeskArrivalRowDto {

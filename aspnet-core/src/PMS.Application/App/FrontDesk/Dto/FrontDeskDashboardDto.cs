@@ -14,6 +14,10 @@ public class FrontDeskDashboardDto
 
     public int RoomsDirty { get; set; }
     public int RoomsOutOfOrder { get; set; }
+
+    public int EventsToday { get; set; }
+    public int UpcomingEventsNext7Days { get; set; }
+    public decimal ConferenceDepositsDue { get; set; }
 }
 
 public class FrontDeskArrivalRowDto

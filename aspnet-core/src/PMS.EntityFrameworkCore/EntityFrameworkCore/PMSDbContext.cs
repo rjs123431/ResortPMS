@@ -56,6 +56,16 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
     public DbSet<ExtraBedType> ExtraBedTypes { get; set; }
     public DbSet<ExtraBedPrice> ExtraBedPrices { get; set; }
 
+    // Conference venues and bookings
+    public DbSet<ConferenceVenue> ConferenceVenues { get; set; }
+    public DbSet<EventType> EventTypes { get; set; }
+    public DbSet<ConferenceExtra> ConferenceExtras { get; set; }
+    public DbSet<ConferenceCompany> ConferenceCompanies { get; set; }
+    public DbSet<ConferenceVenueBlackout> ConferenceVenueBlackouts { get; set; }
+    public DbSet<ConferenceBooking> ConferenceBookings { get; set; }
+    public DbSet<ConferenceBookingAddOn> ConferenceBookingAddOns { get; set; }
+    public DbSet<ConferenceBookingPayment> ConferenceBookingPayments { get; set; }
+
     // Reservation
     public DbSet<Reservation> Reservations { get; set; }
     public DbSet<ReservationRoom> ReservationRooms { get; set; }
@@ -164,6 +174,16 @@ public class PMSDbContext : AbpZeroDbContext<Tenant, Role, User, PMSDbContext>
         modelBuilder.ApplyConfiguration(new AgencyConfiguration());
         modelBuilder.ApplyConfiguration(new ExtraBedTypeConfiguration());
         modelBuilder.ApplyConfiguration(new ExtraBedPriceConfiguration());
+
+        // Conference venues and bookings
+        modelBuilder.ApplyConfiguration(new ConferenceVenueConfiguration());
+        modelBuilder.ApplyConfiguration(new EventTypeConfiguration());
+        modelBuilder.ApplyConfiguration(new ConferenceExtraConfiguration());
+        modelBuilder.ApplyConfiguration(new ConferenceCompanyConfiguration());
+        modelBuilder.ApplyConfiguration(new ConferenceVenueBlackoutConfiguration());
+        modelBuilder.ApplyConfiguration(new ConferenceBookingConfiguration());
+        modelBuilder.ApplyConfiguration(new ConferenceBookingAddOnConfiguration());
+        modelBuilder.ApplyConfiguration(new ConferenceBookingPaymentConfiguration());
 
         // Reservation
         modelBuilder.ApplyConfiguration(new ReservationConfiguration());

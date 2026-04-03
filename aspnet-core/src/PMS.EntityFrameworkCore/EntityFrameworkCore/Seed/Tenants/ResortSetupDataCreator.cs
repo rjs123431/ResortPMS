@@ -37,6 +37,9 @@ public class ResortSetupDataCreator
         EnsureAgencies();
         EnsureDayUseChargeTypes();
         EnsureDayUseOffers();
+        EnsureConferenceVenues();
+        EnsureEventTypes();
+        EnsureConferenceExtras();
 
         // Always ensure default extra-bed price rows for existing tenants
         EnsureExtraBedPrices();
@@ -407,6 +410,134 @@ public class ResortSetupDataCreator
                     IsActive       = true,
                 });
             }
+        }
+
+        _context.SaveChanges();
+    }
+
+    private void EnsureConferenceVenues()
+    {
+        var definitions = new[]
+        {
+            new { Code = "SAMPAGUITA_HALL", Name = "Sampaguita Hall", Category = "Ballroom", Capacity = 220, HourlyRate = 6500m, HalfDayRate = 22000m, FullDayRate = 38000m, SetupBufferMinutes = 120, TeardownBufferMinutes = 60, Description = "Primary ballroom for weddings, banquets, and large corporate events." },
+            new { Code = "AMIHAN_HALL", Name = "Amihan Hall", Category = "Function Hall", Capacity = 120, HourlyRate = 4200m, HalfDayRate = 15000m, FullDayRate = 26000m, SetupBufferMinutes = 90, TeardownBufferMinutes = 45, Description = "Mid-sized hall ideal for seminars, birthdays, and social gatherings." },
+            new { Code = "BAYVIEW_ROOM", Name = "Bayview Meeting Room", Category = "Meeting Room", Capacity = 40, HourlyRate = 1800m, HalfDayRate = 6500m, FullDayRate = 11000m, SetupBufferMinutes = 45, TeardownBufferMinutes = 30, Description = "Boardroom-style meeting room for workshops, trainings, and planning sessions." },
+            new { Code = "SUNSET_PAVILION", Name = "Sunset Pavilion", Category = "Outdoor Venue", Capacity = 80, HourlyRate = 3000m, HalfDayRate = 10500m, FullDayRate = 18500m, SetupBufferMinutes = 90, TeardownBufferMinutes = 45, Description = "Open-air venue suited for intimate ceremonies, cocktails, and branded activations." },
+        };
+
+        foreach (var definition in definitions)
+        {
+            var existing = _context.ConferenceVenues.FirstOrDefault(x => x.Code == definition.Code);
+            if (existing != null)
+            {
+                existing.Name = definition.Name;
+                existing.Category = definition.Category;
+                existing.Capacity = definition.Capacity;
+                existing.HourlyRate = definition.HourlyRate;
+                existing.HalfDayRate = definition.HalfDayRate;
+                existing.FullDayRate = definition.FullDayRate;
+                existing.SetupBufferMinutes = definition.SetupBufferMinutes;
+                existing.TeardownBufferMinutes = definition.TeardownBufferMinutes;
+                existing.Description = definition.Description;
+                existing.IsActive = true;
+                continue;
+            }
+
+            _context.ConferenceVenues.Add(new ConferenceVenue
+            {
+                Code = definition.Code,
+                Name = definition.Name,
+                Category = definition.Category,
+                Capacity = definition.Capacity,
+                HourlyRate = definition.HourlyRate,
+                HalfDayRate = definition.HalfDayRate,
+                FullDayRate = definition.FullDayRate,
+                SetupBufferMinutes = definition.SetupBufferMinutes,
+                TeardownBufferMinutes = definition.TeardownBufferMinutes,
+                Description = definition.Description,
+                IsActive = true,
+            });
+        }
+
+        _context.SaveChanges();
+    }
+
+    private void EnsureConferenceExtras()
+    {
+        var definitions = new[]
+        {
+            new { Code = "BUFFET_PAX", Name = "Buffet Catering", Category = "Food and Beverage", UnitLabel = "per pax", DefaultPrice = 950m, SortOrder = 0 },
+            new { Code = "COFFEE_BREAK", Name = "Coffee Break Set", Category = "Food and Beverage", UnitLabel = "per pax", DefaultPrice = 280m, SortOrder = 1 },
+            new { Code = "SOUND_SYSTEM", Name = "Sound System", Category = "Technical", UnitLabel = "per event", DefaultPrice = 4500m, SortOrder = 10 },
+            new { Code = "PROJECTOR_LED", Name = "Projector and Screen", Category = "Technical", UnitLabel = "per event", DefaultPrice = 2500m, SortOrder = 11 },
+            new { Code = "LED_WALL", Name = "LED Wall Package", Category = "Technical", UnitLabel = "per event", DefaultPrice = 18000m, SortOrder = 12 },
+            new { Code = "FLORAL_BASIC", Name = "Basic Floral Styling", Category = "Decor", UnitLabel = "per event", DefaultPrice = 6000m, SortOrder = 20 },
+            new { Code = "TABLE_LINEN", Name = "Premium Table Linen", Category = "Decor", UnitLabel = "per table", DefaultPrice = 180m, SortOrder = 21 },
+            new { Code = "HOST_MIC", Name = "Wireless Microphone", Category = "Equipment", UnitLabel = "per unit", DefaultPrice = 850m, SortOrder = 30 },
+            new { Code = "PORTABLE_STAGE", Name = "Portable Stage Platform", Category = "Equipment", UnitLabel = "per event", DefaultPrice = 5500m, SortOrder = 31 },
+        };
+
+        foreach (var definition in definitions)
+        {
+            var existing = _context.ConferenceExtras.FirstOrDefault(x => x.Code == definition.Code);
+            if (existing != null)
+            {
+                existing.Name = definition.Name;
+                existing.Category = definition.Category;
+                existing.UnitLabel = definition.UnitLabel;
+                existing.DefaultPrice = definition.DefaultPrice;
+                existing.SortOrder = definition.SortOrder;
+                existing.IsActive = true;
+                continue;
+            }
+
+            _context.ConferenceExtras.Add(new ConferenceExtra
+            {
+                Code = definition.Code,
+                Name = definition.Name,
+                Category = definition.Category,
+                UnitLabel = definition.UnitLabel,
+                DefaultPrice = definition.DefaultPrice,
+                SortOrder = definition.SortOrder,
+                IsActive = true,
+            });
+        }
+
+        _context.SaveChanges();
+    }
+
+    private void EnsureEventTypes()
+    {
+        var definitions = new[]
+        {
+            new { Code = "CONFERENCE", Name = "Conference", SortOrder = 0 },
+            new { Code = "MEETING", Name = "Meeting", SortOrder = 1 },
+            new { Code = "WEDDING", Name = "Wedding", SortOrder = 2 },
+            new { Code = "BIRTHDAY", Name = "Birthday", SortOrder = 3 },
+            new { Code = "SEMINAR", Name = "Seminar", SortOrder = 4 },
+            new { Code = "TRAINING", Name = "Training", SortOrder = 5 },
+            new { Code = "CORPORATE_EVENT", Name = "Corporate Event", SortOrder = 6 },
+            new { Code = "SOCIAL_EVENT", Name = "Social Event", SortOrder = 7 },
+        };
+
+        foreach (var definition in definitions)
+        {
+            var existing = _context.EventTypes.FirstOrDefault(x => x.Code == definition.Code);
+            if (existing != null)
+            {
+                existing.Name = definition.Name;
+                existing.SortOrder = definition.SortOrder;
+                existing.IsActive = true;
+                continue;
+            }
+
+            _context.EventTypes.Add(new EventType
+            {
+                Code = definition.Code,
+                Name = definition.Name,
+                SortOrder = definition.SortOrder,
+                IsActive = true,
+            });
         }
 
         _context.SaveChanges();

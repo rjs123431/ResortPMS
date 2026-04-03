@@ -104,12 +104,34 @@ public class PMSAuthorizationProvider : AuthorizationProvider
         staff.CreateChildPermission(PermissionNames.Pages_Staff_Create, L("Create"));
         staff.CreateChildPermission(PermissionNames.Pages_Staff_Edit, L("Edit"));
 
+        // SETUP — Conference Venues
+        var conferenceVenues = setup.CreateChildPermission(PermissionNames.Pages_ConferenceVenues, L("ConferenceVenues"), multiTenancySides: MultiTenancySides.Tenant);
+        conferenceVenues.CreateChildPermission(PermissionNames.Pages_ConferenceVenues_Create, L("Create"));
+        conferenceVenues.CreateChildPermission(PermissionNames.Pages_ConferenceVenues_Edit, L("Edit"));
+
+        // SETUP — Conference Companies
+        var conferenceCompanies = setup.CreateChildPermission(PermissionNames.Pages_ConferenceCompanies, L("ConferenceCompanies"), multiTenancySides: MultiTenancySides.Tenant);
+        conferenceCompanies.CreateChildPermission(PermissionNames.Pages_ConferenceCompanies_Create, L("Create"));
+        conferenceCompanies.CreateChildPermission(PermissionNames.Pages_ConferenceCompanies_Edit, L("Edit"));
+
+        // SETUP — Conference Extras
+        var conferenceExtras = setup.CreateChildPermission(PermissionNames.Pages_ConferenceExtras, L("ConferenceExtras"), multiTenancySides: MultiTenancySides.Tenant);
+        conferenceExtras.CreateChildPermission(PermissionNames.Pages_ConferenceExtras_Create, L("Create"));
+        conferenceExtras.CreateChildPermission(PermissionNames.Pages_ConferenceExtras_Edit, L("Edit"));
+
         // RESERVATIONS
         var reservations = transactions.CreateChildPermission(PermissionNames.Pages_Reservations, L("Reservations"), multiTenancySides: MultiTenancySides.Tenant);
         reservations.CreateChildPermission(PermissionNames.Pages_Reservations_Create, L("Create"));
         reservations.CreateChildPermission(PermissionNames.Pages_Reservations_Edit, L("Edit"));
         reservations.CreateChildPermission(PermissionNames.Pages_Reservations_Cancel, L("Cancel"));
         reservations.CreateChildPermission(PermissionNames.Pages_Reservations_Deposit, L("Deposit"));
+
+        // CONFERENCE BOOKINGS
+        var conferenceBookings = transactions.CreateChildPermission(PermissionNames.Pages_ConferenceBookings, L("ConferenceBookings"), multiTenancySides: MultiTenancySides.Tenant);
+        conferenceBookings.CreateChildPermission(PermissionNames.Pages_ConferenceBookings_Create, L("Create"));
+        conferenceBookings.CreateChildPermission(PermissionNames.Pages_ConferenceBookings_Edit, L("Edit"));
+        conferenceBookings.CreateChildPermission(PermissionNames.Pages_ConferenceBookings_Cancel, L("Cancel"));
+        conferenceBookings.CreateChildPermission(PermissionNames.Pages_ConferenceBookings_Deposit, L("Deposit"));
 
         // CHECK-IN
         var checkIn = transactions.CreateChildPermission(PermissionNames.Pages_CheckIn, L("CheckIn"), multiTenancySides: MultiTenancySides.Tenant);

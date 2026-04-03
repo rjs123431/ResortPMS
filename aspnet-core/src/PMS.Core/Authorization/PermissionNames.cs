@@ -99,12 +99,34 @@ namespace PMS.Authorization
         public const string Pages_Staff_Create = "Pages.Staff.Create";
         public const string Pages_Staff_Edit = "Pages.Staff.Edit";
 
+        // SETUP — Conference Venues
+        public const string Pages_ConferenceVenues = "Pages.ConferenceVenues";
+        public const string Pages_ConferenceVenues_Create = "Pages.ConferenceVenues.Create";
+        public const string Pages_ConferenceVenues_Edit = "Pages.ConferenceVenues.Edit";
+
+        // SETUP — Conference Companies
+        public const string Pages_ConferenceCompanies = "Pages.ConferenceCompanies";
+        public const string Pages_ConferenceCompanies_Create = "Pages.ConferenceCompanies.Create";
+        public const string Pages_ConferenceCompanies_Edit = "Pages.ConferenceCompanies.Edit";
+
+        // SETUP — Conference Extras
+        public const string Pages_ConferenceExtras = "Pages.ConferenceExtras";
+        public const string Pages_ConferenceExtras_Create = "Pages.ConferenceExtras.Create";
+        public const string Pages_ConferenceExtras_Edit = "Pages.ConferenceExtras.Edit";
+
         // RESERVATIONS
         public const string Pages_Reservations = "Pages.Reservations";
         public const string Pages_Reservations_Create = "Pages.Reservations.Create";
         public const string Pages_Reservations_Edit = "Pages.Reservations.Edit";
         public const string Pages_Reservations_Cancel = "Pages.Reservations.Cancel";
         public const string Pages_Reservations_Deposit = "Pages.Reservations.Deposit";
+
+        // CONFERENCE BOOKINGS
+        public const string Pages_ConferenceBookings = "Pages.ConferenceBookings";
+        public const string Pages_ConferenceBookings_Create = "Pages.ConferenceBookings.Create";
+        public const string Pages_ConferenceBookings_Edit = "Pages.ConferenceBookings.Edit";
+        public const string Pages_ConferenceBookings_Cancel = "Pages.ConferenceBookings.Cancel";
+        public const string Pages_ConferenceBookings_Deposit = "Pages.ConferenceBookings.Deposit";
 
         // CHECK-IN
         public const string Pages_CheckIn = "Pages.CheckIn";

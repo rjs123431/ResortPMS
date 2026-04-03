@@ -5,6 +5,7 @@ import {
   ArrowRightStartOnRectangleIcon,
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
+  BuildingOffice2Icon,
   ExclamationTriangleIcon,
   HomeIcon,
   Squares2X2Icon,
@@ -19,12 +20,13 @@ const navItems = [
   { to: '/front-desk/room-rack', label: 'Room Rack', title: 'View room status and availability', Icon: Squares2X2Icon, permission: PermissionNames.Pages_FrontDesk, tourId: 'nav-frontdesk-room-rack' },
   { to: '/front-desk/reservations', label: 'Reservations', title: 'Create and manage reservations', Icon: CalendarDaysIcon, permission: PermissionNames.Pages_Reservations, tourId: 'nav-frontdesk-reservations' },
   { to: '/front-desk/check-in', label: 'Arrivals', title: 'Check in arriving guests', Icon: ArrowRightStartOnRectangleIcon, permission: PermissionNames.Pages_CheckIn, tourId: 'nav-frontdesk-check-in' },
+  { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_CheckIn },
   { to: '/front-desk/walk-in', label: 'Walk-In', title: 'Create walk-in check-ins', Icon: UsersIcon, permission: PermissionNames.Pages_CheckIn },
-  { to: '/front-desk/day-use', label: 'Day Use', title: 'Sell entrance fees and activities', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_DayUse },
   { to: '/front-desk/stays', label: 'In House', title: 'Manage in-house stays', Icon: HomeIcon, permission: PermissionNames.Pages_Stays },
   { to: '/front-desk/check-out', label: 'Departures', title: 'Check out departing guests', Icon: ArrowLeftEndOnRectangleIcon, permission: PermissionNames.Pages_CheckOut },
+  { to: '/front-desk/day-use', label: 'Day Use', title: 'Sell entrance fees and activities', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_DayUse },
+  { to: '/front-desk/conference-bookings', label: 'Events', title: 'Manage conference halls and event bookings', Icon: BuildingOffice2Icon, permission: PermissionNames.Pages_ConferenceBookings },
   { to: '/front-desk/guests', label: 'Guests', title: 'Guest profiles', Icon: UserGroupIcon, permission: PermissionNames.Pages_Guests, tourId: 'nav-frontdesk-guests' },
-  { to: '/front-desk/pre-check-ins', label: 'Pre Check-In', title: 'Manage pre check-ins', Icon: ClipboardDocumentListIcon, permission: PermissionNames.Pages_CheckIn },
   { to: '/front-desk/incidents', label: 'Incidents', title: 'Log and track incidents', Icon: ExclamationTriangleIcon, permission: PermissionNames.Pages_Incidents },
 ];
 
@@ -40,6 +42,7 @@ export const FrontDeskSidebar: React.FC = () => {
   const isActiveFor = (to: string) => {
     if (to === '/front-desk') return location.pathname === '/front-desk' || location.pathname === '/front-desk/';
     if (to === '/front-desk/reservations') return location.pathname === '/front-desk/reservations' || location.pathname.startsWith('/front-desk/reservations/');
+    if (to === '/front-desk/conference-bookings') return location.pathname === '/front-desk/conference-bookings' || location.pathname.startsWith('/front-desk/conference-bookings/');
     if (to === '/front-desk/check-in') return location.pathname === '/front-desk/check-in' || location.pathname.startsWith('/front-desk/check-in/');
     if (to === '/front-desk/stays') return location.pathname === '/front-desk/stays' || location.pathname.startsWith('/front-desk/stays/');
     if (to === '/front-desk/check-out') return location.pathname === '/front-desk/check-out' || location.pathname.startsWith('/front-desk/check-out/');

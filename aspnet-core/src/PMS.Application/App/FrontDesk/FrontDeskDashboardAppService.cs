@@ -22,6 +22,7 @@ public interface IFrontDeskDashboardAppService : IApplicationService
 [AbpAuthorize]
 public class FrontDeskDashboardAppService(
     IReportingAppService reportingAppService,
+    IRepository<ConferenceBooking, Guid> conferenceBookingRepository,
     IRepository<Reservation, Guid> reservationRepository,
     IRepository<Room, Guid> roomRepository,
     IRepository<RoomDailyInventory, Guid> roomDailyInventoryRepository,
@@ -59,6 +60,29 @@ public class FrontDeskDashboardAppService(
             .Distinct()
             .CountAsync();
 
+        var activeEventStatuses = new[]
+        {
+            ConferenceBookingStatus.Tentative,
+            ConferenceBookingStatus.Confirmed,
+            ConferenceBookingStatus.InProgress,
+        };
+
+        var eventsToday = await conferenceBookingRepository.GetAll()
+            .Where(x => activeEventStatuses.Contains(x.Status))
+            .Where(x => x.StartDateTime < endOfDay && x.EndDateTime > startOfDay)
+            .CountAsync();
+
+        var upcomingEventsNext7Days = await conferenceBookingRepository.GetAll()
+            .Where(x => activeEventStatuses.Contains(x.Status))
+            .Where(x => x.StartDateTime >= startOfDay && x.StartDateTime < endOfDay.AddDays(7))
+            .CountAsync();
+
+        var conferenceDepositsDue = await conferenceBookingRepository.GetAll()
+            .Where(x => activeEventStatuses.Contains(x.Status))
+            .Where(x => x.StartDateTime >= startOfDay && x.StartDateTime < endOfDay.AddDays(7))
+            .Where(x => x.DepositRequired > x.DepositPaid)
+            .SumAsync(x => (decimal?)(x.DepositRequired - x.DepositPaid)) ?? 0m;
+
         return new FrontDeskDashboardDto
         {
             AsOfDate = today,
@@ -68,6 +92,9 @@ public class FrontDeskDashboardAppService(
             VacantRooms = vacantRooms,
             RoomsDirty = roomsDirty,
             RoomsOutOfOrder = roomsOutOfOrder,
+            EventsToday = eventsToday,
+            UpcomingEventsNext7Days = upcomingEventsNext7Days,
+            ConferenceDepositsDue = conferenceDepositsDue,
         };
     }
 
