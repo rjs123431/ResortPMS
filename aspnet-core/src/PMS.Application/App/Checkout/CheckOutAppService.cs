@@ -141,7 +141,6 @@ public class CheckOutAppService(
         };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_CheckOut_Process)]
     [UnitOfWork]
     public async Task<CheckOutResultDto> ProcessCheckOutAsync(ProcessCheckOutDto input)
     {
@@ -316,7 +315,6 @@ public class CheckOutAppService(
         };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_CheckOut_WriteOff)]
     [UnitOfWork]
     public async Task WriteOffBalanceAsync(WriteOffBalanceDto input)
     {
@@ -360,7 +358,6 @@ public class CheckOutAppService(
         Logger.Warn($"Folio {folio.FolioNo} written off. Reason: {input.Reason}.");
     }
 
-    [AbpAuthorize(PermissionNames.Pages_CheckOut_Print)]
     public async Task<ReceiptDto> GetReceiptAsync(Guid receiptId)
     {
         var receipt = await receiptRepository.GetAll()
@@ -397,7 +394,6 @@ public class CheckOutAppService(
         };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_CheckOut_Print)]
     public async Task<ReceiptDto> GetLatestReceiptByStayAsync(Guid stayId)
     {
         var receipt = await receiptRepository.GetAll()

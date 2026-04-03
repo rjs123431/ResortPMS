@@ -14,9 +14,9 @@ public interface IRoomRackSettingsAppService : IApplicationService
     Task UpdateAsync([FromBody] RoomRackSettingsDto input);
 }
 
+[AbpAuthorize]
 public class RoomRackSettingsAppService : PMSAppServiceBase, IRoomRackSettingsAppService
 {
-    [AbpAuthorize]
     public async Task<RoomRackSettingsDto> GetAsync()
     {
         var tenantId = AbpSession.TenantId ?? 1;
@@ -37,7 +37,6 @@ public class RoomRackSettingsAppService : PMSAppServiceBase, IRoomRackSettingsAp
         };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Admin_Settings)]
     public async Task UpdateAsync(RoomRackSettingsDto input)
     {
         var tenantId = AbpSession.TenantId ?? 1;

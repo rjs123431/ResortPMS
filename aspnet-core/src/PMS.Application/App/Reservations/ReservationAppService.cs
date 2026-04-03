@@ -67,7 +67,6 @@ public class ReservationAppService(
     IMutationAuditService mutationAuditService
 ) : PMSAppServiceBase, IReservationAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Create)]
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateReservationDto input)
     {
@@ -301,7 +300,6 @@ public class ReservationAppService(
         return reservation.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task UpdateAsync(UpdateReservationDto input)
     {
@@ -452,7 +450,6 @@ public class ReservationAppService(
             nameof(UpdateAsync));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Cancel)]
     [UnitOfWork]
     public async Task CancelAsync(CancelReservationDto input)
     {
@@ -502,7 +499,6 @@ public class ReservationAppService(
         Logger.Info($"Reservation {reservation.ReservationNo} cancelled.");
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task ConfirmAsync(Guid reservationId)
     {
@@ -523,7 +519,6 @@ public class ReservationAppService(
             nameof(ConfirmAsync));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task SetPendingAsync(Guid reservationId)
     {
@@ -544,7 +539,6 @@ public class ReservationAppService(
             nameof(SetPendingAsync));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task MarkNoShowAsync(Guid reservationId)
     {
@@ -565,7 +559,6 @@ public class ReservationAppService(
             nameof(MarkNoShowAsync));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Deposit)]
     [UnitOfWork]
     public async Task<Guid> RecordDepositAsync(RecordReservationDepositDto input)
     {
@@ -595,7 +588,6 @@ public class ReservationAppService(
         return depositId;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task<int> AddRoomTypesAsync(AddReservationRoomTypesDto input)
     {
@@ -695,7 +687,6 @@ public class ReservationAppService(
         return roomTypeRows.Sum(x => x.Quantity);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task<int> AddGuestsAsync(AddReservationGuestsDto input)
     {
@@ -749,7 +740,6 @@ public class ReservationAppService(
         return validGuestIds.Count;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task LinkGuestAsync(LinkReservationGuestDto input)
     {
@@ -824,7 +814,6 @@ public class ReservationAppService(
             "LinkGuest");
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task<int> AddExtraBedsAsync(AddReservationExtraBedsDto input)
     {
@@ -942,7 +931,6 @@ public class ReservationAppService(
         return extraBedRows.Sum(x => x.Quantity);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task UpdateGuestAgeAsync(UpdateReservationGuestAgeDto input)
     {
@@ -965,7 +953,6 @@ public class ReservationAppService(
         await reservationGuestRepository.UpdateAsync(guest);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task RemoveGuestAsync(RemoveReservationGuestDto input)
     {
@@ -990,7 +977,6 @@ public class ReservationAppService(
         await reservationGuestRepository.DeleteAsync(guest);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task RemoveRoomAsync(RemoveReservationRoomDto input)
     {
@@ -1044,7 +1030,6 @@ public class ReservationAppService(
             "RemoveRoom");
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task RemoveExtraBedAsync(RemoveReservationExtraBedDto input)
     {
@@ -1093,14 +1078,12 @@ public class ReservationAppService(
             "RemoveExtraBed");
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task AssignRoomAsync(AssignReservationRoomDto input)
     {
         await AssignRoomInternalAsync(input, shouldAudit: true);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task<int> AssignRoomsAsync(AssignReservationRoomsDto input)
     {
@@ -1132,7 +1115,6 @@ public class ReservationAppService(
         return input.Assignments.Count;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task<int> ApplyChangesAsync(ApplyReservationChangesDto input)
     {

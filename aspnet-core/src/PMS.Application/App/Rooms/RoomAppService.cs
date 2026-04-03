@@ -39,7 +39,6 @@ public class RoomTypeAppService(
     IRepository<RoomType, Guid> roomTypeRepository
 ) : PMSAppServiceBase, IRoomTypeAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_RoomTypes_Create)]
     public async Task<Guid> CreateAsync(CreateRoomTypeDto input)
     {
         var exists = await roomTypeRepository.GetAll().AnyAsync(r => r.Name == input.Name.Trim());
@@ -96,7 +95,6 @@ public class RoomTypeAppService(
         return new PagedResultDto<RoomTypeListDto>(total, items);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_RoomTypes_Edit)]
     public async Task UpdateAsync(RoomTypeDto input)
     {
         var entity = await roomTypeRepository.GetAsync(input.Id);
@@ -112,7 +110,6 @@ public class RoomAppService(
     IRepository<HousekeepingLog, Guid> housekeepingLogRepository
 ) : PMSAppServiceBase, IRoomAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_Rooms_Create)]
     public async Task<Guid> CreateAsync(CreateRoomDto input)
     {
         var exists = await roomRepository.GetAll().AnyAsync(r => r.RoomNumber == input.RoomNumber.Trim().ToUpper());
@@ -148,7 +145,6 @@ public class RoomAppService(
         return new PagedResultDto<RoomListDto>(total, ObjectMapper.Map<System.Collections.Generic.List<RoomListDto>>(items));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Rooms_Edit)]
     public async Task UpdateAsync(RoomDto input)
     {
         var entity = await roomRepository.GetAsync(input.Id);

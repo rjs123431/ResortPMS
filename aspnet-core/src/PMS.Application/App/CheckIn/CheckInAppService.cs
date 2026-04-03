@@ -51,7 +51,6 @@ public class CheckInAppService(
     IEventBus eventBus
 ) : PMSAppServiceBase, ICheckInAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_CheckIn_FromReservation)]
     [UnitOfWork]
     public async Task<CheckInResultDto> CheckInFromReservationAsync(CheckInFromReservationDto input)
     {
@@ -200,7 +199,6 @@ public class CheckInAppService(
         return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_CheckIn_WalkIn)]
     [UnitOfWork]
     public async Task<CheckInResultDto> CheckInWalkInAsync(CheckInWalkInDto input)
     {
@@ -301,7 +299,6 @@ public class CheckInAppService(
         return new CheckInResultDto { StayId = stay.Id, StayNo = stay.StayNo, FolioId = folio.Id, FolioNo = folio.FolioNo };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_CheckIn_WalkIn)]
     [UnitOfWork]
     public async Task<CheckInResultDto> WalkInCheckInAsync(WalkInCheckInDto input)
     {

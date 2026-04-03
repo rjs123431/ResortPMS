@@ -22,7 +22,6 @@ public class RoomPricingAppService(
     IRoomPricingManager roomPricingManager
 ) : PMSAppServiceBase, IRoomPricingAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Create)]
     public async Task<List<RoomTypeRatePlanOptionDto>> GetRatePlanOptionsAsync(GetRoomTypeRatePlanOptionsInput input)
     {
         return await roomPricingManager.GetRatePlanOptionsAsync(

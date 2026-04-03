@@ -60,7 +60,6 @@ public class ConferenceCompanyAppService(IRepository<ConferenceCompany, Guid> co
         return new ListResultDto<ConferenceCompanyListDto>(ObjectMapper.Map<List<ConferenceCompanyListDto>>(items));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceCompanies_Create)]
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateConferenceCompanyDto input)
     {
@@ -77,7 +76,6 @@ public class ConferenceCompanyAppService(IRepository<ConferenceCompany, Guid> co
         return company.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceCompanies_Edit)]
     [UnitOfWork]
     public async Task UpdateAsync(UpdateConferenceCompanyDto input)
     {

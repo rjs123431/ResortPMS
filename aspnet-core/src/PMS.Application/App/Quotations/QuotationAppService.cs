@@ -71,7 +71,6 @@ public class QuotationAppService(
         );
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Create)]
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateQuotationDto input)
     {
@@ -161,7 +160,6 @@ public class QuotationAppService(
         return quotation.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task<Guid> UpdateAsync(UpdateQuotationDto input)
     {
@@ -263,7 +261,6 @@ public class QuotationAppService(
         return quotation.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Reservations_Edit)]
     [UnitOfWork]
     public async Task CancelAsync(Guid id)
     {

@@ -117,7 +117,6 @@ public class IncidentAppService(
         return MapToDto(incident);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Incidents_Create)]
     public async Task<Guid> CreateAsync(CreateIncidentDto input)
     {
         var stay = await stayRepository.FirstOrDefaultAsync(input.StayId);
@@ -157,7 +156,6 @@ public class IncidentAppService(
         await incidentRepository.UpdateAsync(incident);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Incidents_Resolve)]
     public async Task ResolveAsync(ResolveIncidentDto input)
     {
         var incident = await incidentRepository.FirstOrDefaultAsync(input.Id);
@@ -174,7 +172,6 @@ public class IncidentAppService(
         await incidentRepository.UpdateAsync(incident);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Incidents_Resolve)]
     public async Task CloseAsync(EntityDto<Guid> input)
     {
         var incident = await incidentRepository.FirstOrDefaultAsync(input.Id);

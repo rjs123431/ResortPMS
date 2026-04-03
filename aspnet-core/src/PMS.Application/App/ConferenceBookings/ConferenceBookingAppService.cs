@@ -91,7 +91,6 @@ public class ConferenceBookingAppService(
             items.Select(MapBookingList).ToList());
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Create)]
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateConferenceBookingDto input)
     {
@@ -184,7 +183,6 @@ public class ConferenceBookingAppService(
         return booking.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Edit)]
     [UnitOfWork]
     public async Task UpdateAsync(UpdateConferenceBookingDto input)
     {
@@ -275,7 +273,6 @@ public class ConferenceBookingAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Edit)]
     [UnitOfWork]
     public async Task ConfirmAsync(Guid id)
     {
@@ -301,7 +298,6 @@ public class ConferenceBookingAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Edit)]
     [UnitOfWork]
     public async Task MarkTentativeAsync(Guid id)
     {
@@ -310,7 +306,6 @@ public class ConferenceBookingAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Edit)]
     [UnitOfWork]
     public async Task StartEventAsync(Guid id)
     {
@@ -319,7 +314,6 @@ public class ConferenceBookingAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Edit)]
     [UnitOfWork]
     public async Task CompleteAsync(Guid id)
     {
@@ -328,7 +322,6 @@ public class ConferenceBookingAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Cancel)]
     [UnitOfWork]
     public async Task CancelAsync(Guid id, string reason = null)
     {
@@ -337,7 +330,6 @@ public class ConferenceBookingAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings_Deposit)]
     [UnitOfWork]
     public async Task<Guid> RecordPaymentAsync(RecordConferenceBookingPaymentDto input)
     {

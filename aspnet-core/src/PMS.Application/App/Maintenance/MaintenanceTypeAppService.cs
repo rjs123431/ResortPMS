@@ -55,7 +55,6 @@ public class RoomMaintenanceTypeAppService(
         }).ToList();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Create)]
     public async Task<RoomMaintenanceTypeDto> CreateAsync(CreateUpdateRoomMaintenanceTypeDto input)
     {
         var name = (input.Name ?? string.Empty).Trim();
@@ -78,7 +77,6 @@ public class RoomMaintenanceTypeAppService(
         return new RoomMaintenanceTypeDto { Id = entity.Id, Name = entity.Name, Description = entity.Description, IsActive = entity.IsActive };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task<RoomMaintenanceTypeDto> UpdateAsync(Guid id, CreateUpdateRoomMaintenanceTypeDto input)
     {
         var entity = await typeRepository.GetAsync(id);
@@ -99,7 +97,6 @@ public class RoomMaintenanceTypeAppService(
         return new RoomMaintenanceTypeDto { Id = entity.Id, Name = entity.Name, Description = entity.Description, IsActive = entity.IsActive };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task DeleteAsync(EntityDto<Guid> input)
     {
         await typeRepository.DeleteAsync(input.Id);

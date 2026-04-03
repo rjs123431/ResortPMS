@@ -204,7 +204,6 @@ public class StayAppService(
     /// Quick room transfer (backward compatible). 
     /// For the full workflow with request tracking, use IRoomChangeService.
     /// </summary>
-    [AbpAuthorize(PermissionNames.Pages_Stays_Transfer)]
     [UnitOfWork]
     public async Task TransferRoomAsync(TransferRoomDto input)
     {
@@ -360,7 +359,6 @@ public class StayAppService(
             throw new UserFriendlyException(L("TargetRoomHasBlockingReservation"));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Stays_PostCharge)]
     [UnitOfWork]
     public async Task<Guid> PostChargeAsync(PostChargeDto input)
     {
@@ -403,7 +401,6 @@ public class StayAppService(
         return txId;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Stays_PostPayment)]
     [UnitOfWork]
     public async Task<Guid> PostPaymentAsync(PostPaymentDto input)
     {
@@ -433,7 +430,6 @@ public class StayAppService(
         return payId;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Stays_PostPayment)]
     [UnitOfWork]
     public async Task<Guid> PostRefundAsync(PostRefundDto input)
     {
@@ -680,7 +676,6 @@ public class StayAppService(
         await folioRepository.UpdateAsync(folio);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Stays_VoidTransaction)]
     [UnitOfWork]
     public async Task VoidFolioTransactionAsync(VoidFolioTransactionDto input)
     {

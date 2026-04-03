@@ -25,6 +25,7 @@ public interface IRoomRatePlanAppService : IApplicationService
     Task DeleteAsync(Guid id);
 }
 
+[AbpAuthorize]
 public class RoomRatePlanAppService(
     IRepository<RoomRatePlan, Guid> ratePlanRepository,
     IRepository<RoomRatePlanGroup, Guid> ratePlanGroupRepository,
@@ -34,7 +35,6 @@ public class RoomRatePlanAppService(
     IRepository<RoomType, Guid> roomTypeRepository
 ) : PMSAppServiceBase, IRoomRatePlanAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_RoomRatePlans)]
     public async Task<RoomRatePlanDto> GetAsync(Guid id)
     {
         var plan = await ratePlanRepository.GetAll()
@@ -52,7 +52,6 @@ public class RoomRatePlanAppService(
         return dto;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_RoomRatePlans)]
     public async Task<PagedResultDto<RoomRatePlanListDto>> GetAllAsync(GetRoomRatePlansInput input)
     {
         var query = ratePlanRepository.GetAll()
@@ -70,7 +69,6 @@ public class RoomRatePlanAppService(
         return new PagedResultDto<RoomRatePlanListDto>(total, dtos);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_RoomRatePlans_Create)]
     public async Task<Guid> CreateAsync(CreateRoomRatePlanDto input)
     {
         var roomType = await roomTypeRepository.FirstOrDefaultAsync(input.RoomTypeId);
@@ -132,7 +130,6 @@ public class RoomRatePlanAppService(
         return plan.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_RoomRatePlans_Edit)]
     public async Task UpdateAsync(UpdateRoomRatePlanDto input)
     {
         var plan = await ratePlanRepository.GetAll()
@@ -201,7 +198,6 @@ public class RoomRatePlanAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_RoomRatePlans_Edit)]
     public async Task DeleteAsync(Guid id)
     {
         var plan = await ratePlanRepository.FirstOrDefaultAsync(id);

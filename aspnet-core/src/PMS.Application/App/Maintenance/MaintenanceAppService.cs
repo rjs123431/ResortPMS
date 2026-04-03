@@ -139,7 +139,6 @@ public class RoomMaintenanceAppService(
         return MapToDto(item);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Create)]
     public async Task<Guid> CreateAsync(CreateRoomMaintenanceRequestDto input)
     {
         var title = (input.Title ?? string.Empty).Trim();
@@ -227,7 +226,6 @@ public class RoomMaintenanceAppService(
         return request.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Assign)]
     public async Task AssignAsync(AssignRoomMaintenanceRequestDto input)
     {
         var request = await maintenanceRepository.GetAsync(input.Id);
@@ -236,7 +234,6 @@ public class RoomMaintenanceAppService(
         await maintenanceRepository.UpdateAsync(request);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task StartAsync(EntityDto<Guid> input)
     {
         var request = await maintenanceRepository.GetAsync(input.Id);
@@ -244,7 +241,6 @@ public class RoomMaintenanceAppService(
         await maintenanceRepository.UpdateAsync(request);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task CompleteAsync(EntityDto<Guid> input)
     {
         var request = await maintenanceRepository.GetAsync(input.Id);
@@ -271,7 +267,6 @@ public class RoomMaintenanceAppService(
         await roomStatusHubBroadcaster.NotifyRoomStatusChangedAsync(request.RoomId, (int)RoomOperationalStatus.Vacant);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Maintenance_Edit)]
     public async Task CancelAsync(CancelRoomMaintenanceRequestDto input)
     {
         var request = await maintenanceRepository.GetAsync(input.Id);

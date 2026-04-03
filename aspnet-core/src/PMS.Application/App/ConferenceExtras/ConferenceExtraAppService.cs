@@ -24,16 +24,15 @@ public interface IConferenceExtraAppService : IApplicationService
     Task UpdateAsync(UpdateConferenceExtraDto input);
 }
 
+[AbpAuthorize]
 public class ConferenceExtraAppService(IRepository<ConferenceExtra, Guid> conferenceExtraRepository) : PMSAppServiceBase, IConferenceExtraAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_ConferenceExtras)]
     public async Task<ConferenceExtraDto> GetAsync(Guid id)
     {
         var item = await conferenceExtraRepository.GetAsync(id);
         return ObjectMapper.Map<ConferenceExtraDto>(item);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceExtras)]
     public async Task<PagedResultDto<ConferenceExtraListDto>> GetAllAsync(GetConferenceExtrasInput input)
     {
         var query = conferenceExtraRepository.GetAll()
@@ -54,7 +53,6 @@ public class ConferenceExtraAppService(IRepository<ConferenceExtra, Guid> confer
             ObjectMapper.Map<List<ConferenceExtraListDto>>(items));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings)]
     public async Task<ListResultDto<ConferenceExtraDto>> GetAllActiveAsync()
     {
         var items = await conferenceExtraRepository.GetAll()
@@ -67,7 +65,6 @@ public class ConferenceExtraAppService(IRepository<ConferenceExtra, Guid> confer
         return new ListResultDto<ConferenceExtraDto>(ObjectMapper.Map<List<ConferenceExtraDto>>(items));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceExtras_Create)]
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateConferenceExtraDto input)
     {
@@ -84,7 +81,6 @@ public class ConferenceExtraAppService(IRepository<ConferenceExtra, Guid> confer
         return extra.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceExtras_Edit)]
     [UnitOfWork]
     public async Task UpdateAsync(UpdateConferenceExtraDto input)
     {

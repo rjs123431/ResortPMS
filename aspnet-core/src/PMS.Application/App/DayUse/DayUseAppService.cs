@@ -110,7 +110,6 @@ public class DayUseAppService(
         return items.Select(MapOfferListDto).ToList();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_DayUse_Admin)]
     [UnitOfWork]
     public async Task<Guid> CreateOfferAsync(CreateDayUseOfferDto input)
     {
@@ -135,7 +134,6 @@ public class DayUseAppService(
         return await dayUseOfferRepository.InsertAndGetIdAsync(offer);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_DayUse_Admin)]
     [UnitOfWork]
     public async Task UpdateOfferAsync(UpdateDayUseOfferDto input)
     {
@@ -161,7 +159,6 @@ public class DayUseAppService(
         await dayUseOfferRepository.UpdateAsync(offer);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_DayUse_Sell)]
     [UnitOfWork]
     public async Task<DayUseSaleResultDto> CreateSaleAsync(CreateDayUseSaleDto input)
     {

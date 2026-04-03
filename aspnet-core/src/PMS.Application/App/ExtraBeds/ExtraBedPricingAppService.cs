@@ -91,7 +91,6 @@ public class ExtraBedPricingAppService(
         return result;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ExtraBedPricings_Create)]
     public async Task<Guid> CreateAsync(CreateExtraBedPriceDto input)
     {
         var type = await extraBedTypeRepository.FirstOrDefaultAsync(input.ExtraBedTypeId);
@@ -112,7 +111,6 @@ public class ExtraBedPricingAppService(
         return await extraBedPriceRepository.InsertAndGetIdAsync(entity);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ExtraBedPricings_Edit)]
     public async Task UpdateAsync(UpdateExtraBedPriceDto input)
     {
         var entity = await extraBedPriceRepository.GetAsync(input.Id);

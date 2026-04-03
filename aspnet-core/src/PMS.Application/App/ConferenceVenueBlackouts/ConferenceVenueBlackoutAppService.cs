@@ -62,7 +62,6 @@ public class ConferenceVenueBlackoutAppService(
             items.Select(MapBlackoutList).ToList());
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues_Edit)]
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateConferenceVenueBlackoutDto input)
     {
@@ -85,7 +84,6 @@ public class ConferenceVenueBlackoutAppService(
         return blackout.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues_Edit)]
     [UnitOfWork]
     public async Task UpdateAsync(UpdateConferenceVenueBlackoutDto input)
     {
@@ -99,7 +97,6 @@ public class ConferenceVenueBlackoutAppService(
         await CurrentUnitOfWork.SaveChangesAsync();
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues_Edit)]
     [UnitOfWork]
     public async Task DeleteAsync(Guid id)
     {

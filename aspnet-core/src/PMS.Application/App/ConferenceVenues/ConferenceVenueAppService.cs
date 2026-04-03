@@ -25,19 +25,18 @@ public interface IConferenceVenueAppService : IApplicationService
     Task UpdateAsync(UpdateConferenceVenueDto input);
 }
 
+[AbpAuthorize]
 public class ConferenceVenueAppService(
     IRepository<ConferenceVenue, Guid> conferenceVenueRepository,
     IRepository<ConferenceBooking, Guid> conferenceBookingRepository,
     IRepository<ConferenceVenueBlackout, Guid> conferenceVenueBlackoutRepository) : PMSAppServiceBase, IConferenceVenueAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues)]
     public async Task<ConferenceVenueDto> GetAsync(Guid id)
     {
         var venue = await conferenceVenueRepository.GetAsync(id);
         return ObjectMapper.Map<ConferenceVenueDto>(venue);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues)]
     public async Task<PagedResultDto<ConferenceVenueListDto>> GetAllAsync(GetConferenceVenuesInput input)
     {
         var query = conferenceVenueRepository.GetAll()
@@ -57,7 +56,6 @@ public class ConferenceVenueAppService(
             ObjectMapper.Map<List<ConferenceVenueListDto>>(items));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues)]
     public async Task<ListResultDto<ConferenceVenueListDto>> GetAllActiveAsync()
     {
         var items = await conferenceVenueRepository.GetAll()
@@ -68,7 +66,6 @@ public class ConferenceVenueAppService(
         return new ListResultDto<ConferenceVenueListDto>(ObjectMapper.Map<List<ConferenceVenueListDto>>(items));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceBookings)]
     public async Task<ListResultDto<ConferenceVenueAvailabilityDto>> GetAvailableAsync(GetAvailableConferenceVenuesInput input)
     {
         var venues = await conferenceVenueRepository.GetAll()
@@ -102,7 +99,6 @@ public class ConferenceVenueAppService(
         return new ListResultDto<ConferenceVenueAvailabilityDto>(items);
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues_Create)]
     [UnitOfWork]
     public async Task<Guid> CreateAsync(CreateConferenceVenueDto input)
     {
@@ -131,7 +127,6 @@ public class ConferenceVenueAppService(
         return venue.Id;
     }
 
-    [AbpAuthorize(PermissionNames.Pages_ConferenceVenues_Edit)]
     [UnitOfWork]
     public async Task UpdateAsync(UpdateConferenceVenueDto input)
     {

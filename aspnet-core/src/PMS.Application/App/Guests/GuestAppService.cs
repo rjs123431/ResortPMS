@@ -27,7 +27,6 @@ public class GuestAppService(
     IRepository<Guest, Guid> guestRepository
 ) : PMSAppServiceBase, IGuestAppService
 {
-    [AbpAuthorize(PermissionNames.Pages_Guests_Create)]
     public async Task<Guid> CreateAsync(CreateGuestDto input)
     {
         // Check for duplicate code
@@ -76,7 +75,6 @@ public class GuestAppService(
         return new PagedResultDto<GuestListDto>(totalCount, ObjectMapper.Map<System.Collections.Generic.List<GuestListDto>>(guests));
     }
 
-    [AbpAuthorize(PermissionNames.Pages_Guests_Edit)]
     public async Task UpdateAsync(GuestDto input)
     {
         var guest = await guestRepository.GetAsync(input.Id);

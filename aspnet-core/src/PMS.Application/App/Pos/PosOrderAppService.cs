@@ -768,7 +768,6 @@ public class PosOrderAppService(
         };
     }
 
-    [AbpAuthorize(PermissionNames.Pages_POS_RoomCharge)]
     [UnitOfWork]
     public async Task ChargeToRoomAsync(ChargeToRoomDto input)
     {

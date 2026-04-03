@@ -112,7 +112,6 @@ public class ChargeTypeAppService(
         });
     }
 
-    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateChargeTypeDto input)
     {
         var name = input.Name?.Trim() ?? string.Empty;
@@ -152,7 +151,6 @@ public class ChargeTypeAppService(
         return id;
     }
 
-    [AbpAuthorize]
     public async Task UpdateAsync(ChargeTypeDto input)
     {
         var entity = await chargeTypeRepository.GetAsync(input.Id);
@@ -221,7 +219,6 @@ public class PaymentMethodAppService(
         });
     }
 
-    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreatePaymentMethodDto input)
     {
         var exists = await paymentMethodRepository.GetAll().AnyAsync(x => x.Name == input.Name.Trim());
@@ -236,7 +233,6 @@ public class PaymentMethodAppService(
         return id;
     }
 
-    [AbpAuthorize]
     public async Task UpdateAsync(PaymentMethodDto input)
     {
         var entity = await paymentMethodRepository.GetAsync(input.Id);
@@ -280,7 +276,6 @@ public class ChannelAppService(
         });
     }
 
-    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateChannelDto input)
     {
         var name = input.Name?.Trim() ?? string.Empty;
@@ -301,7 +296,6 @@ public class ChannelAppService(
         return id;
     }
 
-    [AbpAuthorize]
     public async Task UpdateAsync(ChannelDto input)
     {
         var entity = await channelRepository.GetAsync(input.Id);
@@ -354,7 +348,6 @@ public class AgencyAppService(
         });
     }
 
-    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateAgencyDto input)
     {
         var name = input.Name?.Trim() ?? string.Empty;
@@ -372,7 +365,6 @@ public class AgencyAppService(
         return id;
     }
 
-    [AbpAuthorize]
     public async Task UpdateAsync(AgencyDto input)
     {
         var entity = await agencyRepository.GetAsync(input.Id);
@@ -422,7 +414,6 @@ public class ExtraBedTypeAppService(
         });
     }
 
-    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateExtraBedTypeDto input)
     {
         var exists = await extraBedTypeRepository.GetAll().AnyAsync(x => x.Name == input.Name.Trim());
@@ -437,7 +428,6 @@ public class ExtraBedTypeAppService(
         return id;
     }
 
-    [AbpAuthorize]
     public async Task UpdateAsync(ExtraBedTypeDto input)
     {
         var entity = await extraBedTypeRepository.GetAsync(input.Id);
@@ -481,7 +471,6 @@ public class StaffAppService(
         });
     }
 
-    [AbpAuthorize]
     public async Task<Guid> CreateAsync(CreateStaffDto input)
     {
         var code = input.StaffCode?.Trim().ToUpper() ?? string.Empty;
@@ -503,7 +492,6 @@ public class StaffAppService(
         return id;
     }
 
-    [AbpAuthorize]
     public async Task UpdateAsync(StaffDto input)
     {
         var entity = await staffRepository.GetAsync(input.Id);
