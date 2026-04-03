@@ -10,11 +10,11 @@ import { eventTypeService } from '@services/event-type.service';
 import { guestService } from '@services/guest.service';
 import { paymentMethodService } from '@services/payment-method.service';
 import { SearchGuestDialog, type SelectedGuest } from '@pages/Resort/Shared/SearchGuestDialog';
+import { SearchConferenceCompanyDialog, type SelectedConferenceCompany } from '@pages/Resort/Shared/SearchConferenceCompanyDialog';
 import { ConferenceBookingAddOnDialog } from './ConferenceBookingAddOnDialog';
 import { ConferenceBookingPaymentDialog } from './ConferenceBookingPaymentDialog';
 import type {
   ConferenceBookingAddOnDto,
-  ConferenceCompanyListDto,
   ConferenceBookingDto,
   ConferenceBookingPaymentDto,
   ConferencePricingType,
@@ -75,6 +75,7 @@ export function ConferenceBookingPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<BookingFormState>(createEmptyBooking());
   const [guestDialogOpen, setGuestDialogOpen] = useState(false);
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
   const [addOnDialogOpen, setAddOnDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [stagedPayments, setStagedPayments] = useState<StagedConferenceBookingPayment[]>([]);
@@ -100,11 +101,6 @@ export function ConferenceBookingPage() {
     queryFn: eventTypeService.getActiveEventTypes,
   });
 
-  const companiesQuery = useQuery({
-    queryKey: ['conference-companies-active'],
-    queryFn: conferenceCompanyService.getActiveConferenceCompanies,
-  });
-
   const paymentMethodsQuery = useQuery({
     queryKey: ['payment-methods-active'],
     queryFn: paymentMethodService.getPaymentMethods,
@@ -114,6 +110,12 @@ export function ConferenceBookingPage() {
     queryKey: ['conference-booking-guest', form.guestId],
     queryFn: () => guestService.getGuest(form.guestId ?? ''),
     enabled: Boolean(form.guestId),
+  });
+
+  const selectedCompanyQuery = useQuery({
+    queryKey: ['conference-company', form.conferenceCompanyId],
+    queryFn: () => conferenceCompanyService.getConferenceCompany(form.conferenceCompanyId ?? ''),
+    enabled: Boolean(form.conferenceCompanyId),
   });
 
   useEffect(() => {
@@ -218,6 +220,30 @@ export function ConferenceBookingPage() {
         return;
       }
 
+      if (action === 'confirm') {
+        const result = await Swal.fire({
+          title: 'Confirm booking?',
+          text: 'This will mark the event booking as confirmed and reserve the venue schedule.',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Confirm booking',
+        });
+
+        if (!result.isConfirmed) return;
+      }
+
+      if (action === 'complete') {
+        const result = await Swal.fire({
+          title: 'Complete event?',
+          text: 'This will close the event booking and mark it as completed.',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Complete event',
+        });
+
+        if (!result.isConfirmed) return;
+      }
+
       if (action === 'tentative') await conferenceBookingService.markConferenceBookingTentative(id);
       if (action === 'confirm') await conferenceBookingService.confirmConferenceBooking(id);
       if (action === 'start') await conferenceBookingService.startConferenceBooking(id);
@@ -286,11 +312,29 @@ export function ConferenceBookingPage() {
     () => (venuesQuery.data ?? []).find((venue) => venue.id === form.venueId) ?? null,
     [form.venueId, venuesQuery.data],
   );
-  const companies: ConferenceCompanyListDto[] = companiesQuery.data ?? [];
-  const selectedCompany = useMemo(
-    () => companies.find((company) => company.id === form.conferenceCompanyId) ?? null,
-    [companies, form.conferenceCompanyId],
-  );
+  const selectedCompany = useMemo<SelectedConferenceCompany | null>(() => {
+    if (selectedCompanyQuery.data) {
+      return {
+        id: selectedCompanyQuery.data.id,
+        name: selectedCompanyQuery.data.name,
+        contactPerson: selectedCompanyQuery.data.contactPerson || undefined,
+        phone: selectedCompanyQuery.data.phone || undefined,
+        email: selectedCompanyQuery.data.email || undefined,
+      };
+    }
+
+    if (!form.conferenceCompanyId && !(form.companyName ?? '').trim()) {
+      return null;
+    }
+
+    return {
+      id: form.conferenceCompanyId ?? '',
+      name: (form.companyName ?? '').trim() || 'Selected company',
+      contactPerson: (form.contactPerson ?? '').trim() || undefined,
+      phone: (form.phone ?? '').trim() || undefined,
+      email: (form.email ?? '').trim() || undefined,
+    };
+  }, [form.companyName, form.conferenceCompanyId, form.contactPerson, form.email, form.phone, selectedCompanyQuery.data]);
   const selectedGuest = useMemo<SelectedGuest | null>(() => {
     if (!form.guestId) return null;
 
@@ -436,6 +480,7 @@ export function ConferenceBookingPage() {
                           onClick={() => setForm((current) => ({
                             ...current,
                             organizerType: option.value,
+                            guestId: option.value === OrganizerTypeEnum.Company ? null : current.guestId,
                             conferenceCompanyId: option.value === OrganizerTypeEnum.Company ? current.conferenceCompanyId : null,
                             companyName: option.value === OrganizerTypeEnum.Company ? current.companyName : '',
                           }))}
@@ -491,38 +536,61 @@ export function ConferenceBookingPage() {
                 </div>
               ) : null}
               {form.organizerType === OrganizerTypeEnum.Company ? (
-                <SelectField
-                  label="Company"
-                  value={form.conferenceCompanyId ?? ''}
-                  onChange={(value) => {
-                    const company = companies.find((item) => item.id === value);
-                    setForm((current) => ({
-                      ...current,
-                      conferenceCompanyId: value || null,
-                      companyName: company?.name ?? current.companyName,
-                      contactPerson: company?.contactPerson || current.contactPerson,
-                      phone: company?.phone || current.phone,
-                      email: company?.email || current.email,
-                    }));
-                  }}
-                  options={companies.map((company) => ({ value: company.id, label: company.name }))}
-                  placeholder="Select company"
-                />
-              ) : null}
-              {form.organizerType === OrganizerTypeEnum.Company && selectedCompany ? (
-                <div className="md:col-span-2 rounded border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900/20">
-                  <div className="font-medium text-gray-900 dark:text-white">{selectedCompany.name}</div>
-                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {selectedCompany.contactPerson || 'No contact'}
-                    {' • '}
-                    {selectedCompany.phone || 'No phone'}
-                    {' • '}
-                    {selectedCompany.email || 'No email'}
+                <div className="md:col-span-2 rounded-lg border border-dashed border-gray-300 p-3 dark:border-gray-600">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Company Organizer</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Search an existing company or add a new company profile for this booking.</p>
+                    </div>
+                    {!isTerminalBooking ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700"
+                          onClick={() => setCompanyDialogOpen(true)}
+                        >
+                          Search Company
+                        </button>
+                        {form.conferenceCompanyId || (form.companyName ?? '').trim() ? (
+                          <button
+                            type="button"
+                            className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                            onClick={() => {
+                              setForm((current) => ({
+                                ...current,
+                                conferenceCompanyId: null,
+                                companyName: '',
+                              }));
+                            }}
+                          >
+                            Clear Company
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
+                  {selectedCompany ? (
+                    <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900/20">
+                      <div className="font-medium text-gray-900 dark:text-white">{selectedCompany.name}</div>
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {selectedCompany.contactPerson || 'No contact'}
+                        {' • '}
+                        {selectedCompany.phone || 'No phone'}
+                        {' • '}
+                        {selectedCompany.email || 'No email'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400">
+                      No company selected.
+                    </div>
+                  )}
                 </div>
               ) : null}
               {form.organizerType === OrganizerTypeEnum.Company ? (
-                <TextField label="Contact Person" value={form.contactPerson ?? ''} onChange={(value) => setForm((current) => ({ ...current, contactPerson: value }))} />
+                <div className="md:col-span-2">
+                  <TextField label="Contact Person" value={form.contactPerson ?? ''} onChange={(value) => setForm((current) => ({ ...current, contactPerson: value }))} />
+                </div>
               ) : null}
               <TextField label="Phone" value={form.phone ?? ''} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} />
               <TextField label="Email" value={form.email ?? ''} onChange={(value) => setForm((current) => ({ ...current, email: value }))} />
@@ -635,7 +703,7 @@ export function ConferenceBookingPage() {
                 type="button"
                 className="rounded bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
                 onClick={() => saveMutation.mutate(form)}
-                disabled={saveMutation.isPending || !form.venueId || !form.eventName.trim() || (form.organizerType === OrganizerTypeEnum.Company ? !(form.contactPerson ?? '').trim() : !form.guestId && !form.organizerName.trim())}
+                disabled={saveMutation.isPending || !form.venueId || !form.eventName.trim() || (form.organizerType === OrganizerTypeEnum.Company ? !(form.companyName ?? '').trim() || !(form.contactPerson ?? '').trim() : !form.guestId && !form.organizerName.trim())}
               >
                 {saveMutation.isPending ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Booking'}
               </button>
@@ -651,6 +719,8 @@ export function ConferenceBookingPage() {
           setForm((current) => ({
             ...current,
             guestId: guest.id,
+            conferenceCompanyId: null,
+            companyName: '',
             organizerName: guest.fullName,
             contactPerson: guest.fullName,
             phone: guest.phone ?? current.phone,
@@ -658,6 +728,25 @@ export function ConferenceBookingPage() {
             organizerType: OrganizerTypeEnum.Individual,
           }));
           setGuestDialogOpen(false);
+        }}
+      />
+
+      <SearchConferenceCompanyDialog
+        open={companyDialogOpen}
+        onClose={() => setCompanyDialogOpen(false)}
+        onSelectCompany={(company) => {
+          setForm((current) => ({
+            ...current,
+            guestId: null,
+            conferenceCompanyId: company.id,
+            companyName: company.name,
+            organizerName: company.contactPerson ?? company.name,
+            contactPerson: company.contactPerson ?? current.contactPerson,
+            phone: company.phone ?? current.phone,
+            email: company.email ?? current.email,
+            organizerType: OrganizerTypeEnum.Company,
+          }));
+          setCompanyDialogOpen(false);
         }}
       />
 
@@ -739,7 +828,7 @@ function AddOnSection({
                   <td className="p-2 text-right">{addOn.quantity}</td>
                   <td className="p-2 text-right">{formatMoney(addOn.unitPrice)}</td>
                   <td className="p-2 text-right">{formatMoney((Number(addOn.quantity) || 0) * (Number(addOn.unitPrice) || 0))}</td>
-                  <td className="p-2 text-right">{!isReadOnly ? <button type="button" className="rounded bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-700" onClick={() => onRemove(index)}>Remove</button> : '—'}</td>
+                  <td className="p-2 text-right">{!isReadOnly ? <button type="button" className="rounded bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-700" onClick={() => onRemove(index)}>x</button> : '—'}</td>
                 </tr>
               ))
             )}
@@ -794,14 +883,14 @@ function PaymentsSection({
 
                 return (
                   <tr key={payment.id} className="border-b dark:border-gray-700">
-                    <td className="p-2">{formatDate(payment.paidDate)}{isPendingPayment ? ' (pending save)' : ''}</td>
+                    <td className="p-2">{formatDate(payment.paidDate)}</td>
                     <td className="p-2">{payment.paymentMethodName}</td>
                     <td className="p-2">{payment.referenceNo || '—'}</td>
                     <td className="p-2 text-right">{formatMoney(payment.amount)}</td>
                     <td className="p-2 text-right">
                       {isPendingPayment && !isReadOnly ? (
                         <button type="button" className="rounded bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-700" onClick={() => onRemovePendingPayment(payment.id)} disabled={isSaving}>
-                          Remove
+                          x
                         </button>
                       ) : '—'}
                     </td>

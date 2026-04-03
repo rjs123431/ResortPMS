@@ -43,7 +43,7 @@ export const DayUseListPage = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Day-Use Visits</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Review saved day-use visits and inspect charges and payments.</p>
         </div>
-        <Link to="/front-desk/day-use/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
+        <Link to="/front-desk/day-use/new" className="rounded bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700">
           New Sale
         </Link>
       </div>

@@ -28,6 +28,7 @@ public class ConferenceCompanyListDto : EntityDto<Guid>
     public bool IsActive { get; set; }
 }
 
+[AutoMapTo(typeof(ConferenceCompany))]
 public class CreateConferenceCompanyDto
 {
     [Required]

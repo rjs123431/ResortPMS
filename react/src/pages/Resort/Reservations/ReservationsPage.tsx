@@ -44,7 +44,7 @@ export const ReservationListPage = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">Confirm, cancel, and inspect reservation details.</p>
           </div>
 
-          <Link to="/front-desk/reservations/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
+          <Link to="/front-desk/reservations/new" className="rounded bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700">
             New Reservation
           </Link>
         </div>

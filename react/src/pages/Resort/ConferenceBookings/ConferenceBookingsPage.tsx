@@ -46,7 +46,7 @@ export function ConferenceBookingsPage() {
           <Link to="/front-desk/conference-bookings/calendar" className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
             Calendar View
           </Link>
-          <Link to="/front-desk/conference-bookings/new" className="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
+          <Link to="/front-desk/conference-bookings/new" className="rounded bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700">
             New Booking
           </Link>
         </div>
