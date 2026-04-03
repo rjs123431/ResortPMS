@@ -12,8 +12,8 @@ using PMS.EntityFrameworkCore;
 namespace PMS.Migrations
 {
     [DbContext(typeof(PMSDbContext))]
-    [Migration("20260403033415_AddEventTypeLookup")]
-    partial class AddEventTypeLookup
+    [Migration("20260403075452_InitDatabase")]
+    partial class InitDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1642,6 +1642,9 @@ namespace PMS.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<Guid?>("EventTypeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("GuestId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1703,6 +1706,8 @@ namespace PMS.Migrations
                         .IsUnique();
 
                     b.HasIndex("ConferenceCompanyId");
+
+                    b.HasIndex("EventTypeId");
 
                     b.HasIndex("GuestId");
 
@@ -6643,6 +6648,11 @@ namespace PMS.Migrations
                         .HasForeignKey("ConferenceCompanyId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("PMS.App.EventType", "EventTypeLookup")
+                        .WithMany()
+                        .HasForeignKey("EventTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("PMS.App.Guest", "Guest")
                         .WithMany()
                         .HasForeignKey("GuestId")
@@ -6655,6 +6665,8 @@ namespace PMS.Migrations
                         .IsRequired();
 
                     b.Navigation("ConferenceCompany");
+
+                    b.Navigation("EventTypeLookup");
 
                     b.Navigation("Guest");
 

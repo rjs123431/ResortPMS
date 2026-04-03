@@ -69,6 +69,75 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ConferenceCompany",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    ContactPerson = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Phone = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConferenceCompany", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConferenceExtra",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Category = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    UnitLabel = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true),
+                    DefaultPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConferenceExtra", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConferenceVenue",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Category = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    Capacity = table.Column<int>(type: "int", nullable: false),
+                    HourlyRate = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    HalfDayRate = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    FullDayRate = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    SetupBufferMinutes = table.Column<int>(type: "int", nullable: false),
+                    TeardownBufferMinutes = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConferenceVenue", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DocumentSequence",
                 columns: table => new
                 {
@@ -87,6 +156,25 @@ namespace PMS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_DocumentSequence", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EventType",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EventType", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -808,6 +896,39 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "DayUseOffer",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    VariantName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    OfferType = table.Column<int>(type: "int", nullable: false),
+                    GuestContext = table.Column<int>(type: "int", nullable: false),
+                    GuestCategory = table.Column<int>(type: "int", nullable: true),
+                    DurationMinutes = table.Column<int>(type: "int", nullable: true),
+                    ChargeTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DayUseOffer", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DayUseOffer_ChargeType_ChargeTypeId",
+                        column: x => x.ChargeTypeId,
+                        principalTable: "ChargeType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PosOutlet",
                 columns: table => new
                 {
@@ -840,6 +961,35 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ConferenceVenueBlackout",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VenueId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    StartDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EndDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConferenceVenueBlackout", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ConferenceVenueBlackout_ConferenceVenue_VenueId",
+                        column: x => x.VenueId,
+                        principalTable: "ConferenceVenue",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ExtraBedPrice",
                 columns: table => new
                 {
@@ -863,6 +1013,76 @@ namespace PMS.Migrations
                         principalTable: "ExtraBedType",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConferenceBooking",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BookingNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    VenueId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ConferenceCompanyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    EventTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    BookingDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EventName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    EventType = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    OrganizerType = table.Column<int>(type: "int", nullable: false),
+                    OrganizerName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    CompanyName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    ContactPerson = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Phone = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    StartDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EndDateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AttendeeCount = table.Column<int>(type: "int", nullable: false),
+                    PricingType = table.Column<int>(type: "int", nullable: false),
+                    BaseAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    AddOnAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    DepositRequired = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    DepositPaid = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    SetupBufferMinutes = table.Column<int>(type: "int", nullable: false),
+                    TeardownBufferMinutes = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    SpecialRequests = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConferenceBooking", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ConferenceBooking_ConferenceCompany_ConferenceCompanyId",
+                        column: x => x.ConferenceCompanyId,
+                        principalTable: "ConferenceCompany",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ConferenceBooking_ConferenceVenue_VenueId",
+                        column: x => x.VenueId,
+                        principalTable: "ConferenceVenue",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ConferenceBooking_EventType_EventTypeId",
+                        column: x => x.EventTypeId,
+                        principalTable: "EventType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ConferenceBooking_Guest_GuestId",
+                        column: x => x.GuestId,
+                        principalTable: "Guest",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1523,6 +1743,65 @@ namespace PMS.Migrations
                         name: "FK_PosTable_PosOutlet_OutletId",
                         column: x => x.OutletId,
                         principalTable: "PosOutlet",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConferenceBookingAddOn",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ConferenceBookingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConferenceBookingAddOn", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ConferenceBookingAddOn_ConferenceBooking_ConferenceBookingId",
+                        column: x => x.ConferenceBookingId,
+                        principalTable: "ConferenceBooking",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConferenceBookingPayment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ConferenceBookingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PaymentMethodId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    PaidDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReferenceNo = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConferenceBookingPayment", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ConferenceBookingPayment_ConferenceBooking_ConferenceBookingId",
+                        column: x => x.ConferenceBookingId,
+                        principalTable: "ConferenceBooking",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ConferenceBookingPayment_PaymentMethod_PaymentMethodId",
+                        column: x => x.PaymentMethodId,
+                        principalTable: "PaymentMethod",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -2411,6 +2690,56 @@ namespace PMS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "DayUseVisit",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VisitNo = table.Column<string>(type: "varchar(32)", unicode: false, maxLength: 32, nullable: false),
+                    GuestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RoomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    VisitDate = table.Column<DateTime>(type: "date", nullable: false),
+                    AccessStartTime = table.Column<TimeSpan>(type: "time", nullable: false),
+                    AccessEndTime = table.Column<TimeSpan>(type: "time", nullable: false),
+                    GuestContext = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    GuestName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    PaidAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    BalanceAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorUserId = table.Column<long>(type: "bigint", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeleterUserId = table.Column<long>(type: "bigint", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DayUseVisit", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DayUseVisit_Guest_GuestId",
+                        column: x => x.GuestId,
+                        principalTable: "Guest",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_DayUseVisit_Room_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Room",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_DayUseVisit_Stay_StayId",
+                        column: x => x.StayId,
+                        principalTable: "Stay",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Folio",
                 columns: table => new
                 {
@@ -2756,6 +3085,78 @@ namespace PMS.Migrations
                         name: "FK_StayRoom_Stay_StayId",
                         column: x => x.StayId,
                         principalTable: "Stay",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DayUsePayment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DayUseVisitId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PaymentMethodId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    PaidAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReferenceNo = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DayUsePayment", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DayUsePayment_DayUseVisit_DayUseVisitId",
+                        column: x => x.DayUseVisitId,
+                        principalTable: "DayUseVisit",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_DayUsePayment_PaymentMethod_PaymentMethodId",
+                        column: x => x.PaymentMethodId,
+                        principalTable: "PaymentMethod",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DayUseVisitLine",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DayUseVisitId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DayUseOfferId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ChargeTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OfferType = table.Column<int>(type: "int", nullable: false),
+                    GuestContext = table.Column<int>(type: "int", nullable: false),
+                    GuestCategory = table.Column<int>(type: "int", nullable: true),
+                    OfferCode = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    OfferName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    VariantName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    DurationMinutes = table.Column<int>(type: "int", nullable: true),
+                    Quantity = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DayUseVisitLine", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DayUseVisitLine_ChargeType_ChargeTypeId",
+                        column: x => x.ChargeTypeId,
+                        principalTable: "ChargeType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_DayUseVisitLine_DayUseOffer_DayUseOfferId",
+                        column: x => x.DayUseOfferId,
+                        principalTable: "DayUseOffer",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_DayUseVisitLine_DayUseVisit_DayUseVisitId",
+                        column: x => x.DayUseVisitId,
+                        principalTable: "DayUseVisit",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -3240,11 +3641,177 @@ namespace PMS.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBooking_BookingNo",
+                table: "ConferenceBooking",
+                column: "BookingNo",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBooking_ConferenceCompanyId",
+                table: "ConferenceBooking",
+                column: "ConferenceCompanyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBooking_EventTypeId",
+                table: "ConferenceBooking",
+                column: "EventTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBooking_GuestId",
+                table: "ConferenceBooking",
+                column: "GuestId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBooking_Status",
+                table: "ConferenceBooking",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBooking_VenueId_StartDateTime",
+                table: "ConferenceBooking",
+                columns: new[] { "VenueId", "StartDateTime" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBookingAddOn_ConferenceBookingId",
+                table: "ConferenceBookingAddOn",
+                column: "ConferenceBookingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBookingPayment_ConferenceBookingId",
+                table: "ConferenceBookingPayment",
+                column: "ConferenceBookingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceBookingPayment_PaymentMethodId",
+                table: "ConferenceBookingPayment",
+                column: "PaymentMethodId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceCompany_IsActive",
+                table: "ConferenceCompany",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceCompany_Name",
+                table: "ConferenceCompany",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceExtra_Category_SortOrder",
+                table: "ConferenceExtra",
+                columns: new[] { "Category", "SortOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceExtra_Code",
+                table: "ConferenceExtra",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceVenue_Code",
+                table: "ConferenceVenue",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceVenue_IsActive",
+                table: "ConferenceVenue",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceVenue_Name",
+                table: "ConferenceVenue",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConferenceVenueBlackout_VenueId_StartDateTime",
+                table: "ConferenceVenueBlackout",
+                columns: new[] { "VenueId", "StartDateTime" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseOffer_ChargeTypeId",
+                table: "DayUseOffer",
+                column: "ChargeTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseOffer_Code",
+                table: "DayUseOffer",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseOffer_GuestContext_OfferType_SortOrder",
+                table: "DayUseOffer",
+                columns: new[] { "GuestContext", "OfferType", "SortOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUsePayment_DayUseVisitId_PaidAt",
+                table: "DayUsePayment",
+                columns: new[] { "DayUseVisitId", "PaidAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUsePayment_PaymentMethodId",
+                table: "DayUsePayment",
+                column: "PaymentMethodId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisit_GuestId",
+                table: "DayUseVisit",
+                column: "GuestId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisit_RoomId",
+                table: "DayUseVisit",
+                column: "RoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisit_StayId",
+                table: "DayUseVisit",
+                column: "StayId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisit_VisitDate_GuestContext",
+                table: "DayUseVisit",
+                columns: new[] { "VisitDate", "GuestContext" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisit_VisitNo",
+                table: "DayUseVisit",
+                column: "VisitNo",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisitLine_ChargeTypeId",
+                table: "DayUseVisitLine",
+                column: "ChargeTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisitLine_DayUseOfferId",
+                table: "DayUseVisitLine",
+                column: "DayUseOfferId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DayUseVisitLine_DayUseVisitId",
+                table: "DayUseVisitLine",
+                column: "DayUseVisitId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_DocumentSequence_DocumentType_Year_TenantId",
                 table: "DocumentSequence",
                 columns: new[] { "DocumentType", "Year", "TenantId" },
                 unique: true,
                 filter: "[TenantId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EventType_Code",
+                table: "EventType",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EventType_SortOrder_Name",
+                table: "EventType",
+                columns: new[] { "SortOrder", "Name" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ExtraBedPrice_ExtraBedTypeId_EffectiveFrom",
@@ -4393,6 +4960,24 @@ namespace PMS.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "ConferenceBookingAddOn");
+
+            migrationBuilder.DropTable(
+                name: "ConferenceBookingPayment");
+
+            migrationBuilder.DropTable(
+                name: "ConferenceExtra");
+
+            migrationBuilder.DropTable(
+                name: "ConferenceVenueBlackout");
+
+            migrationBuilder.DropTable(
+                name: "DayUsePayment");
+
+            migrationBuilder.DropTable(
+                name: "DayUseVisitLine");
+
+            migrationBuilder.DropTable(
                 name: "DocumentSequence");
 
             migrationBuilder.DropTable(
@@ -4594,6 +5179,15 @@ namespace PMS.Migrations
                 name: "ZzzWebhookSubscriptions");
 
             migrationBuilder.DropTable(
+                name: "ConferenceBooking");
+
+            migrationBuilder.DropTable(
+                name: "DayUseOffer");
+
+            migrationBuilder.DropTable(
+                name: "DayUseVisit");
+
+            migrationBuilder.DropTable(
                 name: "Folio");
 
             migrationBuilder.DropTable(
@@ -4655,6 +5249,15 @@ namespace PMS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ZzzWebhookEvents");
+
+            migrationBuilder.DropTable(
+                name: "ConferenceCompany");
+
+            migrationBuilder.DropTable(
+                name: "ConferenceVenue");
+
+            migrationBuilder.DropTable(
+                name: "EventType");
 
             migrationBuilder.DropTable(
                 name: "GuestRequest");
