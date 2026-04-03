@@ -17,6 +17,7 @@ import type {
   DashboardKpisDto,
   OccupancyReportDto,
   RevenueReportDto,
+  SalesReportDto,
   NightAuditSummaryDto,
 } from '@services/reporting.service';
 import { LogoSpinner } from '@components/common/LogoSpinner';
@@ -414,10 +415,172 @@ function NightAuditTab() {
   );
 }
 
+function SalesTab() {
+  const [from, setFrom] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const { data, isLoading } = useQuery({
+    queryKey: ['reporting-sales', from, to],
+    queryFn: () => reportingService.getSalesReport(from, to),
+    enabled: from <= to,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <LogoSpinner sizeClassName="h-10 w-10" logoSizeClassName="h-6 w-6" />
+      </div>
+    );
+  }
+
+  const report = data as SalesReportDto;
+  const groupedPayments = report.payments.reduce<Record<string, SalesReportDto['payments']>>((groups, payment) => {
+    const key = payment.paymentMethodName || 'Unknown';
+    groups[key] = groups[key] ? [...groups[key], payment] : [payment];
+    return groups;
+  }, {});
+
+  const exportCsv = () => {
+    downloadCsv(
+      report.payments.map((payment) => ({
+        receivedAt: payment.receivedAt,
+        paymentMethod: payment.paymentMethodName,
+        sourceType: payment.sourceType,
+        documentNo: payment.documentNo,
+        description: payment.description,
+        referenceNo: payment.referenceNo,
+        amount: payment.amount,
+      })),
+      `sales-payments-${from}-${to}.csv`,
+      [
+        { key: 'receivedAt', header: 'Received At' },
+        { key: 'paymentMethod', header: 'Payment Method' },
+        { key: 'sourceType', header: 'Source' },
+        { key: 'documentNo', header: 'Document No' },
+        { key: 'description', header: 'Description' },
+        { key: 'referenceNo', header: 'Reference No' },
+        { key: 'amount', header: 'Amount' },
+      ]
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">From</label>
+          <DatePicker
+            selected={from ? parseDateOnly(from) : null}
+            onChange={(date: Date | null) => setFrom(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
+            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">To</label>
+          <DatePicker
+            selected={to ? parseDateOnly(to) : null}
+            onChange={(date: Date | null) => setTo(date ? toDateStr(date) : '')}
+            dateFormat="MMM d, yyyy"
+            className="rounded border border-gray-300 px-3 py-1.5 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <button
+          type="button"
+          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"
+          onClick={exportCsv}
+        >
+          Export CSV
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded border border-gray-200 p-3 dark:border-gray-600 dark:bg-gray-800">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Payments received</p>
+          <p className="text-lg font-semibold">{report.paymentsCount}</p>
+        </div>
+        <div className="rounded border border-gray-200 p-3 dark:border-gray-600 dark:bg-gray-800">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Total received</p>
+          <p className="text-lg font-semibold">{formatCurrency(report.totalPayments)}</p>
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-600 dark:text-gray-300">
+        Includes collections from reservation deposits, check-in and arrival folio payments, and day-use payments.
+      </p>
+
+      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-600">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Payment method</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Payments</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Amount</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+            {report.byPaymentMethod.map((row) => (
+              <tr key={row.paymentMethodId}>
+                <td className="px-3 py-2">{row.paymentMethodName}</td>
+                <td className="px-3 py-2 text-right">{row.paymentsCount}</td>
+                <td className="px-3 py-2 text-right">{formatCurrency(row.amount)}</td>
+              </tr>
+            ))}
+            {report.byPaymentMethod.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
+                  No payments found for the selected date range.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {Object.entries(groupedPayments).map(([paymentMethodName, payments]) => (
+        <div key={paymentMethodName} className="space-y-2 rounded border border-gray-200 p-4 dark:border-gray-600 dark:bg-gray-800/50">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{paymentMethodName}</h3>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              {formatCurrency(payments.reduce((sum, payment) => sum + payment.amount, 0))}
+            </span>
+          </div>
+          <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-600">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Received</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Source</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Document</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Description</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reference</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                {payments.map((payment, index) => (
+                  <tr key={`${paymentMethodName}-${payment.receivedAt}-${payment.documentNo}-${index}`}>
+                    <td className="px-3 py-2 whitespace-nowrap">{new Date(payment.receivedAt).toLocaleString()}</td>
+                    <td className="px-3 py-2">{payment.sourceType}</td>
+                    <td className="px-3 py-2">{payment.documentNo || '-'}</td>
+                    <td className="px-3 py-2">{payment.description || '-'}</td>
+                    <td className="px-3 py-2">{payment.referenceNo || '-'}</td>
+                    <td className="px-3 py-2 text-right">{formatCurrency(payment.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'occupancy', label: 'Occupancy' },
   { id: 'revenue', label: 'Revenue' },
+  { id: 'sales', label: 'Sales' },
   { id: 'night-audit', label: 'Night Audit' },
 ] as const;
 
@@ -431,7 +594,7 @@ export const ReportsPage = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports &amp; Analytics</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Dashboard KPIs, occupancy, revenue and night audit.
+              Dashboard KPIs, occupancy, revenue, sales and night audit.
             </p>
           </div>
         </div>
@@ -457,6 +620,7 @@ export const ReportsPage = () => {
             {activeTab === 'dashboard' && <DashboardTab />}
             {activeTab === 'occupancy' && <OccupancyTab />}
             {activeTab === 'revenue' && <RevenueTab />}
+            {activeTab === 'sales' && <SalesTab />}
             {activeTab === 'night-audit' && <NightAuditTab />}
           </div>
         </section>

@@ -56,6 +56,33 @@ export interface RevenueByChargeTypeDto {
   amount: number;
 }
 
+export interface SalesReportDto {
+  fromDate: string;
+  toDate: string;
+  totalPayments: number;
+  paymentsCount: number;
+  byPaymentMethod: SalesByPaymentMethodDto[];
+  payments: SalesPaymentRowDto[];
+}
+
+export interface SalesByPaymentMethodDto {
+  paymentMethodId: string;
+  paymentMethodName: string;
+  amount: number;
+  paymentsCount: number;
+}
+
+export interface SalesPaymentRowDto {
+  receivedAt: string;
+  paymentMethodId: string;
+  paymentMethodName: string;
+  sourceType: string;
+  documentNo: string;
+  description: string;
+  referenceNo: string;
+  amount: number;
+}
+
 export interface NightAuditSummaryDto {
   auditDate: string;
   arrivals: number;
@@ -145,6 +172,14 @@ export const reportingService = {
   getRevenueReport: async (fromDate: string, toDate: string): Promise<RevenueReportDto> => {
     const res = await api.get<{ result: RevenueReportDto }>(
       '/api/services/app/Reporting/GetRevenueReport',
+      { params: { FromDate: fromDate, ToDate: toDate } }
+    );
+    return res.data.result;
+  },
+
+  getSalesReport: async (fromDate: string, toDate: string): Promise<SalesReportDto> => {
+    const res = await api.get<{ result: SalesReportDto }>(
+      '/api/services/app/Reporting/GetSalesReport',
       { params: { FromDate: fromDate, ToDate: toDate } }
     );
     return res.data.result;

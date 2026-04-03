@@ -19,9 +19,11 @@ public class ReportingAppService(
     IRepository<Stay, Guid> stayRepository,
     IRepository<StayRoom, Guid> stayRoomRepository,
     IRepository<Reservation, Guid> reservationRepository,
+    IRepository<ReservationDeposit, Guid> reservationDepositRepository,
     IRepository<Folio, Guid> folioRepository,
     IRepository<FolioTransaction, Guid> folioTransactionRepository,
     IRepository<FolioPayment, Guid> folioPaymentRepository,
+    IRepository<DayUsePayment, Guid> dayUsePaymentRepository,
     IRepository<PosOrder, Guid> posOrderRepository
 ) : ApplicationService, IReportingAppService
 {
@@ -235,6 +237,98 @@ public class ReportingAppService(
             TotalDiscounts = discounts,
             ByDay = byDay,
             ByChargeType = byChargeType,
+        };
+    }
+
+    public async Task<SalesReportDto> GetSalesReportAsync(DateTime fromDate, DateTime toDate)
+    {
+        var from = fromDate.Date;
+        var to = toDate.Date.AddDays(1);
+
+        var reservationDeposits = await reservationDepositRepository.GetAll()
+            .Include(p => p.PaymentMethod)
+            .Include(p => p.Reservation)
+            .Where(p => p.PaidDate >= from && p.PaidDate < to)
+            .Where(p => p.Reservation.Status != ReservationStatus.Cancelled)
+            .ToListAsync();
+
+        var folioPayments = await folioPaymentRepository.GetAll()
+            .Include(p => p.PaymentMethod)
+            .Include(p => p.Folio)
+                .ThenInclude(f => f.Stay)
+            .Where(p => !p.IsVoided)
+            .Where(p => p.PaidDate >= from && p.PaidDate < to)
+            .ToListAsync();
+
+        var dayUsePayments = await dayUsePaymentRepository.GetAll()
+            .Include(p => p.PaymentMethod)
+            .Include(p => p.DayUseVisit)
+            .Where(p => p.PaidAt >= from && p.PaidAt < to)
+            .Where(p => p.DayUseVisit.Status != DayUseStatus.Cancelled)
+            .ToListAsync();
+
+        var payments = reservationDeposits
+            .Select(p => new SalesPaymentRowDto
+            {
+                ReceivedAt = p.PaidDate,
+                PaymentMethodId = p.PaymentMethodId,
+                PaymentMethodName = p.PaymentMethod?.Name ?? "Unknown",
+                SourceType = "Reservation",
+                DocumentNo = p.Reservation?.ReservationNo ?? string.Empty,
+                Description = p.Reservation?.GuestName ?? string.Empty,
+                ReferenceNo = p.ReferenceNo,
+                Amount = p.Amount,
+            })
+            .Concat(folioPayments.Select(p => new SalesPaymentRowDto
+            {
+                ReceivedAt = p.PaidDate,
+                PaymentMethodId = p.PaymentMethodId,
+                PaymentMethodName = p.PaymentMethod?.Name ?? "Unknown",
+                SourceType = "Check-In / Arrival",
+                DocumentNo = p.Folio?.FolioNo ?? string.Empty,
+                Description = p.Folio?.Stay != null
+                    ? $"{p.Folio.Stay.StayNo} · {p.Folio.Stay.GuestName}"
+                    : string.Empty,
+                ReferenceNo = p.ReferenceNo,
+                Amount = p.Amount,
+            }))
+            .Concat(dayUsePayments.Select(p => new SalesPaymentRowDto
+            {
+                ReceivedAt = p.PaidAt,
+                PaymentMethodId = p.PaymentMethodId,
+                PaymentMethodName = p.PaymentMethod?.Name ?? "Unknown",
+                SourceType = "Day Use",
+                DocumentNo = p.DayUseVisit?.VisitNo ?? string.Empty,
+                Description = p.DayUseVisit?.GuestName ?? string.Empty,
+                ReferenceNo = p.ReferenceNo,
+                Amount = p.Amount,
+            }))
+            .OrderBy(p => p.PaymentMethodName)
+            .ThenBy(p => p.ReceivedAt)
+            .ThenBy(p => p.DocumentNo)
+            .ToList();
+
+        var byPaymentMethod = payments
+            .GroupBy(p => new { p.PaymentMethodId, p.PaymentMethodName })
+            .Select(g => new SalesByPaymentMethodDto
+            {
+                PaymentMethodId = g.Key.PaymentMethodId,
+                PaymentMethodName = g.Key.PaymentMethodName,
+                Amount = g.Sum(p => p.Amount),
+                PaymentsCount = g.Count(),
+            })
+            .OrderByDescending(x => x.Amount)
+            .ThenBy(x => x.PaymentMethodName)
+            .ToList();
+
+        return new SalesReportDto
+        {
+            FromDate = from,
+            ToDate = to.AddDays(-1),
+            TotalPayments = payments.Sum(p => p.Amount),
+            PaymentsCount = payments.Count,
+            ByPaymentMethod = byPaymentMethod,
+            Payments = payments,
         };
     }
 
