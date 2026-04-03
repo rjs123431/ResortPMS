@@ -118,8 +118,16 @@ code {
   height: 36px;
 }
 
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
+select:not([multiple]):not([size]),
+textarea {
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
 select:not([multiple]):not([size]) {
-  height: 42px;
+  min-height: 42px;
 }
 
 /* React DatePicker popup dark mode */
